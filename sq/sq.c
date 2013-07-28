@@ -5,26 +5,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#ifdef _WIN32
-//#include <conio.h>
-#include <windows.h>
-#else
-#include <dlfcn.h>
-#endif
+
 #if defined(_MSC_VER) && defined(_DEBUG)
 #include <crtdbg.h>
 #include <conio.h>
 #endif
 #include <squirrel.h>
 #include <sqstdblob.h>
-#include <sqstdmodule.h>
 #include <sqstdsystem.h>
 #include <sqstdio.h>
 #include <sqstdmath.h>	
 #include <sqstdstring.h>
-
-#include <time.h>
-#include <math.h>
 
 #ifdef SQUNICODE
 #define scfprintf fwprintf
@@ -36,7 +27,6 @@
 #define scvprintf vprintf
 #endif
 
-int CompileScriptFromFile(HSQUIRRELVM,const SQChar *name,int bprinterror);
 void PrintCallStack(HSQUIRRELVM);
 void PrintVersionInfos();
 
@@ -64,15 +54,6 @@ int printerror(HSQUIRRELVM v)
 	return 0;
 }
 
-int compile_file(HSQUIRRELVM v)
-{
-	const SQChar *sFileName;
-	if(SQ_SUCCEEDED(sq_getstring(v,2,&sFileName))){
-		return CompileScriptFromFile(v,sFileName,0);
-	}
-	return sq_throwerror(v,_SC("wrong argument"));
-}
-
 int quit(HSQUIRRELVM v)
 {
 	int *done;
@@ -89,20 +70,38 @@ void printfunc(HSQUIRRELVM v,const SQChar *s,...)
 	va_end(vl);
 }
 
+void PrintVersionInfos()
+{
+	scfprintf(stdout,_SC("%s %s\n"),SQUIRREL_VERSION,SQUIRREL_COPYRIGHT);
+}
+
+void PrintUsage()
+{
+	scfprintf(stderr,_SC("usage: sq <options> <scriptpath [args]>.\n")
+		_SC("Available options are:\n")
+		_SC("   -c              compiles the file to bytecode(default output 'out.cnut')\n")
+		_SC("   -o              specifies output file for the -c option\n")
+		_SC("   -c              compiles only\n")
+		_SC("   -d              generates debug infos\n")
+		_SC("   -v              displays version infos\n")
+		_SC("   -h              prints help\n"));
+}
+
 #define _INTERACTIVE 0
-#define _VERSION 1
 #define _DONE 2
 //<<FIXME>> this func is a mess
 int getargs(HSQUIRRELVM v,int argc, char* argv[])
 {
 	int i;
+	int compiles_only = 0;
 	static SQChar temp[500];
 	const SQChar *ret=NULL;
+	char * output = NULL;
 	int lineinfo=0;
 	if(argc>1)
 	{
 		int arg=1,exitloop=0;
-		while(arg<argc && !exitloop)
+		while(arg < argc && !exitloop)
 		{
 
 			if(argv[arg][0]=='-')
@@ -112,10 +111,28 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 				case 'd': //DEBUG(debug infos)
 					sq_enabledebuginfo(v,1);
 					break;
+				case 'c':
+					compiles_only = 1;
+					break;
+				case 'o':
+					if(arg < argc) {
+						arg++;
+						output = argv[arg];
+					}
+					break;
 				case 'v':
-					return _VERSION;
+					PrintVersionInfos();
+					return _DONE;
+				
+				case 'h':
+					PrintVersionInfos();
+					PrintUsage();
+					return _DONE;
 				default:
-					exitloop=1;
+					PrintVersionInfos();
+					scprintf(_SC("unknown prameter '-%c'\n"),argv[arg][1]);
+					PrintUsage();
+					return _DONE;
 				}
 			}else break;
 			arg++;
@@ -123,7 +140,7 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 
 		// src file
 		
-		if(arg<argc){
+		if(arg<argc) {
 			const SQChar *filename=NULL;
 #ifdef SQUNICODE
 			mbstowcs(temp,argv[arg],strlen(argv[arg]));
@@ -153,38 +170,43 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 			}
 			sq_createslot(v,-3);
 			sq_pop(v,1);
-			if(CompileScriptFromFile(v,filename,1)>0){
-				sq_pushroottable(v);
-				sq_call(v,1,0);
+			if(compiles_only) {
+				if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,1))){
+					SQChar *outfile = _SC("out.cnut");
+					if(output) {
+#ifdef SQUNICODE
+						int len = strlen(output)+1;
+						mbstowcs(sq_getscratchpad(v,len*sizeof(SQChar)),output,len);
+						outfile = sq_getscratchpad(v,-1);
+#else
+						outfile = output;
+#endif
+					}
+					if(SQ_SUCCEEDED(sqstd_writeclosuretofile(v,outfile)))
+						return _DONE;
+				}
 				return _DONE;
 			}
-			else{
-				const SQChar *err;
-				sq_getlasterror(v);
-				if(SQ_SUCCEEDED(sq_getstring(v,-1,&err))){
-					scprintf(_SC("Error [%s]\n"),err);
+			else {
+				if(SQ_SUCCEEDED(sqstd_dofile(v,filename,0,1))) {
+					return _DONE;
 				}
-				return _VERSION;
+				else {
+					const SQChar *err;
+					sq_getlasterror(v);
+					if(SQ_SUCCEEDED(sq_getstring(v,-1,&err))) {
+						scprintf(_SC("Error [%s]\n"),err);
+						return _DONE;
+					}
+				}
 			}
+			
 		}
 	}
 
 	return _INTERACTIVE;
 }
 
-
-void PrintVersionInfos()
-{
-	scfprintf(stdout,_SC("%s %s\n"),SQUIRREL_VERSION,SQUIRREL_COPYRIGHT);
-}
-
-void PrintUsage()
-{
-	scfprintf(stderr,_SC("usage: sq <options> <scriptpath [args]>.\n")
-		_SC("Available options are:\n")
-		_SC("   -d              generate debug infos\n")
-		_SC("   -v				display version infos\n"));
-}
 
 void PrintCallStack(HSQUIRRELVM v)
 {
@@ -255,67 +277,6 @@ void PrintCallStack(HSQUIRRELVM v)
 			sq_pop(v,1);
 		}
 	}
-}
-
-SQInteger file_lexfeedASCII(SQUserPointer file)
-{
-	int ret;
-	char c;
-	if( ( ret=fread(&c,sizeof(c),1,(FILE *)file )>0) )
-		return c;
-	return 0;
-}
-
-SQInteger file_lexfeedWCHAR(SQUserPointer file)
-{
-	int ret;
-	wchar_t c;
-	if( ( ret=fread(&c,sizeof(c),1,(FILE *)file )>0) )
-		return (SQChar)c;
-	return 0;
-}
-
-int file_read(SQUserPointer file,SQUserPointer buf,int size)
-{
-	int ret;
-	if( ( ret=fread(buf,1,size,(FILE *)file )!=0) )return ret;
-	return -1;
-}
-
-int file_write(SQUserPointer file,SQUserPointer p,int size)
-{
-	return fwrite(p,1,size,(FILE *)file);
-}
-
-int CompileScript(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQChar *sourcename,int bprinterror)
-{
-	int ret=-1;
-	if(SQ_SUCCEEDED(sq_compile(v,read,p,sourcename,bprinterror))){
-		ret=1;
-	}
-	return ret;
-}
-
-int CompileScriptFromFile(HSQUIRRELVM v,const SQChar *filename,int bprinterror)
-{
-	FILE *file=scfopen(filename,_SC("rb"));
-	int ret;
-	unsigned short uc;
-	SQLEXREADFUNC func=file_lexfeedASCII;
-	if(file && (ret=fread(&uc,1,2,file))){
-		if(ret==2 && uc==0xFEFF)
-			func=file_lexfeedWCHAR;
-		else
-			fseek(file,0,SEEK_SET);
-
-		if(CompileScript(v,func,file,filename,bprinterror)>0){
-			fclose(file);
-			return 1;
-		}
-		fclose(file);
-		return 0;
-	}
-	return sq_throwerror(v,_SC("cannot open the file"));
 }
 
 void compiler_error(HSQUIRRELVM v,const SQChar *sErr,const SQChar *sSource,int line,int column)
@@ -405,70 +366,8 @@ void Interactive(HSQUIRRELVM v)
 	}
 }
 
-SQRESULT _sqstd_moduleapi_openmodule(HSQUIRRELVM v,const SQChar* modulename ,SQSTDHMODULE* pm)
-{
-#define MAX_MODULE_PATH 512
-	char realmodulename[MAX_MODULE_PATH];
-#ifdef _UNICODE
-	int slen = wcstombs(realmodulename,modulename,MAX_MODULE_PATH-1);
-	realmodulename[slen] = _SC('\0');
-#else
-	strcpy(realmodulename,modulename);
-#endif
-#ifdef _WIN32
-	*pm = LoadLibrary(realmodulename);
-#else
-	*pm = dlopen(modulename,RTLD_NOW);
-#endif
-	if(*pm == NULL)
-		return SQ_ERROR;
-	return SQ_OK;
-}
-
-void *_sqstd_moduleapi_getsymbol(HSQUIRRELVM v,SQSTDHMODULE m,const SQChar* symbol)
-{
-#define MAX_SYMBOL_NAME 128
-	char realsymbolname[MAX_SYMBOL_NAME];
-#ifdef _UNICODE
-	int slen = wcstombs(realsymbolname,symbol,MAX_SYMBOL_NAME-1);
-	realsymbolname[slen] = _SC('\0');
-#else
-	strcpy(realsymbolname,symbol);
-#endif
-
-#ifdef _WIN32
-	return (void *)GetProcAddress((HMODULE)m,realsymbolname);
-#else
-	return dlsym(m,realsymbolname);
-#endif
-}
-
-void _sqstd_moduleapi_closemodule(SQSTDHMODULE m)
-{
-#ifdef _WIN32
-	FreeLibrary((HMODULE)m);
-#else
-	dlclose(m);
-#endif
-}
-
-SQSTDUserModuleAPI api = {
-	_sqstd_moduleapi_openmodule,
-	_sqstd_moduleapi_getsymbol,
-	_sqstd_moduleapi_closemodule
-};
-
-void *x_malloc(unsigned int size) {
-	return malloc(size);
-}
-
-void x_free(void *p,unsigned int size) {
-	free(p);
-}
-
 int main(int argc, char* argv[])
 {
-	const SQChar *error;
 	HSQUIRRELVM v;
 	
 	const SQChar *filename=NULL;
@@ -483,13 +382,6 @@ int main(int argc, char* argv[])
 
 	sqstd_register_bloblib(v);
 	sqstd_register_iolib(v);
-	if(SQ_FAILED(sqstd_register_modulelib(v,&api))) {
-		sq_getlasterror(v);
-		sq_getstring(v,-1,&error);
-		scprintf(_SC("MODULE LIB [%s]\n"),error);
-		sq_pop(v,1);
-	}
-	
 	sqstd_register_systemlib(v);
 	sqstd_register_mathlib(v);
 	sqstd_register_stringlib(v);
@@ -500,19 +392,9 @@ int main(int argc, char* argv[])
 	sq_newclosure(v,printerror,0);
 	sq_seterrorhandler(v);
 
-	sq_pushroottable(v);
-	sq_pushstring(v,_SC("compile_file"),-1);
-	sq_newclosure(v,compile_file,0);
-	sq_setparamscheck(v,-2,NULL);
-	sq_createslot(v,-3);
-	sq_pop(v,1);
-
 	//gets arguments
 	switch(getargs(v,argc,argv))
 	{
-	case _VERSION:
-		PrintVersionInfos();
-		break;
 	case _INTERACTIVE:
 		Interactive(v);
 		break;
@@ -520,16 +402,6 @@ int main(int argc, char* argv[])
 	default: 
 		break;
 	}
-		/* SAVE & LOAD THE BYTECODE BEFORE EXECUTE IT(is just a sample)
-		FILE *bytecodefile=fopen("./bytecode.cnut","wb+");
-		sq_writeclosure(v,file_write,bytecodefile);
-		fclose(bytecodefile);
-
-		sq_pop(v,1);
-
-		bytecodefile=fopen("./bytecode.cnut","rb");
-		sq_readclosure(v,file_read,bytecodefile);
-		fclose(bytecodefile);*/
 
 	sq_close(v);
 	

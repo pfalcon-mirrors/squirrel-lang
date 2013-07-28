@@ -550,6 +550,25 @@ SQRESULT sq_setdelegate(HSQUIRRELVM v,int idx)
 	return SQ_OK;
 }
 
+SQRESULT sq_rawdeleteslot(HSQUIRRELVM v,int idx,int pushval)
+{
+	SQ_TRY {
+		sq_aux_paramscheck(v, 2);
+		SQObjectPtr &self = sq_aux_gettypedarg(v, idx, OT_TABLE);
+		SQObjectPtr &key = v->GetUp(-1);
+		SQObjectPtr t;
+		if(_table(self)->Get(key,t)) {
+			_table(self)->Remove(key);
+		}
+		if(pushval != 0)
+			if(pushval)	v->GetUp(-1) = t;
+		else
+			v->Pop(1);
+		return SQ_OK;
+	}
+	SQ_CATCH(SQException, e){ return sq_aux_throwobject(v, e); }
+}
+
 SQRESULT sq_getdelegate(HSQUIRRELVM v,int idx)
 {
 	SQObjectPtr &self=stack_get(v,idx);
@@ -729,6 +748,9 @@ SQRESULT sq_writeclosure(HSQUIRRELVM v,SQWRITEFUNC w,SQUserPointer up)
 	SQ_TRY {
 		SQObjectPtr o=sq_aux_gettypedarg(v,-1,OT_CLOSURE);
 		SQClosure *c=_closure(o);
+		unsigned short tag = SQ_BYTECODE_STREAM_TAG;
+		if(w(up,&tag,2) != 2)
+			return sq_throwerror(v,_SC("io error"));
 		_closure(o)->Save(v,up,w);
 	}
 	SQ_CATCH(SQException,e){return sq_aux_throwobject(v,e);}
@@ -740,6 +762,11 @@ SQRESULT sq_readclosure(HSQUIRRELVM v,SQREADFUNC r,SQUserPointer up)
 	SQ_TRY {
 		SQObjectPtr func=SQFunctionProto::Create();
 		SQObjectPtr closure=SQClosure::Create(_ss(v),_funcproto(func));
+		unsigned short tag;
+		if(r(up,&tag,2) != 2)
+			return sq_throwerror(v,_SC("io error"));
+		if(tag != SQ_BYTECODE_STREAM_TAG)
+			return sq_throwerror(v,_SC("invalid stream"));
 		_closure(closure)->Load(v,up,r);
 		v->Push(closure);
 	}

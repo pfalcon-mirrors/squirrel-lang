@@ -1,3 +1,4 @@
+/* see copyright notice in squirrel.h */
 #include <new>
 #include <stdio.h>
 #include <squirrel.h>
@@ -25,7 +26,7 @@ SQInteger sqstd_fwrite(const SQUserPointer buffer, SQInteger size, SQInteger cou
 	return (SQInteger)fwrite(buffer,size,count,(FILE *)file);
 }
 
-int sqstd_fseek(SQFILE file, long offset, int origin)
+SQInteger sqstd_fseek(SQFILE file, long offset, int origin)
 {
 	int realorigin;
 	switch(origin) {
@@ -42,17 +43,17 @@ long sqstd_ftell(SQFILE file)
 	return ftell((FILE *)file);
 }
 
-int sqstd_fflush(SQFILE file)
+SQInteger sqstd_fflush(SQFILE file)
 {
 	return fflush((FILE *)file);
 }
 
-int sqstd_fclose(SQFILE file)
+SQInteger sqstd_fclose(SQFILE file)
 {
 	return fclose((FILE *)file);
 }
 
-int sqstd_feof(SQFILE file)
+SQInteger sqstd_feof(SQFILE file)
 {
 	return feof((FILE *)file);
 }
@@ -100,7 +101,7 @@ struct SQFile : public SQStream {
 		return sqstd_fseek(_handle,offset,origin);
 	}
 	bool IsValid() { return _handle?true:false; }
-	bool EOS() { return sqstd_feof(_handle)!=0?true:false;}
+	bool EOS() { return Tell()==Len()?true:false;}
 	SQFILE GetHandle() {return _handle;}
 private:
 	SQFILE _handle;
@@ -127,6 +128,7 @@ static SQRegFunction _file_delegate[] = {
 	_DECL_STREAM_FUNC(tell,1,_SC("u")),
 	_DECL_STREAM_FUNC(len,1,_SC("u")),
 	_DECL_STREAM_FUNC(eos,1,_SC("u")),
+	_DECL_STREAM_FUNC(flush,1,_SC("u")),
 	_DECL_FILE_FUNC(_typeof,1,_SC("u")),
 	{0,0,0,0},
 };
@@ -166,7 +168,7 @@ SQRESULT sqstd_getfile(HSQUIRRELVM v, int idx, SQFILE *file)
 }
 
 
-static int _io_fopen(HSQUIRRELVM v)
+static int _g_io_fopen(HSQUIRRELVM v)
 {
 	const SQChar *filename,*mode;
 	sq_getstring(v, 2, &filename);
@@ -177,6 +179,123 @@ static int _io_fopen(HSQUIRRELVM v)
 		return SQ_ERROR;
 	return 1;
 }
+
+static SQInteger _io_file_lexfeedASCII(SQUserPointer file)
+{
+	int ret;
+	char c;
+	if( ( ret=sqstd_fread(&c,sizeof(c),1,(FILE *)file )>0) )
+		return c;
+	return 0;
+}
+
+static SQInteger _io_file_lexfeedWCHAR(SQUserPointer file)
+{
+	int ret;
+	wchar_t c;
+	if( ( ret=sqstd_fread(&c,sizeof(c),1,(FILE *)file )>0) )
+		return (SQChar)c;
+	return 0;
+}
+
+int file_read(SQUserPointer file,SQUserPointer buf,int size)
+{
+	int ret;
+	if( ( ret = sqstd_fread(buf,1,size,(SQFILE)file ))!=0 )return ret;
+	return -1;
+}
+
+int file_write(SQUserPointer file,SQUserPointer p,int size)
+{
+	return sqstd_fwrite(p,1,size,(SQFILE)file);
+}
+
+SQRESULT sqstd_loadfile(HSQUIRRELVM v,const SQChar *filename,int printerror)
+{
+	SQFILE file = sqstd_fopen(filename,_SC("rb"));
+	int ret;
+	unsigned short uc;
+	SQLEXREADFUNC func = _io_file_lexfeedASCII;
+	if(file && (ret=sqstd_fread(&uc,1,2,file))){
+		if(ret!=2) {
+			sqstd_fclose(file);
+			return sq_throwerror(v,_SC("io error"));
+		}
+		if(uc==SQ_BYTECODE_STREAM_TAG) { //BYTECODE
+			sqstd_fseek(file,0,SQ_SEEK_SET);
+			if(SQ_SUCCEEDED(sq_readclosure(v,file_read,file))) {
+				sqstd_fclose(file);
+				return SQ_OK;
+			}
+		}
+		else { //SCRIPT
+			if(uc==0xFEFF)
+				func = _io_file_lexfeedWCHAR;
+			else
+				sqstd_fseek(file,0,SQ_SEEK_SET);
+
+			if(SQ_SUCCEEDED(sq_compile(v,func,file,filename,printerror))){
+				sqstd_fclose(file);
+				return SQ_OK;
+			}
+		}
+		sqstd_fclose(file);
+		return SQ_ERROR;
+	}
+	return sq_throwerror(v,_SC("cannot open the file"));
+}
+
+SQRESULT sqstd_dofile(HSQUIRRELVM v,const SQChar *filename,int retval,int printerror)
+{
+	if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,printerror))) {
+		sq_push(v,-2);
+		if(SQ_SUCCEEDED(sq_call(v,1,retval))) {
+			sq_remove(v,-2); //removes the closure
+			return 1;
+		}
+		sq_pop(v,1); //removes the closure
+	}
+	return SQ_ERROR;
+}
+
+SQRESULT sqstd_writeclosuretofile(HSQUIRRELVM v,const SQChar *filename)
+{
+	SQFILE file = sqstd_fopen(filename,_SC("wb+"));
+	if(!file) return sq_throwerror(v,_SC("cannot open the file"));
+	if(SQ_SUCCEEDED(sq_writeclosure(v,file_write,file))) {
+		sqstd_fclose(file);
+		return SQ_OK;
+	}
+	sqstd_fclose(file);
+	return SQ_ERROR; //forward the error
+}
+
+int _g_io_loadfile(HSQUIRRELVM v)
+{
+	const SQChar *filename;
+	sq_getstring(v,2,&filename);
+	if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,0)))
+		return 1;
+	return SQ_ERROR; //propagates the error
+}
+
+int _g_io_dofile(HSQUIRRELVM v)
+{
+	const SQChar *filename;
+	sq_getstring(v,2,&filename);
+	sq_push(v,1); //repush the this
+	if(SQ_SUCCEEDED(sqstd_dofile(v,filename,1,0)))
+		return 1;
+	return SQ_ERROR; //propagates the error
+}
+
+#define _DECL_GLOBALIO_FUNC(name,nparams,typecheck) {_SC(#name),_g_io_##name,nparams,typecheck}
+static SQRegFunction iolib_funcs[]={
+	_DECL_GLOBALIO_FUNC(fopen,3,_SC(".ss")),
+	_DECL_GLOBALIO_FUNC(loadfile,2,_SC(".s")),
+	_DECL_GLOBALIO_FUNC(dofile,2,_SC(".s")),
+	{0,0}
+};
 
 SQRESULT sqstd_register_iolib(HSQUIRRELVM v)
 {
@@ -196,10 +315,25 @@ SQRESULT sqstd_register_iolib(HSQUIRRELVM v)
 	sq_createslot(v,-3);
 	sq_pop(v,1); //pops registry
 
-	sq_pushstring(v,_SC("fopen"),-1);
-    sq_newclosure(v,_io_fopen,0);
-	sq_setparamscheck(v,3,_SC(".ss"));
+		i = 0;
+	while(iolib_funcs[i].name!=0)
+	{
+		SQRegFunction &f = iolib_funcs[i];
+		sq_pushstring(v,f.name,-1);
+		sq_newclosure(v,f.f,0);
+		sq_setparamscheck(v,f.nparamscheck,f.typemask);
+		sq_createslot(v,-3);
+		i++;
+	}
+	sq_pushstring(v,_SC("stdout"),-1);
+	sqstd_createfile(v,stdout,0);
 	sq_createslot(v,-3);
-	
+	sq_pushstring(v,_SC("stdin"),-1);
+	sqstd_createfile(v,stdin,0);
+	sq_createslot(v,-3);
+	sq_pushstring(v,_SC("stderr"),-1);
+	sqstd_createfile(v,stderr,0);
+	sq_createslot(v,-3);
+
 	return SQ_OK;
 }

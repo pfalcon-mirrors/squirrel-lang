@@ -1,3 +1,22 @@
+***version 1.0 beta 3***
+-minor vm bug fixes
+-string allocation is now faster
+-tables and array memory usage is now less conservative(they shrink)
+-added regular expression routines in the standard library
+-The 'c' expression now accepts only 1 character(thx irbrian)
+-multiline strings <[ ]> have been substituted with C# style verbatim strings (eg. @"string")
+-added new keyword 'parent' for accessing the delegate of tables and unserdata
+-The metamethod '_clone' has been renamed '_cloned'
+-the _delslot metamethod's behaviour and prototype have been changed
+-new default function in the integer and float object 'tochar()'
+-the built-in function chcode2string has been removed
+-the default method [table].getdelegate() has been removed
+-new api sq_rawdeleteslot()
+-new table built-in method rawdelete(key)
+-the dynamic mudule loading has been removed from the standard distribution
+-some optimizations in the VM
+
+***2004-04-21        ***
 ***version 1.0 beta 2***
 -minor compiler/parser bug fixes
 -sq_newclosure has a different prototype, the "paramscheck" of paramter has been moved to the new function sq_setparamscheck()

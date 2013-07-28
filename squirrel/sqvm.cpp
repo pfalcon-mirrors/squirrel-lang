@@ -320,7 +320,8 @@ void SQVM::StartCall(SQClosure *closure,int target,int nargs,int stackbase,bool 
 		ci->_ncalls++;
 	}
 
-	ci->_closure = SQObjectPtr(closure);
+	ci->_closure._unVal.pClosure = closure;
+	ci->_closure._type = OT_CLOSURE;
 	ci->_iv = &func->_instructions;
 	ci->_literals = &func->_literals;
 	//grows the stack if needed
@@ -446,6 +447,7 @@ exception_restore:
 			{
 			case _OP_LOAD: TARGET = (*ci->_literals)[arg1]; continue;
 			case _OP_LOADNULL: TARGET = _null_; continue;
+			case _OP_LOADNULLS:{ for(int n=0;n<arg1;n++) STK(arg0+n) = _null_; }continue;
 			case _OP_LOADROOTTABLE:	TARGET = _roottable; continue;
 			case _OP_MOVE: TARGET = STK(arg1); continue;
 			case _OP_DMOVE: STK(arg0) = STK(arg1); STK(arg2) = STK(arg3); continue;
@@ -476,6 +478,13 @@ exception_restore:
 				if (!Get(STK(arg2), (*ci->_literals)[arg1], temp_reg, false)) IdxError((*ci->_literals)[arg1]);
 				TARGET = temp_reg;
 				continue;
+				break;
+			case _OP_GETPARENT:
+				if(type(STK(arg1)) == OT_TABLE) {
+                  		TARGET = _table(STK(arg1))->_delegate?SQObjectPtr(_table(STK(arg1))->_delegate):_null_;
+						continue;
+				}
+				RT_Error(_SC("the %s type doesn't have a parent slot"), GetTypeName(STK(arg1)));
 				break;
 			case _OP_MINUSEQ:
 				if (arg3 == 0xFF) {
@@ -1018,7 +1027,7 @@ bool SQVM::Clone(const SQObjectPtr &self,SQObjectPtr &target)
 		if(_table(target)->_delegate){
 			Push(target);
 			Push(self);
-			CallMetaMethod(_table(target)->_delegate,MT_CLONE,2,temp_reg);
+			CallMetaMethod(_table(target)->_delegate,MT_CLONED,2,temp_reg);
 		}
 		return true;
 	case OT_ARRAY: 
@@ -1051,28 +1060,46 @@ void SQVM::NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObject
 
 void SQVM::DeleteSlot(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &res)
 {
-	if(type(self)==OT_TABLE){
+	switch(type(self)) {
+	case OT_TABLE: {
 		SQObjectPtr t;
-		if(_table(self)->Get(key,t)){
-			if(_table(self)->_delegate){
-				SQObjectPtr dummy;
-				Push(self);Push(key);Push(t);
-				CallMetaMethod(_table(self)->_delegate,MT_DELSLOT,3,dummy);
-			}
-			_table(self)->Remove(key);
+		bool handled = false;
+		if(_table(self)->_delegate) {
+			Push(self);Push(key);
+			handled = CallMetaMethod(_table(self)->_delegate,MT_DELSLOT,2,t);
 		}
-		res=t;
-	}else RT_Error(_SC("attempt to delete a slot from a %s"),GetTypeName(self));
+		if(!handled) {
+			if(_table(self)->Get(key,t))
+				_table(self)->Remove(key);
+			else
+				IdxError((SQObject &)key);
+		}
+		res = t;
+				}
+		break;
+	case OT_USERDATA:
+		if(_userdata(self)->_delegate) {
+			Push(self);Push(key);
+			SQObjectPtr t;
+			if(!CallMetaMethod(_userdata(self)->_delegate,MT_DELSLOT,2,t)) {
+				RT_Error(_SC("cannot delete a slot from a userdata"));
+			}
+			res = t;
+		}
+		break;
+	default:
+		RT_Error(_SC("attempt to delete a slot from a %s"),GetTypeName(self));
+	}
 }
 
 bool SQVM::Call(SQObjectPtr &closure,int nparams,int stackbase,SQObjectPtr &outres)
 {
-	switch(type(closure)){
+	switch(type(closure)) {
 	case OT_CLOSURE:
-		outres=Execute(closure,_top-nparams,nparams,stackbase);
+		outres=Execute(closure, _top - nparams, nparams, stackbase);
 		return true;
-	case OT_NATIVECLOSURE:{
-		CallNative(_nativeclosure(closure),nparams,stackbase,false,outres);}
+	case OT_NATIVECLOSURE: {
+		CallNative(_nativeclosure(closure), nparams, stackbase, false, outres); }
 		return true;
 	default:
 		return false;
@@ -1082,8 +1109,8 @@ bool SQVM::Call(SQObjectPtr &closure,int nparams,int stackbase,SQObjectPtr &outr
 bool SQVM::CallMetaMethod(SQTable *mt,SQMetaMethod mm,int nparams,SQObjectPtr &outres)
 {
 	SQObjectPtr closure;
-	if(mt->Get((*_ss(this)->_metamethods)[mm],closure)){
-		if(Call(closure,nparams,_top-nparams,outres)){
+	if(mt->Get((*_ss(this)->_metamethods)[mm], closure)) {
+		if(Call(closure, nparams, _top - nparams, outres)) {
 			Pop(nparams);
 			return true;
 		}

@@ -11,7 +11,7 @@ SRCS= \
 	sqstdmath.cpp \
 	sqstdsystem.cpp \
 	sqstdstring.cpp \
-	sqstdmodule.cpp
+	sqstdrex.c
 	
 	
 squirrel:

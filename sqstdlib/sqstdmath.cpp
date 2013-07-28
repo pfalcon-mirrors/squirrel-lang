@@ -1,3 +1,4 @@
+/* see copyright notice in squirrel.h */
 #include <squirrel.h>
 #include <math.h>
 #include <stdlib.h>

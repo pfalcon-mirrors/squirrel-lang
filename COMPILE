@@ -1,4 +1,4 @@
-Squirrel 1.0 beta 2
+Squirrel 1.0 beta 3
 --------------------------------------------------------
 What is in this distribution?
 
@@ -14,9 +14,6 @@ sq
 doc
 	The manual
 	
-etc/tesmodule
-	a sample dynamic binary module
-
 samples
 	samples programs
 	
@@ -29,12 +26,6 @@ There is a very simple makefile that compiles all libraries and exes
 from the root of the project run 'make'
  $ make
 
-For MinGW and Cygwin users(due the lack of libdl.a)
- $ make win
- 
-To compiler the sample module
- $ make -f testmodule.mk
- 
 VISUAL C++ USERS
 .........................................................
 Open squirrel.dsw from the root project directory and build(dho!)

@@ -13,14 +13,14 @@ struct SQLexer
 	SQObjectPtr Tok2Str(int tok);
 private:
 	int GetIDType(SQChar *s);
-	int ReadString(int ndelim);
+	int ReadString(int ndelim,bool verbatim);
 	int ReadNumber();
 	void LexBlockComment();
-	int ReadMultilineString();
+	//int ReadMultilineString();
 	int ReadID();
 	void Next();
 	int _curtoken;
-	SQChar _tempstring[MAX_STRING];
+	//SQChar _tempstring[MAX_STRING];
 	SQTable *_keywords;
 public:
 	int _prevtoken;

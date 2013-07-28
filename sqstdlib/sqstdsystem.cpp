@@ -1,16 +1,23 @@
+/* see copyright notice in squirrel.h */
 #include <squirrel.h>
 #include <time.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "sqstdsystem.h"
 
 #ifdef SQUNICODE
+#include <wchar.h>
 #define scgetenv _wgetenv
 #define scsystem _wsystem
 #define scasctime _wasctime
+#define scremove _wremove
+#define screname _wrename
 #else
 #define scgetenv getenv
 #define scsystem system
 #define scasctime asctime
+#define scremove remove
+#define screname rename
 #endif
 
 static int _system_getenv(HSQUIRRELVM v)
@@ -47,6 +54,25 @@ static int _system_time(HSQUIRRELVM v)
 	time(&t);
 	sq_pushinteger(v,*((SQInteger *)&t));
 	return 1;
+}
+
+static int _system_remove(HSQUIRRELVM v)
+{
+	const SQChar *s;
+	sq_getstring(v,2,&s);
+	if(scremove(s)==-1)
+		return sq_throwerror(v,_SC("remove() failed"));
+	return 0;
+}
+
+static int _system_rename(HSQUIRRELVM v)
+{
+	const SQChar *oldn,*newn;
+	sq_getstring(v,2,&oldn);
+	sq_getstring(v,3,&newn);
+	if(screname(oldn,newn)==-1)
+		return sq_throwerror(v,_SC("rename() failed"));
+	return 0;
 }
 
 static void _set_integer_slot(HSQUIRRELVM v,const SQChar *name,SQInteger val)
@@ -97,6 +123,8 @@ static SQRegFunction systemlib_funcs[]={
 	_DECL_FUNC(clock,1,NULL),
 	_DECL_FUNC(time,1,NULL),
 	_DECL_FUNC(date,-1,_SC(".nn")),
+	_DECL_FUNC(remove,2,_SC(".s")),
+	_DECL_FUNC(rename,3,_SC(".ss")),
 	{0,0}
 };
 

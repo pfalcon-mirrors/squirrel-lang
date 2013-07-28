@@ -1,3 +1,4 @@
+/*	see copyright notice in squirrel.h */
 #ifndef _SQSTD_MODULEAPI_H_
 #define _SQSTD_MODULEAPI_H_
 

@@ -71,7 +71,9 @@ SQInstructionDesc g_InstrDesc[]={
 	//optimiz
 	{_SC("_OP_GETK"),1,1,1,0},
 	{_SC("_OP_PREPCALLK"),1,1,1,1},
-	{_SC("_OP_DMOVE"),1,1,1,1}
+	{_SC("_OP_DMOVE"),1,1,1,1},
+	{_SC("_OP_GETPARENT"),1,1,0,0},
+	{_SC("_OP_LOADNULLS"),1,1,0,0}
 };
 #endif
 void DumpLiteral(SQObjectPtr &o)
@@ -226,13 +228,6 @@ int SQFuncState::AllocStackPos()
 		_stacksize=_vlocals.size();
 	}
 	return npos;
-}
-
-int SQFuncState::FreeStackPos()
-{
-	assert(type(_vlocals.back()._name)==OT_NULL);
-	_vlocals.pop_back();
-	return _vlocals.size();
 }
 
 int SQFuncState::PushTarget(int n)
@@ -407,6 +402,17 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 				return;
 			}
 			break;
+		case _OP_LOADNULLS:
+		case _OP_LOADNULL:
+			if((pi.op == _OP_LOADNULL && pi._arg0 == i._arg0-1) ||
+				(pi.op == _OP_LOADNULLS && pi._arg0+pi._arg1 == i._arg0)
+				) {
+				
+				pi._arg1 = pi.op == _OP_LOADNULL?2:pi._arg1+1;
+				pi.op = _OP_LOADNULLS;
+				return;
+			}
+            break;
 		case _OP_LINE:
 			if(pi.op == _OP_LINE) {
 				_instructions.pop_back();

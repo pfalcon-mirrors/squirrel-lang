@@ -26,7 +26,7 @@ enum SQMetaMethod{
 	MT_NEXTI=9,
 	MT_CMP=10,
 	MT_CALL=11,
-	MT_CLONE=12,
+	MT_CLONED=12,
 	MT_NEWSLOT=13,
 	MT_DELSLOT=14,
 };
@@ -43,7 +43,7 @@ enum SQMetaMethod{
 #define MM_NEXTI	_SC("_nexti")
 #define MM_CMP		_SC("_cmp")
 #define MM_CALL		_SC("_call")
-#define MM_CLONE	_SC("_clone")
+#define MM_CLONED	_SC("_cloned")
 #define MM_NEWSLOT	_SC("_newslot")
 #define MM_DELSLOT	_SC("_delslot")
 

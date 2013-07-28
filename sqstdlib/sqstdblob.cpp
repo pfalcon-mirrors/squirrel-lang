@@ -1,3 +1,4 @@
+/* see copyright notice in squirrel.h */
 #include <new>
 #include <squirrel.h>
 #include <sqstdio.h>
@@ -36,7 +37,7 @@ static void __swap_dword(unsigned int *n)
 
 static void __swap_word(unsigned short *n)
 {
-	*n=(unsigned short)(((*n&0x00FF)>>8)| ((*n&0xFF00)<<8));
+	*n=(unsigned short)((*n>>8)&0x00FF)| ((*n<<8)&0xFF00);
 }
 
 static int _blob_swap4(HSQUIRRELVM v)
@@ -85,6 +86,25 @@ static int _blob__get(HSQUIRRELVM v)
 	return 1;
 }
 
+static int _blob__nexti(HSQUIRRELVM v)
+{
+	SETUP_BLOB(v);
+	if(sq_gettype(v,2) == OT_NULL) {
+		sq_pushinteger(v, 0);
+		return 1;
+	}
+	SQInteger idx;
+	if(SQ_SUCCEEDED(sq_getinteger(v, 2, &idx))) {
+		if(idx+1 < self->Len()) {
+			sq_pushinteger(v, idx+1);
+			return 1;
+		}
+		sq_pushnull(v);
+		return 1;
+	}
+	return sq_throwerror(v,_SC("internal error (_nexti) wrong argument type"));
+}
+
 static int _blob__typeof(HSQUIRRELVM v)
 {
 	sq_pushstring(v,_SC("blob"),-1);
@@ -103,12 +123,14 @@ static SQRegFunction _blob_delegate[] = {
 	_DECL_STREAM_FUNC(tell,1,_SC("u")),
 	_DECL_STREAM_FUNC(len,1,_SC("u")),
 	_DECL_STREAM_FUNC(eos,1,_SC("u")),
+	_DECL_STREAM_FUNC(flush,1,_SC("u")),
 	_DECL_BLOB_FUNC(resize,2,_SC("un")),
 	_DECL_BLOB_FUNC(swap2,1,_SC("u")),
 	_DECL_BLOB_FUNC(swap4,1,_SC("u")),
 	_DECL_BLOB_FUNC(_set,3,_SC("unn")),
 	_DECL_BLOB_FUNC(_get,2,_SC("un")),
 	_DECL_BLOB_FUNC(_typeof,1,_SC("u")),
+	_DECL_BLOB_FUNC(_nexti,2,_SC("u")),
 	{0,0,0,0}
 };
 
@@ -130,7 +152,7 @@ static int _g_blob_blob(HSQUIRRELVM v)
 	return 1;
 }
 
-static int _g_blob_rawcastI2F(HSQUIRRELVM v)
+static int _g_blob_casti2f(HSQUIRRELVM v)
 {
 	SQInteger i;
 	sq_getinteger(v,2,&i);
@@ -138,7 +160,7 @@ static int _g_blob_rawcastI2F(HSQUIRRELVM v)
 	return 1;
 }
 
-static int _g_blob_rawcastF2I(HSQUIRRELVM v)
+static int _g_blob_castf2i(HSQUIRRELVM v)
 {
 	SQFloat f;
 	sq_getfloat(v,2,&f);
@@ -175,8 +197,8 @@ static int _g_blob_swapfloat(HSQUIRRELVM v)
 
 #define _DECL_GLOBALBLOB_FUNC(name,nparams,typecheck) {_SC(#name),_g_blob_##name,nparams,typecheck}
 static SQRegFunction bloblib_funcs[]={
-	_DECL_GLOBALBLOB_FUNC(rawcastI2F,2,_SC(".n")),
-	_DECL_GLOBALBLOB_FUNC(rawcastF2I,2,_SC(".n")),
+	_DECL_GLOBALBLOB_FUNC(casti2f,2,_SC(".n")),
+	_DECL_GLOBALBLOB_FUNC(castf2i,2,_SC(".n")),
 	_DECL_GLOBALBLOB_FUNC(swap2,2,_SC(".n")),
 	_DECL_GLOBALBLOB_FUNC(swap4,2,_SC(".n")),
 	_DECL_GLOBALBLOB_FUNC(swapfloat,2,_SC(".n")),

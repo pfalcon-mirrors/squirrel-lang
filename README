@@ -1,4 +1,4 @@
-The programming language SQUIRREL 1.0 beta 2
+The programming language SQUIRREL 1.0 beta 3
 
 This is a work in progress
 --------------------------------------------------
@@ -15,8 +15,6 @@ Has been tested with the following compilers:
 
 Work in progress
 -The documentation covers all topics but has to be improved/corrected.
--the libraries (sqstdlib) are still under development;
--The language could have some minor bug.
 
 Feedback and suggestions are appreciated 
 project page - http://squirrel.sourceforge.net

@@ -108,6 +108,7 @@ void SQSharedState::Init()
 	newsysstring(_SC("userpointer"));
 	newsysstring(_SC("function"));
 	newsysstring(_SC("generator"));
+	newsysstring(_SC("thread"));
 	//meta methods
 	newmetamethod(MM_ADD);
 	newmetamethod(MM_SUB);
@@ -121,7 +122,7 @@ void SQSharedState::Init()
 	newmetamethod(MM_NEXTI);
 	newmetamethod(MM_CMP);
 	newmetamethod(MM_CALL);
-	newmetamethod(MM_CLONE);
+	newmetamethod(MM_CLONED);
 	newmetamethod(MM_NEWSLOT);
 	newmetamethod(MM_DELSLOT);
 
@@ -206,7 +207,7 @@ int SQSharedState::CollectGarbage(SQVM *vm)
 	SQVM *vms=_thread(_root_vm);
 	
 	vms->Mark(&tchain);
-
+	int x = _table(_thread(_root_vm)->_roottable)->CountUsed();
 	MarkObject(_refs_table,&tchain);
 	MarkObject(_registry,&tchain);
 	MarkObject(_table_default_delegate,&tchain);
@@ -235,6 +236,8 @@ int SQSharedState::CollectGarbage(SQVM *vm)
 		t=t->_next;
 	}
 	_gc_chain=tchain;
+	int z = _table(_thread(_root_vm)->_roottable)->CountUsed();
+	assert(z == x);
 	return n;
 }
 #endif
@@ -289,6 +292,7 @@ SQChar* SQSharedState::GetScratchPad(int size)
 StringTable::StringTable()
 {
 	AllocNodes(4);
+	_slotused = 0;
 }
 
 StringTable::~StringTable()
@@ -300,7 +304,7 @@ StringTable::~StringTable()
 void StringTable::AllocNodes(int size)
 {
 	_numofslots=size;
-	_slotused=0;
+	//_slotused=0;
 	_strings=(SQString**)SQ_MALLOC(sizeof(SQString*)*_numofslots);
 	memset(_strings,0,sizeof(SQString*)*_numofslots);
 }
@@ -312,7 +316,7 @@ SQString *StringTable::Add(const SQChar *news,int len)
 	unsigned int h=::_hashstr(news,len)&(_numofslots-1);
 	SQString *s;
 	for (s = _strings[h]; s; s = s->_next){
-		if(s->_len==len && (!memcmp(news,s->_val,rsl(len))))
+		if(s->_len == len && (!memcmp(news,s->_val,rsl(len))))
 			return s; //found
 	}
 
@@ -354,12 +358,13 @@ void StringTable::Remove(SQString *bs)
 	SQString *s;
 	SQString *prev=NULL;
 	unsigned int h=bs->_hash&(_numofslots-1);
+	
 	for (s = _strings[h]; s; ){
-		if(s->_len==bs->_len && (!memcmp(bs->_val,s->_val,rsl(bs->_len)))){
+		if(s == bs){
 			if(prev)
-				prev->_next=s->_next;
+				prev->_next = s->_next;
 			else
-				_strings[h]=s->_next;
+				_strings[h] = s->_next;
 			_slotused--;
 			int slen=s->_len;
 			s->~SQString();

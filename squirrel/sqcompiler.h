@@ -51,7 +51,8 @@ struct SQVM;
 #define TK_THIS 302
 #define TK_PLUSPLUS 303
 #define TK_MINUSMINUS 304
+#define TK_PARENT 305
 
-struct ParserException{SQChar *desc;ParserException(SQChar *err):desc(err){}};
-bool Compile(SQVM *vm,SQLEXREADFUNC rg,SQUserPointer up,const SQChar *sourcename,SQObjectPtr &out,bool raiseerror,bool lineinfo);
+struct ParserException{ SQChar *desc; ParserException(SQChar *err):desc(err) {} };
+bool Compile(SQVM *vm, SQLEXREADFUNC rg, SQUserPointer up, const SQChar *sourcename, SQObjectPtr &out, bool raiseerror, bool lineinfo);
 #endif //_SQCOMPILER_H_

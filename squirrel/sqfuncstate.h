@@ -35,7 +35,6 @@ struct SQFuncState
 	void AddLineInfos(int line,bool lineop,bool force=false);
 	void Finalize();
 	int AllocStackPos();
-	int FreeStackPos();
 	int PushTarget(int n=-1);
 	int PopTarget();
 	int TopTarget();

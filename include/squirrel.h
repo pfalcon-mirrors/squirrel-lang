@@ -97,7 +97,7 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 1.0 (beta 2)")
+#define SQUIRREL_VERSION	_SC("Squirrel 1.0 (beta 3)")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2004 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
@@ -106,6 +106,7 @@ typedef char SQChar;
 #define SQ_VMSTATE_SUSPENDED	2
 
 #define SQUIRREL_EOB 0
+#define SQ_BYTECODE_STREAM_TAG	0xFAFA
 
 #define SQOBJECT_REF_COUNTED	0x00800000
 #define SQOBJECT_NUMERIC		0x00080000
@@ -187,10 +188,6 @@ typedef int (*SQREADFUNC)(SQUserPointer,SQUserPointer,int);
 
 typedef SQInteger (*SQLEXREADFUNC)(SQUserPointer);
 
-typedef void *(*SQUIRREL_MALLOC)(unsigned int);
-typedef void *(*SQUIRREL_REALLOC)(void*,unsigned int,unsigned int);
-typedef void (*SQUIRREL_FREE)(void*,unsigned int);
-
 typedef struct tagSQRegFunction{
 	const SQChar *name;
 	SQFUNCTION f;
@@ -259,6 +256,7 @@ SQUIRREL_API SQRESULT sq_set(HSQUIRRELVM v,int idx);
 SQUIRREL_API SQRESULT sq_get(HSQUIRRELVM v,int idx);
 SQUIRREL_API SQRESULT sq_rawget(HSQUIRRELVM v,int idx);
 SQUIRREL_API SQRESULT sq_rawset(HSQUIRRELVM v,int idx);
+SQUIRREL_API SQRESULT sq_rawdeleteslot(HSQUIRRELVM v,int idx,int pushval);
 SQUIRREL_API SQRESULT sq_arrayappend(HSQUIRRELVM v,int idx);
 SQUIRREL_API SQRESULT sq_arraypop(HSQUIRRELVM v,int idx,int pushval); 
 SQUIRREL_API SQRESULT sq_arrayresize(HSQUIRRELVM v,int idx,int newsize); 
@@ -290,6 +288,7 @@ SQUIRREL_API int sq_collectgarbage(HSQUIRRELVM v);
 SQUIRREL_API SQRESULT sq_writeclosure(HSQUIRRELVM vm,SQWRITEFUNC writef,SQUserPointer up);
 SQUIRREL_API SQRESULT sq_readclosure(HSQUIRRELVM vm,SQREADFUNC readf,SQUserPointer up);
 
+/*mem allocation*/
 SQUIRREL_API void *sq_malloc(unsigned int size);
 SQUIRREL_API void *sq_realloc(void* p,unsigned int oldsize,unsigned int newsize);
 SQUIRREL_API void sq_free(void *p,unsigned int size);

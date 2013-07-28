@@ -26,7 +26,7 @@ private:
 	
 ///////////////////////////
 	void AllocNodes(int nSize);
-	void Rehash();
+	void Rehash(bool force);
 	SQTable(SQSharedState *ss, int nInitialSize);
 public:
 	SQTable *_delegate;
@@ -67,7 +67,7 @@ public:
 		_HashNode *n = &_nodes[hash];
 		SQObjectType ktype = type(key);
 		do{
-			if(type(n->key) == type(key) && _rawval(n->key) == _rawval(key)){
+			if(_rawval(n->key) == _rawval(key) && type(n->key) == type(key)){
 				return n;
 			}
 		}while(n = n->next);
@@ -136,14 +136,14 @@ public:
 			else if (_firstfree == _nodes) break;  /* cannot decrement from here */
 			else (_firstfree)--;
 		}
-		Rehash();
+		Rehash(true);
 		return NewSlot(key, val);
 	}
 	int Next(const SQObjectPtr &refpos, SQObjectPtr &outkey, SQObjectPtr &outval)
 	{
 		int idx = (int)TranslateIndex(refpos);
 		while (idx < _numofnodes) {
-			if(type(_nodes[idx].key)!=OT_NULL) {
+			if(type(_nodes[idx].key) != OT_NULL) {
 				//first found
 				outkey = _nodes[idx].key;
 				outval = _nodes[idx].val;

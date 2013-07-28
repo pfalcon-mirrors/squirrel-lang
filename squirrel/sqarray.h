@@ -53,14 +53,21 @@ public:
 	}
 	SQArray *Clone(){SQArray *anew=Create(_opt_ss(this),Size()); anew->_values.copy(_values); return anew; }
 	int Size() const {return _values.size();}
-	void Resize(int size) { _values.resize(size); }
+	void Resize(int size) { _values.resize(size); ShrinkIfNeeded(); }
 	void Reserve(int size) { _values.reserve(size); }
 	void Append(const SQObject &o){_values.push_back(o);}
 	void Extend(const SQArray *a);
 	SQObjectPtr &Top(){return _values.top();}
-	void Pop(){_values.pop_back();}
+	void Pop(){_values.pop_back(); ShrinkIfNeeded(); }
 	inline void Insert(const SQObject& idx,const SQObject &val){_values.insert((unsigned int)tointeger(idx),val);}
-	inline void Remove(const SQObject& idx){_values.remove((unsigned int)_integer(idx));}
+	inline void ShrinkIfNeeded() {
+		if(_values.size() <= _values.capacity()>>2) //shrink the array
+			_values.shrinktofit();
+	}
+	inline void Remove(unsigned int idx){
+		_values.remove(idx);
+		ShrinkIfNeeded();
+	}
 	void Release()
 	{
 		sq_delete(this,SQArray);

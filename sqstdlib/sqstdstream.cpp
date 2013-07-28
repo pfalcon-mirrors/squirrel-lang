@@ -1,3 +1,4 @@
+/* see copyright notice in squirrel.h */
 #include <new>
 #include <stdio.h>
 #include <stdlib.h>
@@ -276,6 +277,16 @@ int _stream_len(HSQUIRRELVM v)
 {
 	SETUP_STREAM(v);
 	sq_pushinteger(v, self->Len());
+	return 1;
+}
+
+int _stream_flush(HSQUIRRELVM v)
+{
+	SETUP_STREAM(v);
+	if(!self->Flush())
+		sq_pushinteger(v, 1);
+	else
+		sq_pushnull(v);
 	return 1;
 }
 

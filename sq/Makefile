@@ -4,8 +4,7 @@ SQUIRREL= ..
 OUT= $(SQUIRREL)/bin/sq
 INCZ= -I$(SQUIRREL)/include -I. -I$(SQUIRREL)/sqlibs
 LIBZ= -L$(SQUIRREL)/lib 
-LIB= -lsquirrel -lsqstdlib -lstdc++ -ldl
-WLIB= -lsquirrel -lsqstdlib -lstdc++ 
+LIB= -lsquirrel -lsqstdlib -lstdc++
 
 OBJS= sq.o
 	
@@ -15,5 +14,3 @@ SRCS= sq.c
 sq:
 	g++ -O2 -o $(OUT) $(SRCS) $(INCZ) $(LIBZ) $(LIB)
 	
-win:
-	g++ -O2 -o $(OUT) $(SRCS) $(INCZ) $(LIBZ) $(WLIB)

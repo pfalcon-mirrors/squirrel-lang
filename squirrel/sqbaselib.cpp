@@ -16,17 +16,17 @@ bool str2num(const SQChar *s,SQObjectPtr &res)
 {
 	SQChar *end;
 	if(scstrstr(s,_SC("."))){
-		SQFloat r=SQFloat(scstrtod(s,&end));
-		if(s==end) return false;
+		SQFloat r = SQFloat(scstrtod(s,&end));
+		if(s == end) return false;
 		while (scisspace((*end)) ) end++;
 		if (*end != _SC('\0')) return false;
 		res = r;
 		return true;
 	}
 	else{
-		const SQChar *t=s;
-		while(*t!=_SC('\0'))if(!scisdigit(*t++))return false;
-		res=SQInteger(scatoi(s));
+		const SQChar *t = s;
+		while(*t != _SC('\0')) if(!scisdigit(*t++)) return false;
+		res = SQInteger(scatoi(s));
 		return true;
 	}
 }
@@ -34,7 +34,7 @@ bool str2num(const SQChar *s,SQObjectPtr &res)
 #ifndef NO_GARBAGE_COLLECTOR
 static int base_collectgarbage(HSQUIRRELVM v)
 {
-	sq_pushinteger(v,sq_collectgarbage(v));
+	sq_pushinteger(v, sq_collectgarbage(v));
 	return 1;
 }
 #endif
@@ -62,6 +62,13 @@ static int base_seterrorhandler(HSQUIRRELVM v)
 static int base_setdebughook(HSQUIRRELVM v)
 {
 	sq_setdebughook(v);
+	return 0;
+}
+
+static int base_enabledebuginfo(HSQUIRRELVM v)
+{
+	SQObjectPtr &o=stack_get(v,2);
+	sq_enabledebuginfo(v,(type(o) != OT_NULL)?1:0);
 	return 0;
 }
 
@@ -129,6 +136,9 @@ static int get_slice_params(HSQUIRRELVM v,int &sidx,int &eidx,SQObjectPtr &o)
 			eidx=tointeger(end);
 		}
 	}
+	else {
+		eidx = sq_getsize(v,1);
+	}
 	return 1;
 }
 
@@ -155,14 +165,6 @@ static int base_print(HSQUIRRELVM v)
 	return 0;
 }
 
-static int base_chcode2string(HSQUIRRELVM v)
-{
-	SQObject &o=stack_get(v,2);
-	SQChar c=tointeger(o);
-	v->Push(SQString::Create(_ss(v),(const SQChar *)&c,1));
-	return 1;
-}
-
 static int base_compilestring(HSQUIRRELVM v)
 {
 	int nargs=sq_gettop(v);
@@ -181,7 +183,9 @@ static int base_compilestring(HSQUIRRELVM v)
 
 static int base_newthread(HSQUIRRELVM v)
 {
-	HSQUIRRELVM newv = sq_newthread(v,MIN_STACK_OVERHEAD + 2);
+	SQObjectPtr &func = stack_get(v,2);
+	int stksize = (_funcproto(_closure(func)->_function)->_stacksize << 1) +2;
+	HSQUIRRELVM newv = sq_newthread(v, (stksize < MIN_STACK_OVERHEAD + 2)? MIN_STACK_OVERHEAD + 2 : stksize);
 	sq_move(newv,v,-2);
 	return 1;
 }
@@ -195,6 +199,7 @@ static SQRegFunction base_funcs[]={
 	//generic
 	{_SC("seterrorhandler"),base_seterrorhandler,2, _SC("tc")},
 	{_SC("setdebughook"),base_setdebughook,2, _SC("tc")},
+	{_SC("enabledebuginfo"),base_enabledebuginfo,2, _SC("t.")},
 	{_SC("getstackinfos"),base_getstackinfos,2, _SC("tn")},
 	{_SC("getroottable"),base_getroottable,1, _SC("t")},
 	{_SC("setroottable"),base_setroottable,2, _SC("t")},
@@ -203,8 +208,6 @@ static SQRegFunction base_funcs[]={
 	{_SC("compilestring"),base_compilestring,-2, _SC("tss")},
 	{_SC("newthread"),base_newthread,2, _SC("tc")},
 	{_SC("suspend"),base_suspend,-1, _SC("t")},
-	//string stuff
-	{_SC("chcode2string"),base_chcode2string,2, _SC("tn")},
 #ifndef NO_GARBAGE_COLLECTOR
 	{_SC("collectgarbage"),base_collectgarbage,1, _SC("t")},
 #endif
@@ -296,12 +299,24 @@ static int default_delegate_tostring(HSQUIRRELVM v)
 	return 1;
 }
 
+static int number_delegate_tochar(HSQUIRRELVM v)
+{
+	SQObject &o=stack_get(v,2);
+	SQChar c=tointeger(o);
+	v->Push(SQString::Create(_ss(v),(const SQChar *)&c,1));
+	return 1;
+}
+
+
 /////////////////////////////////////////////////////////////////
 //TABLE DEFAULT DELEGATE
 
-static int table_getdelegate(HSQUIRRELVM v)
+static int table_rawdelete(HSQUIRRELVM v)
 {
-	return SQ_SUCCEEDED(sq_getdelegate(v,-1))?1:SQ_ERROR;
+	//return SQ_SUCCEEDED(sq_getdelegate(v,-1))?1:SQ_ERROR;
+	if(SQ_FAILED(sq_rawdeleteslot(v,1,1)))
+		return SQ_ERROR;
+	return 1;
 }
 
 
@@ -320,7 +335,7 @@ SQRegFunction SQSharedState::_table_default_delegate_funcz[]={
 	{_SC("len"),default_delegate_len,1, _SC("t")},
 	{_SC("rawget"),table_rawget,2, _SC("t")},
 	{_SC("rawset"),table_rawset,3, _SC("t")},
-	{_SC("getdelegate"),table_getdelegate,1, _SC("t")},
+	{_SC("rawdelete"),table_rawdelete,2, _SC("t")},
 	{0,0}
 };
 
@@ -373,7 +388,7 @@ static int array_remove(HSQUIRRELVM v)
 	if(!sq_isnumeric(idx)) return sq_throwerror(v, _SC("wrong type"));
 	SQObjectPtr val;
 	if(_array(o)->Get(tointeger(idx), val)) {
-		_array(o)->Remove(idx);
+		_array(o)->Remove(tointeger(idx));
 		v->Push(val);
 		return 1;
 	}
@@ -452,8 +467,8 @@ static int array_slice(HSQUIRRELVM v)
 	SQObjectPtr o;
 	if(get_slice_params(v,sidx,eidx,o)==-1)return -1;
 	if(sidx<0)sidx=_array(o)->Size()+sidx;
-	if(eidx<1)eidx=_array(o)->Size()+eidx;
-	if(eidx<=sidx)return sq_throwerror(v,_SC("wrog indexes"));
+	if(eidx<0)eidx=_array(o)->Size()+eidx;
+	if(eidx <= sidx)return sq_throwerror(v,_SC("wrong indexes"));
 	SQArray *arr=SQArray::Create(_ss(v),eidx-sidx);
 	SQObjectPtr t;
 	int count=0;
@@ -489,8 +504,9 @@ static int string_slice(HSQUIRRELVM v)
 	SQObjectPtr o;
 	if(SQ_FAILED(get_slice_params(v,sidx,eidx,o)))return -1;
 	if(sidx<0)sidx=_string(o)->_len+sidx;
-	if(eidx<1)eidx=_string(o)->_len+eidx;
-	if(eidx<sidx)return sq_throwerror(v,_SC("wrog indexes"));
+	if(eidx<0)eidx=_string(o)->_len+eidx;
+	if(eidx<sidx)
+		return sq_throwerror(v,_SC("wrong indexes"));
 	v->Push(SQString::Create(_ss(v),&_stringval(o)[sidx],eidx-sidx));
 	return 1;
 }
@@ -545,6 +561,7 @@ SQRegFunction SQSharedState::_number_default_delegate_funcz[]={
 	{_SC("tointeger"),default_delegate_tointeger,1, _SC("n")},
 	{_SC("tofloat"),default_delegate_tofloat,1, _SC("n")},
 	{_SC("tostring"),default_delegate_tostring,1, _SC("n")},
+	{_SC("tochar"),number_delegate_tochar,1, _SC("n")},
 	{0,0}
 };
 
