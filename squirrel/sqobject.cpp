@@ -46,6 +46,10 @@ int SQGenerator::Yield(SQVM *v)
 	memcpy(&_stack._vals[0],&v->_stack[v->_stackbase],bytesize);
 	memset(&v->_stack[v->_stackbase],0,bytesize);
 	_ci._generator=_null_;
+	for(int i=0;i<_ci._etraps;i++) {
+		_etraps.push_back(v->_etraps.top());
+		v->_etraps.pop_back();
+	}
 	_state=eSuspended;
 	return size;
 }
@@ -61,7 +65,11 @@ void SQGenerator::Resume(SQVM *v,int target)
 	v->_stackbase=v->_top;
 	v->ci->_target=target;
 	v->ci->_generator=SQObjectPtr(this);
-	int bytesize=sizeof(SQObjectPtr)*size;
+	for(int i=0;i<_ci._etraps;i++) {
+		v->_etraps.push_back(_etraps.top());
+		_etraps.pop_back();
+	}
+    int bytesize=sizeof(SQObjectPtr)*size;
 	memcpy(&v->_stack[v->_stackbase],&_stack._vals[0],bytesize);
 	memset(&_stack._vals[0],0,bytesize);
 	v->_top=v->_stackbase+size;
@@ -99,10 +107,10 @@ const SQChar* SQFunctionProto::GetLocal(SQVM *vm,unsigned int stackbase,unsigned
 
 int SQFunctionProto::GetLine(SQInstruction *curr)
 {
-	int op=(curr-_instructions._vals)-1;
+	int op=(curr-_instructions._vals)+1;
 	int line=_lineinfos[0]._line;
 	for(unsigned int i=1;i<_lineinfos.size();i++){
-		if(_lineinfos[i]._op>op)
+		if(_lineinfos[i]._op>=op)
 			return line;
 		line=_lineinfos[i]._line;
 	}
@@ -279,6 +287,7 @@ void SQArray::Mark(SQCollectable **chain)
 void SQTable::Mark(SQCollectable **chain)
 {
 	START_MARK()
+		if(_delegate)_delegate->Mark(chain);
 		int len=_numofnodes;
 		for(int i=0;i<len;i++){
 			SQSharedState::MarkObject(_nodes[i].key,chain);
@@ -310,9 +319,9 @@ void SQNativeClosure::Mark(SQCollectable **chain)
 }
 
 void SQUserData::Mark(SQCollectable **chain){
-	if(_delegate)_delegate->Mark(chain);
-	RemoveFromChain(&_sharedstate->_gc_chain,this);
-	AddToChain(chain,this);
+	START_MARK()
+		if(_delegate)_delegate->Mark(chain);
+	END_MARK()
 }
 
 void SQCollectable::UnMark(){_uiRef&=~MARK_FLAG;}

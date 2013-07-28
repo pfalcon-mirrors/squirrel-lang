@@ -215,18 +215,18 @@ static int base_compilestring(HSQUIRRELVM v)
 
 static SQRegFunction base_funcs[]={
 	//generic
-	{_SC("seterrorhandler"),base_seterrorhandler},
-	{_SC("setdebughook"),base_setdebughook},
-	{_SC("getstackinfos"),base_getstackinfos},
-	{_SC("getroottable"),base_getroottable},
-	{_SC("setroottable"),base_setroottable},
-	{_SC("assert"),base_assert},
-	{_SC("print"),base_print},
-	{_SC("compilestring"),base_compilestring},
+	{_SC("seterrorhandler"),base_seterrorhandler,2},
+	{_SC("setdebughook"),base_setdebughook,2},
+	{_SC("getstackinfos"),base_getstackinfos,1},
+	{_SC("getroottable"),base_getroottable,1},
+	{_SC("setroottable"),base_setroottable,2},
+	{_SC("assert"),base_assert,2},
+	{_SC("print"),base_print,2},
+	{_SC("compilestring"),base_compilestring,-2},
 	//string stuff
-	{_SC("chcode2string"),base_chcode2string},
+	{_SC("chcode2string"),base_chcode2string,2},
 #ifdef GARBAGE_COLLECTOR
-	{_SC("collect_garbage"),base_collect_garbage},
+	{_SC("collect_garbage"),base_collect_garbage,1},
 #endif
 	{0,0}
 };
@@ -237,7 +237,7 @@ void sq_base_register(HSQUIRRELVM v)
 	sq_pushroottable(v);
 	while(base_funcs[i].name!=0){
 		sq_pushstring(v,base_funcs[i].name,-1);
-		sq_newclosure(v,base_funcs[i].f,0);
+		sq_newclosure(v,base_funcs[i].f,base_funcs[i].nparamscheck,0);
 		sq_createslot(v,-3);
 		i++;
 	}
@@ -342,10 +342,10 @@ static int table_rawget(HSQUIRRELVM v)
 }
 
 SQRegFunction SQSharedState::_table_default_delegate_funcz[]={
-	{_SC("len"),default_delegate_len},
-	{_SC("rawget"),table_rawget},
-	{_SC("rawset"),table_rawset},
-	{_SC("getdelegate"),table_getdelegate},
+	{_SC("len"),default_delegate_len,1},
+	{_SC("rawget"),table_rawget,2},
+	{_SC("rawset"),table_rawset,3},
+	{_SC("getdelegate"),table_getdelegate,1},
 	{0,0}
 };
 
@@ -499,18 +499,18 @@ static int array_slice(HSQUIRRELVM v)
 }
 
 SQRegFunction SQSharedState::_array_default_delegate_funcz[]={
-	{_SC("len"),default_delegate_len},
-	{_SC("append"),array_append},
-	{_SC("extend"),array_extend},
-	{_SC("push"),array_append},
-	{_SC("pop"),array_pop},
-	{_SC("top"),array_top},
-	{_SC("insert"),array_insert},
-	{_SC("remove"),array_remove},
-	{_SC("resize"),array_resize},
-	{_SC("reverse"),array_reverse},
-	{_SC("sort"),array_sort},
-	{_SC("slice"),array_slice},
+	{_SC("len"),default_delegate_len,1},
+	{_SC("append"),array_append,2},
+	{_SC("extend"),array_extend,2},
+	{_SC("push"),array_append,2},
+	{_SC("pop"),array_pop,1},
+	{_SC("top"),array_top,1},
+	{_SC("insert"),array_insert,3},
+	{_SC("remove"),array_remove,2},
+	{_SC("resize"),array_resize,2},
+	{_SC("reverse"),array_reverse,1},
+	{_SC("sort"),array_sort,-1},
+	{_SC("slice"),array_slice,-1},
 	{0,0}
 };
 
@@ -562,22 +562,22 @@ STRING_TOFUNCZ(tolower)
 STRING_TOFUNCZ(toupper)
 
 SQRegFunction SQSharedState::_string_default_delegate_funcz[]={
-	{_SC("len"),default_delegate_len},
-	{_SC("tointeger"),default_delegate_tointeger},
-	{_SC("tofloat"),default_delegate_tofloat},
-	{_SC("tostring"),default_delegate_tostring},
-	{_SC("slice"),string_slice},
-	{_SC("find"),string_find},
-	{_SC("tolower"),string_tolower},
-	{_SC("toupper"),string_toupper},
+	{_SC("len"),default_delegate_len,1},
+	{_SC("tointeger"),default_delegate_tointeger,1},
+	{_SC("tofloat"),default_delegate_tofloat,1},
+	{_SC("tostring"),default_delegate_tostring,1},
+	{_SC("slice"),string_slice,-1},
+	{_SC("find"),string_find,-2},
+	{_SC("tolower"),string_tolower,1},
+	{_SC("toupper"),string_toupper,1},
 	{0,0}
 };
 
 //INTEGER DEFAULT DELEGATE//////////////////////////
 SQRegFunction SQSharedState::_number_default_delegate_funcz[]={
-	{_SC("tointeger"),default_delegate_tointeger},
-	{_SC("tofloat"),default_delegate_tofloat},
-	{_SC("tostring"),default_delegate_tostring},
+	{_SC("tointeger"),default_delegate_tointeger,1},
+	{_SC("tofloat"),default_delegate_tofloat,1},
+	{_SC("tostring"),default_delegate_tostring,1},
 	{0,0}
 };
 
@@ -598,8 +598,8 @@ static int closure_acall(HSQUIRRELVM v)
 }
 
 SQRegFunction SQSharedState::_closure_default_delegate_funcz[]={
-	{_SC("call"),closure_call},
-	{_SC("acall"),closure_acall},
+	{_SC("call"),closure_call,-1},
+	{_SC("acall"),closure_acall,2},
 	{0,0}
 };
 
@@ -617,6 +617,6 @@ static int generator_getstatus(HSQUIRRELVM v)
 }
 
 SQRegFunction SQSharedState::_generator_default_delegate_funcz[]={
-	{_SC("getstatus"),generator_getstatus},
+	{_SC("getstatus"),generator_getstatus,1},
 	{0,0}
 };

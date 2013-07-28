@@ -6,7 +6,7 @@ struct SQFunctionProto;
 struct SQClosure : public CHAINABLE_OBJ
 {
 private:
-	SQClosure(SQSharedState *ss,SQFunctionProto *func){_uiRef=0;_function=func;_bgenerator=func->_bgenerator; INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);}
+	SQClosure(SQSharedState *ss,SQFunctionProto *func){_uiRef=0;_function=func; INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);}
 public:
 	static SQClosure *Create(SQSharedState *ss,SQFunctionProto *func){
 		SQClosure *nc=(SQClosure*)SQ_MALLOC(sizeof(SQClosure));
@@ -31,7 +31,6 @@ public:
 #endif
 	SQObjectPtr _function;
 	SQObjectPtrVec _outervalues;
-	bool _bgenerator;
 };
 //////////////////////////////////////////////
 struct SQGenerator : public CHAINABLE_OBJ 
@@ -67,6 +66,7 @@ public:
 	SQObjectPtr _closure;
 	SQObjectPtrVec _stack;
 	SQVM::CallInfo _ci;
+	ExceptionsTraps _etraps;
 	SQGEneratorState _state;
 };
 
@@ -96,6 +96,7 @@ public:
 #endif
 	SQFUNCTION _function;
 	SQObjectPtrVec _outervalues;
+	int _nparamscheck;
 };
 
 

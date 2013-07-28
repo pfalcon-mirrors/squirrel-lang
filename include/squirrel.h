@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003 Alberto Demichelis
+Copyright (c) 2003-2004 Alberto Demichelis
 
 This software is provided 'as-is', without any 
 express or implied warranty. In no event will the 
@@ -97,8 +97,8 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 0.8 (alpha)")
-#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003 Alberto Demichelis")
+#define SQUIRREL_VERSION	_SC("Squirrel 0.9 (alpha)")
+#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2004 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
 #define SQ_VMSTATE_IDLE			0
@@ -174,13 +174,13 @@ typedef struct tagSQStackInfos{
 typedef struct SQVM* HSQUIRRELVM;
 typedef SQObject HSQOBJECT;
 typedef int (*SQFUNCTION)(HSQUIRRELVM);
-typedef int (*SQUSERDATARELEASE)(SQUserPointer);
+typedef int (*SQUSERDATARELEASE)(SQUserPointer,int size);
 typedef void (*SQCOMPILERERROR)(HSQUIRRELVM,const SQChar * /*desc*/,const SQChar * /*source*/,int /*line*/,int /*column*/);
 
 typedef int (*SQWRITEFUNC)(SQUserPointer,SQUserPointer,int);
 typedef int (*SQREADFUNC)(SQUserPointer,SQUserPointer,int);
 
-typedef SQChar (*SQLEXREADFUNC)(SQUserPointer);
+typedef SQInteger (*SQLEXREADFUNC)(SQUserPointer);
 
 typedef void *(*SQUIRREL_MALLOC)(unsigned int);
 typedef void *(*SQUIRREL_REALLOC)(void*,unsigned int,unsigned int);
@@ -189,6 +189,7 @@ typedef void (*SQUIRREL_FREE)(void*,unsigned int);
 typedef struct tagSQRegFunction{
 	const SQChar *name;
 	SQFUNCTION f;
+	int nparamscheck;
 }SQRegFunction;
 
 /*vm*/
@@ -203,7 +204,7 @@ SQUIRREL_API int sq_getvmstate(HSQUIRRELVM v);
 
 /*compiler*/
 SQUIRREL_API SQRESULT sq_compile(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQChar *sourcename,int raiseerror,int lineinfo);
-SQRESULT sq_compilebuffer(HSQUIRRELVM v,const SQChar *s,int size,const SQChar *sourcename,int raiseerror,int lineinfo);
+SQUIRREL_API SQRESULT sq_compilebuffer(HSQUIRRELVM v,const SQChar *s,int size,const SQChar *sourcename,int raiseerror,int lineinfo);
 SQUIRREL_API void sq_setcompilererrorhandler(HSQUIRRELVM v,SQCOMPILERERROR f);
 
 /*stack operations*/
@@ -219,7 +220,7 @@ SQUIRREL_API int sq_cmp(HSQUIRRELVM v);
 SQUIRREL_API SQUserPointer sq_newuserdata(HSQUIRRELVM v,unsigned int size);
 SQUIRREL_API void sq_newtable(HSQUIRRELVM v);
 SQUIRREL_API void sq_newarray(HSQUIRRELVM v,int size);
-SQUIRREL_API void sq_newclosure(HSQUIRRELVM v,SQFUNCTION func,unsigned int nfreevars);
+SQUIRREL_API void sq_newclosure(HSQUIRRELVM v,SQFUNCTION func,int nparamscheck,unsigned int nfreevars);
 SQUIRREL_API void sq_pushstring(HSQUIRRELVM v,const SQChar *s,int len);
 SQUIRREL_API void sq_pushfloat(HSQUIRRELVM v,SQFloat f);
 SQUIRREL_API void sq_pushinteger(HSQUIRRELVM v,SQInteger n);

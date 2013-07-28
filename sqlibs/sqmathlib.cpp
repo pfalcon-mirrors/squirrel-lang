@@ -21,7 +21,7 @@
 static int math_srand(HSQUIRRELVM v)
 {
 	SQInteger i;
-	if(!sq_getinteger(v,1,&i))return sq_throwerror(v,_SC("invalid param"));
+	if(!sq_getinteger(v,2,&i))return sq_throwerror(v,_SC("invalid param"));
 	srand(i);
 	return 0;
 }
@@ -48,24 +48,24 @@ SINGLE_ARG_FUNC(floor)
 SINGLE_ARG_FUNC(ceil)
 SINGLE_ARG_FUNC(exp)
 
-#define _DECL_FUNC(name) {_SC(#name),math_##name}
+#define _DECL_FUNC(name,nparams) {_SC(#name),math_##name,nparams}
 static SQRegFunction mathlib_funcs[]={
-	_DECL_FUNC(sqrt),
-	_DECL_FUNC(sin),
-	_DECL_FUNC(cos),
-	_DECL_FUNC(asin),
-	_DECL_FUNC(acos),
-	_DECL_FUNC(log),
-	_DECL_FUNC(log10),
-	_DECL_FUNC(tan),
-	_DECL_FUNC(atan),
-	_DECL_FUNC(atan2),
-	_DECL_FUNC(pow),
-	_DECL_FUNC(floor),
-	_DECL_FUNC(ceil),
-	_DECL_FUNC(exp),
-	_DECL_FUNC(srand),
-	_DECL_FUNC(rand),
+	_DECL_FUNC(sqrt,2),
+	_DECL_FUNC(sin,2),
+	_DECL_FUNC(cos,2),
+	_DECL_FUNC(asin,2),
+	_DECL_FUNC(acos,2),
+	_DECL_FUNC(log,2),
+	_DECL_FUNC(log10,2),
+	_DECL_FUNC(tan,2),
+	_DECL_FUNC(atan,2),
+	_DECL_FUNC(atan2,3),
+	_DECL_FUNC(pow,3),
+	_DECL_FUNC(floor,2),
+	_DECL_FUNC(ceil,2),
+	_DECL_FUNC(exp,2),
+	_DECL_FUNC(srand,2),
+	_DECL_FUNC(rand,1),
 	{0,0},
 };
 
@@ -79,7 +79,7 @@ int sq_mathlib_register(HSQUIRRELVM v)
 	while(mathlib_funcs[i].name!=0)
 	{
 		sq_pushstring(v,mathlib_funcs[i].name,-1);
-		sq_newclosure(v,mathlib_funcs[i].f,0);
+		sq_newclosure(v,mathlib_funcs[i].f,mathlib_funcs[i].nparamscheck,0);
 		sq_createslot(v,-3);
 		i++;
 	}

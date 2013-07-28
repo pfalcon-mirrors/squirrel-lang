@@ -28,6 +28,7 @@ public:
 	int _prevtoken;
 	int _currentchar;
 	int _currentline;
+	int _lasttokenline;
 	int _currentcolumn;
 	const SQChar *_svalue;
 	SQInteger _nvalue;

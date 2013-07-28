@@ -6,9 +6,12 @@
 
 typedef sqvector<int> IntVec;
 
+#define MAX_FUNC_STACKSIZE 0xFF
+#define MAX_LITERALS 0xFFFF
+
 struct SQFuncState
 {
-	SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *parent){_sharedstate=ss;_lastline=0;_optimization=true;_func=func;_parent=parent;_stacksize=0;}
+	SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *parent);
 #ifdef _DEBUG_DUMP
 	void Dump();
 #endif
@@ -50,7 +53,9 @@ struct SQFuncState
 	SQOuterVarVec _outervalues;
 	SQInstructionVec _instructions;
 	SQLocalVarInfoVec _localvarinfos;
-	SQObjectPtrVec _literals;
+	//SQObjectPtrVec _literals;
+	SQObjectPtr _literals;
+	SQInteger _nliterals;
 	SQLineInfoVec _lineinfos;
 	SQObjectPtr _func;
 	SQFuncState *_parent;

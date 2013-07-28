@@ -31,7 +31,8 @@ struct SQVM
 		SQObjectPtrVec *_literals;
 		SQObject _closure;
 		SQObject _generator;
-		ExceptionsTraps _etraps;
+		//ExceptionsTraps _etraps;
+		int _etraps;
 		int _prevstkbase;
 		int _prevtop;
 		int _target;
@@ -121,6 +122,7 @@ public:
 	
 	SQObjectPtr temp;
 	CallInfoVec _callsstack;
+	ExceptionsTraps _etraps;
 	CallInfo *ci;
 	SQCOMPILERERROR _compilererrorhandler;
 	void *_foreignptr;

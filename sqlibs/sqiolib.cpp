@@ -115,7 +115,7 @@ private:
 	bool m_bClose;
 };
 
-static int file_release(SQUserPointer p)
+static int file_release(SQUserPointer p,int size)
 {
 	_File *f=(_File *)p;
 	if(f)f->~_File();
@@ -417,23 +417,23 @@ int io_rename(HSQUIRRELVM v)
 
 
 static SQRegFunction io_funcs[]={
-	{_SC("remove"),io_remove},
-	{_SC("rename"),io_rename},
+	{_SC("remove"),io_remove,2},
+	{_SC("rename"),io_rename,3},
 	{0,0}
 };
 
 static SQRegFunction io_file_funcs[]={
-	{_SC("close"),io_file_close},
-	{_SC("eof"),io_file_eof},
-	{_SC("read"),io_file_read},
-	{_SC("readblob"),io_file_readblob},
-	{_SC("writeblob"),io_file_writeblob},
-	{_SC("fillblob"),io_file_fillblob},
-	{_SC("write"),io_file_write},
-	{_SC("seek"),io_file_seek},
-	{_SC("size"),io_file_size},
+	{_SC("close"),io_file_close,1},
+	{_SC("eof"),io_file_eof,1},
+	{_SC("read"),io_file_read,-2},
+	{_SC("readblob"),io_file_readblob,2},
+	{_SC("writeblob"),io_file_writeblob,2},
+	{_SC("fillblob"),io_file_fillblob,2},
+	{_SC("write"),io_file_write,2},
+	{_SC("seek"),io_file_seek,2},
+	{_SC("size"),io_file_size,1},
 // reflex
-	{_SC("_typeof"),io_file_typeof},
+	{_SC("_typeof"),io_file_typeof,1},
 	{0,0}
 };
 
@@ -446,12 +446,12 @@ int sq_iolib_register(HSQUIRRELVM v)
 	while(io_file_funcs[i].name!=0)
 	{
 		sq_pushstring(v,io_file_funcs[i].name,-1);
-		sq_newclosure(v,io_file_funcs[i].f,0);
+		sq_newclosure(v,io_file_funcs[i].f,io_file_funcs[i].nparamscheck,0);
 		sq_createslot(v,-3);
 		i++;
 	}
 	////
-	sq_newclosure(v,io_fopen,1);
+	sq_newclosure(v,io_fopen,4,1);
 	sq_createslot(v,-3);
 
 	//AHHHHH COPY & PASTE <<FIXME>>
@@ -489,7 +489,7 @@ int sq_iolib_register(HSQUIRRELVM v)
 	while(io_funcs[i].name!=0)
 	{
 		sq_pushstring(v,io_funcs[i].name,-1);
-		sq_newclosure(v,io_funcs[i].f,0);
+		sq_newclosure(v,io_funcs[i].f,io_funcs[i].nparamscheck,0);
 		sq_createslot(v,-3);
 		i++;
 	}

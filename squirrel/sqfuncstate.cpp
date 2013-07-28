@@ -2,8 +2,10 @@
 	see copyright notice in squirrel.h
 */
 #include "sqpcheader.h"
+#include "sqcompiler.h"
 #include "sqfuncproto.h"
 #include "sqstring.h"
+#include "sqtable.h"
 #include "sqopcodes.h"
 #include "sqfuncstate.h"
 
@@ -79,6 +81,19 @@ void DumpLiteral(SQObjectPtr &o)
 		case OT_INTEGER: scprintf(_SC("{%d}"),_integer(o));break;
 	}
 }
+
+SQFuncState::SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *parent)
+{
+		_nliterals = 0;
+		_literals = SQTable::Create(ss,0);
+		_sharedstate = ss;
+		_lastline = 0;
+		_optimization = true;
+		_func = func;
+		_parent = parent;
+		_stacksize = 0;
+}
+
 #ifdef _DEBUG_DUMP
 void SQFuncState::Dump()
 {
@@ -89,9 +104,17 @@ void SQFuncState::Dump()
 	scprintf(_SC("--------------------------------------------------------------------\n"));
 	scprintf(_SC("*****FUNCTION [%s]\n"),type(func->_name)==OT_STRING?_stringval(func->_name):_SC("unknown"));
 	scprintf(_SC("-----LITERALS\n"));
-	for(i=0;i<_literals.size();i++){
+	SQObjectPtr refidx,key,val;
+	SQInteger idx;
+	SQObjectPtrVec templiterals;
+	templiterals.resize(_nliterals);
+	while((idx=_table(_literals)->Next(refidx,key,val))!=-1) {
+		refidx=idx;
+		templiterals[_integer(val)]=key;
+	}
+	for(i=0;i<templiterals.size();i++){
 		scprintf(_SC("[%d] "),n);
-		DumpLiteral(_literals[i]);
+		DumpLiteral(templiterals[i]);
 		scprintf(_SC("\n"));
 		n++;
 	}
@@ -126,8 +149,11 @@ void SQFuncState::Dump()
 			scprintf(_SC("[%03d] %15s %d "),n,g_InstrDesc[inst.op].name,inst._arg0);
 			if(inst._arg1==-1)
 				scprintf(_SC("null"));
-			else
-				DumpLiteral(_literals[inst._arg1]);
+			else {
+				SQObjectPtr val;
+				_table(_literals)->Get(SQObjectPtr(inst._arg1),val);
+				DumpLiteral(val);
+			}
 			scprintf(_SC(" %d %d \n"),inst._arg2,inst._arg3);
 		}
 		else 
@@ -157,7 +183,16 @@ int SQFuncState::GetNumericConstant(const SQFloat cons)
 int SQFuncState::GetConstant(SQObjectPtr cons)
 {
 	int n=0;
-	for(unsigned int i=0;i<_literals.size();i++){
+	SQObjectPtr val;
+	if(!_table(_literals)->Get(cons,val))
+	{
+		val=_nliterals;
+		_table(_literals)->NewSlot(cons,val);
+		_nliterals++;
+		if(_nliterals>MAX_LITERALS) throw ParserException(_SC("internal compiler error: too many literals"));
+	}
+	return _integer(val);
+	/*for(unsigned int i=0;i<_literals.size();i++){
 		if((type(cons)==type(_literals[i])) && 
 			(_userpointer(cons)==_userpointer(_literals[i]))){
 			return n;
@@ -165,7 +200,8 @@ int SQFuncState::GetConstant(SQObjectPtr cons)
 		n++;
 	}
 	_literals.push_back(cons);
-	return _literals.size()-1;
+	if(_literals.size()>MAX_LITERALS) throw ParserException(_SC("internal compiler error: too many literals"));
+	return _literals.size()-1;*/
 }
 
 void SQFuncState::SetIntructionParams(int pos,int arg0,int arg1,int arg2,int arg3)
@@ -190,7 +226,10 @@ int SQFuncState::AllocStackPos()
 {
 	int npos=_vlocals.size();
 	_vlocals.push_back(SQLocalVarInfo());
-	if(_vlocals.size()>((unsigned int)_stacksize))_stacksize=_vlocals.size();
+	if(_vlocals.size()>((unsigned int)_stacksize)) {
+		if(_stacksize>MAX_FUNC_STACKSIZE) throw ParserException(_SC("internal compiler error: too many locals"));
+		_stacksize=_vlocals.size();
+	}
 	return npos;
 }
 
@@ -279,6 +318,7 @@ int SQFuncState::GetLocalVariable(const SQObjectPtr &name)
 
 void SQFuncState::AddOuterValue(const SQObjectPtr &name)
 {
+	AddParameter(name);
 	int pos=-1;
 	if(_parent)pos=_parent->GetLocalVariable(name);
 	if(pos!=-1)
@@ -310,11 +350,11 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 	if(size>0 && (_optimization || i.op==_OP_RETURN)){ //simple optimizer
 		SQInstruction &pi=_instructions[size-1];//previous intruction
 		switch(i.op){
-		//case _OP_RETURN:
-		//	if( _parent && i._arg0!=0xFF && pi.op==_OP_CALL){
-		//		pi.op=_OP_TAILCALL;
-		//	}
-		//break;
+		case _OP_RETURN:
+			if( _parent && i._arg0!=0xFF && pi.op==_OP_CALL) {
+				pi.op=_OP_TAILCALL;
+			}
+		break;
 		case _OP_GET:
 			if( pi.op==_OP_LOAD	&& pi._arg0==i._arg2 && (!IsLocal(pi._arg0))){
 				pi._arg2=(unsigned char)i._arg1;
@@ -351,6 +391,7 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 				return;
 			}
 			break;
+
 		case _OP_ADD:case _OP_SUB:case _OP_MUL:case _OP_DIV:
 		case _OP_EQ:case _OP_NE:case _OP_G:case _OP_GE:case _OP_L:case _OP_LE:
 			if(pi.op==_OP_LOAD && pi._arg0==i._arg1	&& (!IsLocal(pi._arg0) ))
@@ -377,8 +418,13 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 void SQFuncState::Finalize()
 {
 	SQFunctionProto *f=_funcproto(_func);
-	f->_literals.resize(_literals.size());
-	f->_literals.copy(_literals);
+	f->_literals.resize(_nliterals);
+	SQObjectPtr refidx,key,val;
+	SQInteger idx;
+	while((idx=_table(_literals)->Next(refidx,key,val))!=-1) {
+		f->_literals[_integer(val)]=key;
+		refidx=idx;
+	}
 	f->_functions.resize(_functions.size());
 	f->_functions.copy(_functions);
 	f->_parameters.resize(_parameters.size());

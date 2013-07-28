@@ -60,16 +60,14 @@ int compile_file(HSQUIRRELVM v)
 {
 	const SQChar *sFileName;
 	int lineinfo=0;
-	if(sq_gettop(v)>1){
-		if(SQ_SUCCEEDED(sq_getstring(v,2,&sFileName))){
-			if(sq_gettop(v)>2){
-				SQObjectType t=sq_gettype(v,3);
-				lineinfo=(t!=OT_NULL?1:0);
-			}
-			return CompileScriptFromFile(v,sFileName,1,lineinfo);
+	if(SQ_SUCCEEDED(sq_getstring(v,2,&sFileName))){
+		if(sq_gettop(v)>2){
+			SQObjectType t=sq_gettype(v,3);
+			lineinfo=(t!=OT_NULL?1:0);
 		}
+		return CompileScriptFromFile(v,sFileName,1,lineinfo);
 	}
-	return sq_throwerror(v,_SC("(compile_file)wrong argument number"));
+	return sq_throwerror(v,_SC("wrong argument"));
 }
 
 int quit(HSQUIRRELVM v)
@@ -244,7 +242,7 @@ void PrintCallStack(HSQUIRRELVM v)
 	}
 }
 
-SQChar file_lexfeedASCII(SQUserPointer file)
+SQInteger file_lexfeedASCII(SQUserPointer file)
 {
 	int ret;
 	char c;
@@ -253,7 +251,7 @@ SQChar file_lexfeedASCII(SQUserPointer file)
 	return 0;
 }
 
-SQChar file_lexfeedWCHAR(SQUserPointer file)
+SQInteger file_lexfeedWCHAR(SQUserPointer file)
 {
 	int ret;
 	wchar_t c;
@@ -267,6 +265,11 @@ int file_read(SQUserPointer file,SQUserPointer buf,int size)
 	int ret;
 	if( ( ret=fread(buf,1,size,(FILE *)file )!=0) )return ret;
 	return -1;
+}
+
+int file_write(SQUserPointer file,SQUserPointer p,int size)
+{
+	return fwrite(p,1,size,(FILE *)file);
 }
 
 int CompileScript(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQChar *sourcename,int bprinterror,int lineinfo)
@@ -301,10 +304,6 @@ int CompileScriptFromFile(HSQUIRRELVM v,const SQChar *filename,int bprinterror,i
 }
 
 
-int file_write(SQUserPointer file,SQUserPointer p,int size)
-{
-	return fwrite(p,1,size,(FILE *)file);
-}
 
 void compiler_error(HSQUIRRELVM v,const SQChar *sErr,const SQChar *sSource,int line,int column)
 {
@@ -326,7 +325,7 @@ void Interactive(HSQUIRRELVM v)
 	sq_pushroottable(v);
 	sq_pushstring(v,_SC("quit"),-1);
 	sq_pushuserpointer(v,&done);
-	sq_newclosure(v,quit,1);
+	sq_newclosure(v,quit,1,1);
 	sq_createslot(v,-3);
 	sq_pop(v,1);
 
@@ -421,12 +420,12 @@ int main(int argc, char* argv[])
 
 	//sets error handlers
 	sq_setcompilererrorhandler(v,compiler_error);
-	sq_newclosure(v,printerror,0);
+	sq_newclosure(v,printerror,2,0);
 	sq_seterrorhandler(v);
 
 	sq_pushroottable(v);
 	sq_pushstring(v,_SC("compile_file"),-1);
-	sq_newclosure(v,compile_file,0);
+	sq_newclosure(v,compile_file,-2,0);
 	sq_createslot(v,-3);
 	sq_pop(v,1);
 

@@ -1,3 +1,16 @@
+***version 0.9 alpha***
+-fixed a garbage collection bug
+-fixed some API bugs(thx Joshua Jensen)
+-fixed tail calls (in the version 0.8 the tail call optimization was erroneously disabled)
+-new function parameters semantic, now passing a wrong number of parameters generates an exception
+-native closures have now a built in parameter number checking
+-sq_rawget and sq_rawset now work also on arrays
+-sq_getsize now woks also on userdata
+-the userdata release hook prototype is changed(now passes the size of the userdata)
+-the lexer reader function now returns an integer instead of a char that allows better error checking on the input(thx Joshua Jensen)
+-faster compiler
+-try/catch blocks do not cause any runtime memory allocation anymore
+
 ***varsion 0.8 alpha***
 -fixed a bug that was preventing to have callable userdata throught the metamethod _call
 -fixed a garbage collection bug

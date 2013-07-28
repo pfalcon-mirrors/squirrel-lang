@@ -426,44 +426,44 @@ int blob_swapfloat(HSQUIRRELVM v)
 	return 1;
 }
 
-#define _DECL_FUNC(name) {_SC(#name),blob_##name}
+#define _DECL_FUNC(name,nparams) {_SC(#name),blob_##name,nparams}
 static SQRegFunction blob_funcs[]={
-	_DECL_FUNC(readI1),
-    _DECL_FUNC(readI2),
-    _DECL_FUNC(readI4),
-	_DECL_FUNC(readU2),
-    _DECL_FUNC(readU1),
-    _DECL_FUNC(readF4),
-	_DECL_FUNC(readF8),
-	_DECL_FUNC(writeI1),
-    _DECL_FUNC(writeI2),
-    _DECL_FUNC(writeI4),
-	_DECL_FUNC(writeU2),
-    _DECL_FUNC(writeU1),
-    _DECL_FUNC(writeF4),
-	_DECL_FUNC(writeF8),
-	_DECL_FUNC(swapblob4),
-	_DECL_FUNC(swapblob2),
-    _DECL_FUNC(seek),
-    _DECL_FUNC(readblob),
-    _DECL_FUNC(cloneblob),
-	_DECL_FUNC(size),
-	_DECL_FUNC(tell),
-	_DECL_FUNC(resize),
+	_DECL_FUNC(readI1,1),
+    _DECL_FUNC(readI2,1),
+    _DECL_FUNC(readI4,1),
+	_DECL_FUNC(readU2,1),
+    _DECL_FUNC(readU1,1),
+    _DECL_FUNC(readF4,1),
+	_DECL_FUNC(readF8,1),
+	_DECL_FUNC(writeI1,2),
+    _DECL_FUNC(writeI2,2),
+    _DECL_FUNC(writeI4,2),
+	_DECL_FUNC(writeU2,2),
+    _DECL_FUNC(writeU1,2),
+    _DECL_FUNC(writeF4,2),
+	_DECL_FUNC(writeF8,2),
+	_DECL_FUNC(swapblob4,1),
+	_DECL_FUNC(swapblob2,1),
+    _DECL_FUNC(seek,-2),
+    _DECL_FUNC(readblob,2),
+    _DECL_FUNC(cloneblob,1),
+	_DECL_FUNC(size,1),
+	_DECL_FUNC(tell,1),
+	_DECL_FUNC(resize,2),
 // reflex
-	_DECL_FUNC(_set),
-	_DECL_FUNC(_get),
-	_DECL_FUNC(_typeof),
-	_DECL_FUNC(_nexti),
+	_DECL_FUNC(_set,3),
+	_DECL_FUNC(_get,2),
+	_DECL_FUNC(_typeof,1),
+	_DECL_FUNC(_nexti,2),
 	{0,0}
 };
 
 static SQRegFunction bloblib_funcs[]={
-	_DECL_FUNC(rawcastI2F),
-	_DECL_FUNC(rawcastF2I),
-	_DECL_FUNC(swap2),
-	_DECL_FUNC(swap4),
-	_DECL_FUNC(swapfloat),
+	_DECL_FUNC(rawcastI2F,2),
+	_DECL_FUNC(rawcastF2I,2),
+	_DECL_FUNC(swap2,2),
+	_DECL_FUNC(swap4,2),
+	_DECL_FUNC(swapfloat,2),
 
 	{0,0}
 };
@@ -495,7 +495,7 @@ void sq_blob_createdelegate(HSQUIRRELVM v)
 		while(blob_funcs[i].name!=0)
 		{
 			sq_pushstring(v,blob_funcs[i].name,-1);
-			sq_newclosure(v,blob_funcs[i].f,0);
+			sq_newclosure(v,blob_funcs[i].f,blob_funcs[i].nparamscheck,0);
 			sq_createslot(v,-3);
 			i++;
 		}
@@ -511,7 +511,7 @@ void sq_blob_createdelegate(HSQUIRRELVM v)
 	
 }
 
-int _blob_release(SQUserPointer p)
+int _blob_release(SQUserPointer p,int size)
 {
 	Blob_Userdata *bu=(Blob_Userdata *)p;
 	if(bu->_magic_number==BLOB_MAGIC_NUMBER)
@@ -556,13 +556,13 @@ void sq_blob_register(HSQUIRRELVM v,SQUIRREL_MALLOC _default_malloc,SQUIRREL_FRE
 	while(bloblib_funcs[i].name!=0)
 	{
 		sq_pushstring(v,bloblib_funcs[i].name,-1);
-		sq_newclosure(v,bloblib_funcs[i].f,0);
+		sq_newclosure(v,bloblib_funcs[i].f,bloblib_funcs[i].nparamscheck,0);
 		sq_createslot(v,-3);
 		i++;
 	}
 	sq_pushstring(v,_SC("createblob"),-1);
 	sq_blob_createdelegate(v);
-	sq_newclosure(v,blob_crateblob,1);
+	sq_newclosure(v,blob_crateblob,2,1);
 	sq_createslot(v,-3);
 }
 

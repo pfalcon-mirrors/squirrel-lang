@@ -61,13 +61,13 @@ int system_localtime(HSQUIRRELVM v)
 
 
 
-#define _DECL_FUNC(name) {_SC(#name),system_##name}
+#define _DECL_FUNC(name,nparams) {_SC(#name),system_##name,nparams}
 static SQRegFunction systemlib_funcs[]={
-	_DECL_FUNC(getenv),
-	_DECL_FUNC(system),
-	_DECL_FUNC(clock),
-	_DECL_FUNC(gmtime),
-	_DECL_FUNC(localtime),
+	_DECL_FUNC(getenv,2),
+	_DECL_FUNC(system,2),
+	_DECL_FUNC(clock,1),
+	_DECL_FUNC(gmtime,1),
+	_DECL_FUNC(localtime,1),
 	{0,0}
 };
 
@@ -78,7 +78,7 @@ int sq_systemlib_register(HSQUIRRELVM v)
 	while(systemlib_funcs[i].name!=0)
 	{
 		sq_pushstring(v,systemlib_funcs[i].name,-1);
-		sq_newclosure(v,systemlib_funcs[i].f,0);
+		sq_newclosure(v,systemlib_funcs[i].f,systemlib_funcs[i].nparamscheck,0);
 		sq_createslot(v,-3);
 		i++;
 	}

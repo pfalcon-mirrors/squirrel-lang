@@ -24,7 +24,7 @@ struct SQUserData : CHAINABLE_OBJ
 	void Finalize(){SetDelegate(NULL);}
 #endif
 	void Release(){
-		if (_hook) _hook(this->_val);
+		if (_hook) _hook(_val,_size);
 		int tsize = _size;
 		this->~SQUserData();
 		SQ_FREE(this, sizeof(SQUserData) + tsize);

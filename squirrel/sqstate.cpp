@@ -31,7 +31,9 @@ SQTable *CreateDefaultDelegate(SQSharedState *ss,SQRegFunction *funcz)
 	int i=0;
 	SQTable *t=SQTable::Create(ss,0);
 	while(funcz[i].name!=0){
-		t->NewSlot(SQString::Create(ss,funcz[i].name),SQNativeClosure::Create(ss,funcz[i].f));
+		SQNativeClosure *nc = SQNativeClosure::Create(ss,funcz[i].f);
+		nc->_nparamscheck = funcz[i].nparamscheck;
+		t->NewSlot(SQString::Create(ss,funcz[i].name),nc);
 		i++;
 	}
 	return t;
