@@ -2,19 +2,6 @@
 #ifndef _SQSTD_STREAM_H_
 #define _SQSTD_STREAM_H_
 
-#define SQSTD_STREAM_TYPE_TAG 0x80000000
-
-struct SQStream {
-	virtual SQInteger Read(void *buffer, SQInteger size) = 0;
-	virtual SQInteger Write(void *buffer, SQInteger size) = 0;
-	virtual int Flush() = 0;
-	virtual long Tell() = 0;
-	virtual SQInteger Len() = 0;
-	virtual SQInteger Seek(long offset, int origin) = 0;
-	virtual bool IsValid() = 0;
-	virtual bool EOS() = 0;
-};
-
 int _stream_readstr(HSQUIRRELVM v);
 int _stream_readblob(HSQUIRRELVM v);
 int _stream_readline(HSQUIRRELVM v);

@@ -324,7 +324,7 @@ void init_streamclass(HSQUIRRELVM v)
 	sq_pushstring(v,_SC("std_stream"),-1);
 	if(SQ_FAILED(sq_get(v,-2))) {
 		sq_pushstring(v,_SC("std_stream"),-1);
-		sq_newclass(v,0);
+		sq_newclass(v,SQFalse);
 		sq_settypetag(v,-1,SQSTD_STREAM_TYPE_TAG);
 		int i = 0;
 		while(_stream_methods[i].name != 0) {
@@ -354,7 +354,7 @@ SQRESULT declare_stream(HSQUIRRELVM v,SQChar* name,int typetag,SQChar* reg_name,
 	sq_pushstring(v,reg_name,-1);
 	sq_pushstring(v,_SC("std_stream"),-1);
 	if(SQ_SUCCEEDED(sq_get(v,-3))) {
-		sq_newclass(v,1);
+		sq_newclass(v,SQTrue);
 		sq_settypetag(v,-1,typetag);
 		int i = 0;
 		while(methods[i].name != 0) {

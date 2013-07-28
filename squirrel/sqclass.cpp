@@ -46,8 +46,13 @@ SQClass::~SQClass()
 bool SQClass::NewSlot(const SQObjectPtr &key,const SQObjectPtr &val)
 {
 	SQObjectPtr temp;
-	if(_locked || (_members->Get(key,temp) && type(temp) == OT_INTEGER))
+	if(_locked) 
 		return false; //the slot already exists
+	if(_members->Get(key,temp) && type(temp) == OT_INTEGER) //overrides the default value
+	{
+		_defaultvalues[_integer(temp)].val = val;
+		return true;
+	}
 	if(type(val) == OT_CLOSURE || type(val) == OT_NATIVECLOSURE) {
 		SQInteger mmidx;
 		if((mmidx = _sharedstate->GetMetaMethodIdxByName(key)) != -1) {

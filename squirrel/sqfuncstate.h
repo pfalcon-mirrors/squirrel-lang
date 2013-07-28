@@ -4,8 +4,7 @@
 ///////////////////////////////////
 #include "squtils.h"
 
-#define MAX_FUNC_STACKSIZE 0xFF
-#define MAX_LITERALS 0xFFFF
+
 
 struct SQFuncState
 {
@@ -14,6 +13,11 @@ struct SQFuncState
 	void Dump();
 #endif
 	void AddInstruction(SQOpcode _op,int arg0=0,int arg1=0,int arg2=0,int arg3=0){SQInstruction i(_op,arg0,arg1,arg2,arg3);AddInstruction(i);}
+	/*void AddLInstruction(SQOpcode _op,int arg0=0,int arg1 = 0){
+		SQInstruction i(_op,arg0,arg1,0,0);
+		i.args.l._arg1 = arg1;
+		AddInstruction(i);
+	}*/
 	void AddInstruction(SQInstruction &i);
 	void SetIntructionParams(int pos,int arg0,int arg1,int arg2=0,int arg3=0);
 	void SetIntructionParam(int pos,int arg,int val);
@@ -41,7 +45,7 @@ struct SQFuncState
 	int TopTarget();
 	int GetUpTarget(int n);
 	bool IsLocal(unsigned int stkpos);
-
+	SQObject CreateString(const SQChar *s);
 	int _returnexp;
 	SQLocalVarInfoVec _vlocals;
 	SQIntVec _targetstack;
@@ -51,6 +55,7 @@ struct SQFuncState
 	SQIntVec _unresolvedcontinues;
 	SQObjectPtrVec _functions;
 	SQObjectPtrVec _parameters;
+	SQObjectPtrVec _stringrefs;
 	SQOuterVarVec _outervalues;
 	SQInstructionVec _instructions;
 	SQLocalVarInfoVec _localvarinfos;

@@ -12,8 +12,9 @@ SQTable::SQTable(SQSharedState *ss,int nInitialSize)
 	int pow2size=MINPOWER2;
 	while(nInitialSize>pow2size)pow2size=pow2size<<1;
 	AllocNodes(pow2size);
-	_uiRef=0;
-	_delegate=NULL;
+	_uiRef = 0;
+	_usednodes = 0;
+	_delegate = NULL;
 	INIT_CHAIN();
 	ADD_TO_CHAIN(&_sharedstate->_gc_chain,this);
 }
@@ -23,6 +24,7 @@ void SQTable::Remove(const SQObjectPtr &key)
 	_HashNode *n = _Get(key, HashKey(key) & (_numofnodes - 1));
 	if (n) {
 		n->val = n->key = _null_;
+		_usednodes--;
 		Rehash(false);
 	}
 }
@@ -41,11 +43,11 @@ void SQTable::AllocNodes(int nSize)
 
 int SQTable::CountUsed()
 {
-	int n=0;
+	/*int n=0;
 	for(int i=0;i<_numofnodes;i++){
 		if(type(_nodes[i].key)!=OT_NULL) n++;
-	}
-	return n;
+	}*/
+	return _usednodes;
 }
 
 void SQTable::Rehash(bool force)
@@ -64,6 +66,7 @@ void SQTable::Rehash(bool force)
 		AllocNodes(oldsize);
 	else
 		return;
+	_usednodes = 0;
 	for (int i=0; i<oldsize; i++) {
 		_HashNode *old = nold+i;
 		if (type(old->key) != OT_NULL)
@@ -133,6 +136,7 @@ bool SQTable::NewSlot(const SQObjectPtr &key,const SQObjectPtr &val)
 	for (;;) {  /* correct `firstfree' */
 		if (type(_firstfree->key) == OT_NULL) {
 			mp->val = val;
+			_usednodes++;
 			return true;  /* OK; table still has a free place */
 		}
 		else if (_firstfree == _nodes) break;  /* cannot decrement from here */

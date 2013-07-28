@@ -68,7 +68,7 @@ public:
 	{
 		switch(tok){
 		case _SC('='): case _SC('('): case TK_NEWSLOT:
-		case TK_MINUSEQ: case TK_PLUSEQ: case TK_PLUSPLUS: case TK_MINUSMINUS: return true;
+		case TK_MODEQ: case TK_MULEQ: case TK_DIVEQ: case TK_MINUSEQ: case TK_PLUSEQ: case TK_PLUSPLUS: case TK_MINUSMINUS: return true;
 		}
 		return false;
 	}
@@ -83,7 +83,8 @@ public:
 		SQObjectPtr ret;
 		if(_token != tok) {
 			if(_token == TK_CONSTRUCTOR && tok == TK_IDENTIFIER) {
-				SQString::Create(_ss(_vm),_SC("constructor"));
+				//ret = SQString::Create(_ss(_vm),_SC("constructor"));
+				//do nothing
 			}
 			else {
 				if(tok > 255) {
@@ -286,6 +287,28 @@ public:
 		int p1 = _fs->PopTarget(); //key in OP_GET
 		_fs->AddInstruction(op,_fs->PushTarget(), p1, p2, p3);
 	}
+	void EmitCompoundArith(int tok,bool deref)
+	{
+		int oper;
+		switch(tok){
+		case TK_MINUSEQ: oper = '-'; break;
+		case TK_PLUSEQ: oper = '+'; break;
+		case TK_MULEQ: oper = '*'; break;
+		case TK_DIVEQ: oper = '/'; break;
+		case TK_MODEQ: oper = '%'; break;
+		default: assert(0); break;
+		};
+		if(deref) {
+			int val = _fs->PopTarget();
+			int key = _fs->PopTarget();
+			int src = _fs->PopTarget();
+			//mixes dest obj and source val in the arg1(hack?)
+			_fs->AddInstruction(_OP_COMPARITH,_fs->PushTarget(),(src<<16)|val,key,oper);
+		}
+		else {
+			Emit2ArgsOP(_OP_COMPARITHL, oper);
+		}
+	}
 	void CommaExpr()
 	{
 		for(Expression();_token == ',';_fs->PopTarget(), Lex(), CommaExpr());
@@ -300,7 +323,11 @@ public:
 		case _SC('='):
 		case TK_NEWSLOT:
 		case TK_MINUSEQ:
-		case TK_PLUSEQ: {
+		case TK_PLUSEQ:
+		case TK_MULEQ:
+		case TK_DIVEQ:
+		case TK_MODEQ:
+		{
 				int op = _token;
 				int ds = _exst._deref;
 				bool freevar = _exst._freevar;
@@ -326,11 +353,11 @@ public:
 					}
 					break;
 				case TK_MINUSEQ:
-				case TK_PLUSEQ: 
-					if(ds == DEREF_FIELD)
-						EmitDerefOp(op == TK_MINUSEQ?_OP_MINUSEQ:_OP_PLUSEQ);
-					else //if _derefstate != DEREF_NO_DEREF && DEREF_FIELD so is the index of a local
-						Emit2ArgsOP(op == TK_MINUSEQ?_OP_MINUSEQ:_OP_PLUSEQ, -1);
+				case TK_PLUSEQ:
+				case TK_MULEQ:
+				case TK_DIVEQ:
+				case TK_MODEQ:
+					EmitCompoundArith(op,ds == DEREF_FIELD);
 					break;
 				}
 			}
@@ -432,10 +459,10 @@ public:
 		ShiftExp();
 		for(;;) switch(_token) {
 		case TK_EQ: BIN_EXP(_OP_EQ, &SQCompiler::ShiftExp); break;
-		case _SC('>'): BIN_EXP(_OP_G, &SQCompiler::ShiftExp); break;
-		case _SC('<'): BIN_EXP(_OP_L, &SQCompiler::ShiftExp); break;
-		case TK_GE: BIN_EXP(_OP_GE, &SQCompiler::ShiftExp); break;
-		case TK_LE: BIN_EXP(_OP_LE, &SQCompiler::ShiftExp); break;
+		case _SC('>'): BIN_EXP(_OP_CMP, &SQCompiler::ShiftExp,CMP_G); break;
+		case _SC('<'): BIN_EXP(_OP_CMP, &SQCompiler::ShiftExp,CMP_L); break;
+		case TK_GE: BIN_EXP(_OP_CMP, &SQCompiler::ShiftExp,CMP_GE); break;
+		case TK_LE: BIN_EXP(_OP_CMP, &SQCompiler::ShiftExp,CMP_LE); break;
 		case TK_NE: BIN_EXP(_OP_NE, &SQCompiler::ShiftExp); break;
 		default: return;	
 		}
@@ -602,7 +629,7 @@ public:
 			return -1;
 			break;
 		case TK_NULL: 
-			_fs->AddInstruction(_OP_LOADNULL, _fs->PushTarget());
+			_fs->AddInstruction(_OP_LOADNULLS, _fs->PushTarget(),1);
 			Lex();
 			break;
 		case TK_INTEGER: 
@@ -611,6 +638,10 @@ public:
 			break;
 		case TK_FLOAT: 
 			_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetNumericConstant(_lex._fvalue));
+			Lex();
+			break;
+		case TK_TRUE: case TK_FALSE:
+			_fs->AddInstruction(_OP_LOADBOOL, _fs->PushTarget(),_token == TK_TRUE?1:0);
 			Lex();
 			break;
 		case _SC('['): {
@@ -660,9 +691,12 @@ public:
 	}
 	bool NeedGet()
 	{
-		return _token != _SC('=') && _token != TK_PLUSPLUS && _token != TK_MINUSMINUS 
-			&& _token != TK_PLUSEQ && _token != TK_MINUSEQ && _token != _SC('(') && _token != TK_NEWSLOT 
-			&& ((!_exst._class_or_delete) || (_exst._class_or_delete && (_token == _SC('.') || _token == _SC('['))));
+		switch(_token) {
+		case _SC('='): case _SC('('): case TK_NEWSLOT: case TK_PLUSPLUS: case TK_MINUSMINUS:
+		case TK_PLUSEQ: case TK_MINUSEQ: case TK_MULEQ: case TK_DIVEQ: case TK_MODEQ:
+			return false;
+		}
+		return (!_exst._class_or_delete) || (_exst._class_or_delete && (_token == _SC('.') || _token == _SC('[')));
 	}
 	
 	void FunctionCallArgs()
@@ -690,9 +724,9 @@ public:
 		while(_token != terminator) {
 			bool hasattrs = false;
 			//check if is an attribute
-			if(separator == ';' && _token == '(') {
+			if(separator == ';' && _token == TK_ATTR_OPEN) {
 				_fs->AddInstruction(_OP_NEWTABLE, _fs->PushTarget()); Lex();
-				ParseTableOrClass(',',')');
+				ParseTableOrClass(',',TK_ATTR_CLOSE);
 				hasattrs = true;
 			}
 			switch(_token) {
@@ -742,7 +776,7 @@ public:
 				if(dest != src) _fs->AddInstruction(_OP_MOVE, dest, src);
 			}
 			else{
-				_fs->AddInstruction(_OP_LOADNULL, _fs->PushTarget());
+				_fs->AddInstruction(_OP_LOADNULLS, _fs->PushTarget(),1);
 			}
 			_fs->PopTarget();
 			_fs->PushLocalVariable(varname);
@@ -875,13 +909,13 @@ public:
 		int container = _fs->TopTarget();
 		//push the index local var
 		int indexpos = _fs->PushLocalVariable(idxname);
-		_fs->AddInstruction(_OP_LOADNULL, indexpos);
+		_fs->AddInstruction(_OP_LOADNULLS, indexpos,1);
 		//push the value local var
 		int valuepos = _fs->PushLocalVariable(valname);
-		_fs->AddInstruction(_OP_LOADNULL, valuepos);
+		_fs->AddInstruction(_OP_LOADNULLS, valuepos,1);
 		//push reference index
 		int itrpos = _fs->PushLocalVariable(SQString::Create(_ss(_vm), _SC("@ITERATOR@"))); //use invalid id to make it inaccessible
-		_fs->AddInstruction(_OP_LOADNULL, itrpos);
+		_fs->AddInstruction(_OP_LOADNULLS, itrpos,1);
 		int jmppos = _fs->GetCurrentPos();
 		_fs->AddInstruction(_OP_FOREACH, container, 0, indexpos);
 		int foreachpos = _fs->GetCurrentPos();
@@ -1015,11 +1049,10 @@ public:
 			Lex(); Expression();
 			base = _fs->TopTarget();
 		}
-		if(_token == _SC(':')) {
+		if(_token == TK_ATTR_OPEN) {
 			Lex();
-			Expect('(');
 			_fs->AddInstruction(_OP_NEWTABLE, _fs->PushTarget());
-			ParseTableOrClass(_SC(','),_SC(')'));
+			ParseTableOrClass(_SC(','),TK_ATTR_CLOSE);
 			attrs = _fs->TopTarget();
 		}
 		Expect(_SC('{'));

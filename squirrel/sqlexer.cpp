@@ -61,6 +61,8 @@ void SQLexer::Init(SQSharedState *ss, SQLEXREADFUNC rg, SQUserPointer up)
 	ADD_KEYWORD(instanceof,TK_INSTANCEOF);
 	ADD_KEYWORD(vargc,TK_VARGC);
 	ADD_KEYWORD(vargv,TK_VARGV);
+	ADD_KEYWORD(true,TK_TRUE);
+	ADD_KEYWORD(false,TK_FALSE);
 
 	_readf = rg;
 	_up = up;
@@ -130,6 +132,14 @@ int SQLexer::Lex()
 			case _SC('/'):
 				do { NEXT(); } while (CUR_CHAR != _SC('\n') && (!IS_EOB()));
 				continue;
+			case _SC('='):
+				NEXT();
+				RETURN_TOKEN(TK_DIVEQ);
+				continue;
+			case _SC('>'):
+				NEXT();
+				RETURN_TOKEN(TK_ATTR_CLOSE);
+				continue;
 			default:
 				RETURN_TOKEN('/');
 			}
@@ -142,6 +152,7 @@ int SQLexer::Lex()
 			if ( CUR_CHAR == _SC('=') ) { NEXT(); RETURN_TOKEN(TK_LE) }
 			else if ( CUR_CHAR == _SC('-') ) { NEXT(); RETURN_TOKEN(TK_NEWSLOT); }
 			else if ( CUR_CHAR == _SC('<') ) { NEXT(); RETURN_TOKEN(TK_SHIFTL); }
+			else if ( CUR_CHAR == _SC('/') ) { NEXT(); RETURN_TOKEN(TK_ATTR_OPEN); }
 			//else if ( CUR_CHAR == _SC('[') ) { NEXT(); ReadMultilineString(); RETURN_TOKEN(TK_STRING_LITERAL); }
 			else { RETURN_TOKEN('<') }
 		case _SC('>'):
@@ -179,8 +190,7 @@ int SQLexer::Lex()
 			throw ParserException(_SC("error parsing the string"));
 			}
 		case _SC('{'): case _SC('}'): case _SC('('): case _SC(')'): case _SC('['): case _SC(']'):
-		case _SC(';'): case _SC(','): case _SC('%'): case _SC('?'): case _SC('^'): case _SC('~'):
-		case _SC('*'):
+		case _SC(';'): case _SC(','): case _SC('?'): case _SC('^'): case _SC('~'):
 			{int ret = CUR_CHAR;
 			NEXT(); RETURN_TOKEN(ret); }
 		case _SC('.'):
@@ -202,6 +212,14 @@ int SQLexer::Lex()
 			NEXT();
 			if (CUR_CHAR != _SC(':')){ RETURN_TOKEN(':') }
 			else { NEXT(); RETURN_TOKEN(TK_DOUBLE_COLON); }
+		case _SC('*'):
+			NEXT();
+			if (CUR_CHAR == _SC('=')){ NEXT(); RETURN_TOKEN(TK_MULEQ);}
+			else RETURN_TOKEN('*');
+		case _SC('%'):
+			NEXT();
+			if (CUR_CHAR == _SC('=')){ NEXT(); RETURN_TOKEN(TK_MODEQ);}
+			else RETURN_TOKEN('%');
 		case _SC('-'):
 			NEXT();
 			if (CUR_CHAR == _SC('=')){ NEXT(); RETURN_TOKEN(TK_MINUSEQ);}

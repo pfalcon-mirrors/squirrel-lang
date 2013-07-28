@@ -2,7 +2,6 @@
 	see copyright notice in squirrel.h
 */
 #include "sqpcheader.h"
-#include <malloc.h>
 void *sq_vm_malloc(unsigned int size){	return malloc(size); }
 
 void *sq_vm_realloc(void *p, unsigned int oldsize, unsigned int size){ return realloc(p, size); }

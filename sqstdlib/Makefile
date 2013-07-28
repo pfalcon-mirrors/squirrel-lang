@@ -16,6 +16,6 @@ SRCS= \
 	
 	
 squirrel:
-	gcc -O2 -c $(SRCS) $(INCZ)
+	gcc -O3 -Os -c $(SRCS) $(INCZ)
 	ar rc $(OUT) *.o
 	rm *.o

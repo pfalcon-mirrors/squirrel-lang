@@ -37,6 +37,6 @@ SRCS= \
 	
 	
 squirrellib:
-	gcc -O2 -c $(SRCS) $(INCZ) $(DEFS)
+	gcc -O3 -Os -c $(SRCS) $(INCZ) $(DEFS)
 	ar rc $(OUT) *.o
 	rm *.o

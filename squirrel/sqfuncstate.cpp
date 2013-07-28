@@ -28,7 +28,6 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_ARITH")},
 	{_SC("_OP_BITW")},
 	{_SC("_OP_RETURN")},
-	{_SC("_OP_LOADNULL")},
 	{_SC("_OP_LOADNULLS")},
 	{_SC("_OP_LOADROOTTABLE")},
 	{_SC("_OP_DMOVE")},
@@ -42,16 +41,13 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_NEWARRAY")},
 	{_SC("_OP_APPENDARRAY")},
 	{_SC("_OP_GETPARENT")},
-	{_SC("_OP_MINUSEQ")},
-	{_SC("_OP_PLUSEQ")},
+	{_SC("_OP_COMPARITH")},
+	{_SC("_OP_COMPARITHL")},
 	{_SC("_OP_INC")},
 	{_SC("_OP_INCL")},
 	{_SC("_OP_PINC")},
 	{_SC("_OP_PINCL")},
-	{_SC("_OP_G")},
-	{_SC("_OP_GE")},
-	{_SC("_OP_L")},
-	{_SC("_OP_LE")},
+	{_SC("_OP_CMP")},
 	{_SC("_OP_EXISTS")},
 	{_SC("_OP_INSTANCEOF")},
 	{_SC("_OP_AND")},
@@ -149,13 +145,14 @@ void SQFuncState::Dump()
 		SQInstruction &inst=_instructions[i];
 		if(inst.op==_OP_LOAD || inst.op==_OP_PREPCALLK || inst.op==_OP_GETK ){
 			
+			int lidx = inst._arg1;
 			scprintf(_SC("[%03d] %15s %d "),n,g_InstrDesc[inst.op].name,inst._arg0);
-			if(inst._arg1==0xFFFF)
+			if(lidx >= 0xFFFFFFFF)
 				scprintf(_SC("null"));
 			else {
 				int refidx;
 				SQObjectPtr val,key,refo;
-				while(((refidx=_table(_literals)->Next(refo,key,val))!= -1) && (_integer(val) != inst._arg1)) {
+				while(((refidx=_table(_literals)->Next(refo,key,val))!= -1) && (_integer(val) != lidx)) {
 					refo = refidx;	
 				}
 				DumpLiteral(key);
@@ -195,10 +192,10 @@ int SQFuncState::GetConstant(SQObjectPtr cons)
 	SQObjectPtr val;
 	if(!_table(_literals)->Get(cons,val))
 	{
-		val=_nliterals;
+		val = _nliterals;
 		_table(_literals)->NewSlot(cons,val);
 		_nliterals++;
-		if(_nliterals>MAX_LITERALS) throw ParserException(_SC("internal compiler error: too many literals"));
+		if(_nliterals > MAX_LITERALS) throw ParserException(_SC("internal compiler error: too many literals"));
 	}
 	return _integer(val);
 }
@@ -218,6 +215,7 @@ void SQFuncState::SetIntructionParam(int pos,int arg,int val)
 		case 1:_instructions[pos]._arg1=*((unsigned int *)&val);break;
 		case 2:_instructions[pos]._arg2=*((unsigned int *)&val);break;
 		case 3:_instructions[pos]._arg3=*((unsigned int *)&val);break;
+		case 4:_instructions[pos]._arg1=*((unsigned int *)&val);break;
 	};
 }
 
@@ -326,11 +324,21 @@ void SQFuncState::AddOuterValue(const SQObjectPtr &name)
 {
 	//AddParameter(name);
 	int pos=-1;
-	if(_parent) pos = _parent->GetLocalVariable(name);
-	if(pos!=-1)
-		_outervalues.push_back(SQOuterVar(name,SQObjectPtr(SQInteger(pos)),true)); //local
-	else
-		_outervalues.push_back(SQOuterVar(name,name,false)); //global
+	if(_parent) { 
+		pos = _parent->GetLocalVariable(name);
+		if(pos == -1) {
+			pos = _parent->GetOuterVariable(name);
+			if(pos != -1) {
+				_outervalues.push_back(SQOuterVar(name,SQObjectPtr(SQInteger(pos)),otOUTER)); //local
+				return;
+			}
+		}
+		else {
+			_outervalues.push_back(SQOuterVar(name,SQObjectPtr(SQInteger(pos)),otLOCAL)); //local
+			return;
+		}
+	}	
+	_outervalues.push_back(SQOuterVar(name,name,otSYMBOL)); //global
 }
 
 void SQFuncState::AddParameter(const SQObjectPtr &name)
@@ -357,22 +365,25 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 		SQInstruction &pi = _instructions[size-1];//previous instruction
 		switch(i.op) {
 		case _OP_RETURN:
-			if( _parent && i._arg0 != 0xFF && pi.op == _OP_CALL && _returnexp < size-1) {
+			if( _parent && i._arg0 != MAX_FUNC_STACKSIZE && pi.op == _OP_CALL && _returnexp < size-1) {
 				pi.op = _OP_TAILCALL;
 			}
 		break;
 		case _OP_GET:
-			if( pi.op == _OP_LOAD	&& pi._arg0 == i._arg2 && (!IsLocal(pi._arg0))){
+			if( pi.op == _OP_LOAD && pi._arg0 == i._arg2 && (!IsLocal(pi._arg0))){
+				pi._arg1 = pi._arg1;
 				pi._arg2 = (unsigned char)i._arg1;
 				pi.op = _OP_GETK;
 				pi._arg0 = i._arg0;
+				
 				return;
 			}
 		break;
 		case _OP_PREPCALL:
-			if( pi.op == _OP_LOAD && pi._arg0 == i._arg1 && (!IsLocal(pi._arg0))){
+			if( pi.op == _OP_LOAD  && pi._arg0 == i._arg1 && (!IsLocal(pi._arg0))){
 				pi.op = _OP_PREPCALLK;
 				pi._arg0 = i._arg0;
+				pi._arg1 = pi._arg1;
 				pi._arg2 = i._arg2;
 				pi._arg3 = i._arg3;
 				return;
@@ -383,16 +394,13 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 				pi.op = _OP_APPENDARRAY;
 				pi._arg0 = i._arg0;
 				pi._arg1 = pi._arg1;
-				pi._arg2 = 0xFF;
-				pi._arg3 = 0xFF;
+				pi._arg2 = MAX_FUNC_STACKSIZE;
+				pi._arg3 = MAX_FUNC_STACKSIZE;
 				return;
 			}
 			break;
 		case _OP_MOVE: 
-			if((pi.op == _OP_GET || pi.op == _OP_ARITH || pi.op == _OP_BITW/*
-				|| pi.op == _OP_MUL || pi.op == _OP_DIV || pi.op == _OP_SHIFTL
-				|| pi.op == _OP_SHIFTR || pi.op == _OP_BWOR	|| pi.op == _OP_BWXOR
-				|| pi.op == _OP_BWAND*/) && (pi._arg0 == i._arg1))
+			if((pi.op == _OP_GET || pi.op == _OP_ARITH || pi.op == _OP_BITW) && (pi._arg0 == i._arg1))
 			{
 				pi._arg0 = i._arg0;
 				_optimization = false;
@@ -408,24 +416,22 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 			}
 			break;
 
-		//case _OP_ADD:case _OP_SUB:case _OP_MUL:case _OP_DIV:
-		case _OP_EQ:case _OP_NE:case _OP_G:case _OP_GE:case _OP_L:case _OP_LE:
+		case _OP_EQ:case _OP_NE:
 			if(pi.op == _OP_LOAD && pi._arg0 == i._arg1 && (!IsLocal(pi._arg0) ))
 			{
 				pi.op = i.op;
 				pi._arg0 = i._arg0;
+				pi._arg1 = pi._arg1;
 				pi._arg2 = i._arg2;
-				pi._arg3 = 0xFF;
+				pi._arg3 = MAX_FUNC_STACKSIZE;
 				return;
 			}
 			break;
 		case _OP_LOADNULLS:
-		case _OP_LOADNULL:
-			if((pi.op == _OP_LOADNULL && pi._arg0 == i._arg0-1) ||
-				(pi.op == _OP_LOADNULLS && pi._arg0+pi._arg1 == i._arg0)
-				) {
+		//case _OP_LOADNULL:
+			if((pi.op == _OP_LOADNULLS && pi._arg0+pi._arg1 == i._arg0)) {
 				
-				pi._arg1 = pi.op == _OP_LOADNULL?2:pi._arg1+1;
+				pi._arg1 = pi._arg1 + 1;
 				pi.op = _OP_LOADNULLS;
 				return;
 			}
@@ -440,6 +446,13 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 	}
 	_optimization = true;
 	_instructions.push_back(i);
+}
+
+SQObject SQFuncState::CreateString(const SQChar *s)
+{
+	SQObjectPtr ns(SQString::Create(_sharedstate,s));
+	_stringrefs.push_back(ns);
+	return ns;
 }
 
 void SQFuncState::Finalize()

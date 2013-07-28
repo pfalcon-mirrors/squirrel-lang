@@ -103,7 +103,8 @@ private:
 #endif
 
 extern SQObjectPtr _null_;
-extern SQObjectPtr _notnull_;
+extern SQObjectPtr _true_;
+extern SQObjectPtr _false_;
 extern SQObjectPtr _one_;
 extern SQObjectPtr _minusone_;
 

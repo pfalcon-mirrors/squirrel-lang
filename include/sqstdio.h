@@ -3,6 +3,20 @@
 #define _SQSTDIO_H_
 
 #ifdef __cplusplus
+
+#define SQSTD_STREAM_TYPE_TAG 0x80000000
+
+struct SQStream {
+	virtual SQInteger Read(void *buffer, SQInteger size) = 0;
+	virtual SQInteger Write(void *buffer, SQInteger size) = 0;
+	virtual int Flush() = 0;
+	virtual long Tell() = 0;
+	virtual SQInteger Len() = 0;
+	virtual SQInteger Seek(long offset, int origin) = 0;
+	virtual bool IsValid() = 0;
+	virtual bool EOS() = 0;
+};
+
 extern "C" {
 #endif
 
@@ -21,12 +35,12 @@ SQUIRREL_API SQInteger sqstd_fflush(SQFILE);
 SQUIRREL_API SQInteger sqstd_fclose(SQFILE);
 SQUIRREL_API SQInteger sqstd_feof(SQFILE);
 
-SQUIRREL_API SQRESULT sqstd_createfile(HSQUIRRELVM v, SQFILE file,int own);
+SQUIRREL_API SQRESULT sqstd_createfile(HSQUIRRELVM v, SQFILE file,SQBool own);
 SQUIRREL_API SQRESULT sqstd_getfile(HSQUIRRELVM v, int idx, SQFILE *file);
 
 //compiler helpers
-SQUIRREL_API SQRESULT sqstd_loadfile(HSQUIRRELVM v,const SQChar *filename,int printerror);
-SQUIRREL_API SQRESULT sqstd_dofile(HSQUIRRELVM v,const SQChar *filename,int retval,int printerror);
+SQUIRREL_API SQRESULT sqstd_loadfile(HSQUIRRELVM v,const SQChar *filename,SQBool printerror);
+SQUIRREL_API SQRESULT sqstd_dofile(HSQUIRRELVM v,const SQChar *filename,SQBool retval,SQBool printerror);
 SQUIRREL_API SQRESULT sqstd_writeclosuretofile(HSQUIRRELVM v,const SQChar *filename);
 
 SQUIRREL_API SQRESULT sqstd_register_iolib(HSQUIRRELVM v);

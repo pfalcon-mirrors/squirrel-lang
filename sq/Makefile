@@ -12,5 +12,5 @@ SRCS= sq.c
 	
 	
 sq:
-	g++ -O2 -o $(OUT) $(SRCS) $(INCZ) $(LIBZ) $(LIB)
+	g++ -O3 -Os -o $(OUT) $(SRCS) $(INCZ) $(LIBZ) $(LIB)
 	

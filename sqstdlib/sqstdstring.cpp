@@ -143,7 +143,7 @@ static int _regexp_match(HSQUIRRELVM v)
 	SETUP_REX(v);
 	const SQChar *str;
 	sq_getstring(v,2,&str);
-	if(sqstd_rex_match(self,str) == SQRex_True)
+	if(sqstd_rex_match(self,str) == SQTrue)
 	{
 		sq_pushinteger(v,1);
 		return 1;
@@ -169,7 +169,7 @@ static int _regexp_search(HSQUIRRELVM v)
 	SQInteger start = 0;
 	sq_getstring(v,2,&str);
 	if(sq_gettop(v) > 2) sq_getinteger(v,3,&start);
-	if(sqstd_rex_search(self,str+start,&begin,&end) == SQRex_True) {
+	if(sqstd_rex_search(self,str+start,&begin,&end) == SQTrue) {
 		_addrexmatch(v,str,begin,end);
 		return 1;
 	}
@@ -183,7 +183,7 @@ static int _regexp_capture(HSQUIRRELVM v)
 	SQInteger start = 0;
 	sq_getstring(v,2,&str);
 	if(sq_gettop(v) > 2) sq_getinteger(v,3,&start);
-	if(sqstd_rex_search(self,str+start,&begin,&end) == SQRex_True) {
+	if(sqstd_rex_search(self,str+start,&begin,&end) == SQTrue) {
 		SQInteger n = sqstd_rex_getsubexpcount(self);
 		SQRexMatch match;
 		sq_newarray(v,0);
@@ -253,7 +253,7 @@ static SQRegFunction stringlib_funcs[]={
 int sqstd_register_stringlib(HSQUIRRELVM v)
 {
 	sq_pushstring(v,_SC("regexp"),-1);
-	sq_newclass(v,0);
+	sq_newclass(v,SQFalse);
 	//sq_pushregistrytable(v);
 	int i = 0;
 	while(rexobj_funcs[i].name != 0) {

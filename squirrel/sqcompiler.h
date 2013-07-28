@@ -60,6 +60,13 @@ struct SQVM;
 #define TK_VARPARAMS 312
 #define TK_VARGC 313
 #define TK_VARGV 314
+#define TK_TRUE 315
+#define TK_FALSE 316
+#define TK_MULEQ 317
+#define TK_DIVEQ 318
+#define TK_MODEQ 319
+#define TK_ATTR_OPEN 320
+#define TK_ATTR_CLOSE 321
 
 
 struct ParserException{ SQChar *desc; ParserException(SQChar *err):desc(err) {} };

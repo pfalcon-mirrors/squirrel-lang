@@ -97,16 +97,16 @@ static void sqstd_rex_expect(SQRex *exp, int n){
 	*exp->_p++;
 }
 
-static SQRexBool sqstd_rex_ischar(SQChar c)
+static SQBool sqstd_rex_ischar(SQChar c)
 {
 	switch(c) {
 	case SQREX_SYMBOL_BRANCH:case SQREX_SYMBOL_GREEDY_ZERO_OR_MORE:
 	case SQREX_SYMBOL_GREEDY_ZERO_OR_ONE:case SQREX_SYMBOL_GREEDY_ONE_OR_MORE:
 	case SQREX_SYMBOL_BEGINNING_OF_STRING:case SQREX_SYMBOL_END_OF_STRING:
 	case SQREX_SYMBOL_ANY_CHAR:case SQREX_SYMBOL_ESCAPE_CHAR:case '(':case ')':case '[':case '{': case '}':
-		return SQRex_False;
+		return SQFalse;
     }
-	return SQRex_True;
+	return SQTrue;
 }
 
 static SQChar sqstd_rex_escapechar(SQRex *exp)
@@ -132,7 +132,7 @@ static int sqstd_rex_charclass(SQRex *exp,int classid)
 	return n;
 }
 
-static int sqstd_rex_charnode(SQRex *exp,SQRexBool isclass)
+static int sqstd_rex_charnode(SQRex *exp,SQBool isclass)
 {
 	if(*exp->_p == SQREX_SYMBOL_ESCAPE_CHAR) {
 		*exp->_p++;
@@ -199,10 +199,10 @@ static int sqstd_rex_class(SQRex *exp)
 				int c = first;
 				exp->_nodes[chain].next = c;
 				chain = c;
-				first = sqstd_rex_charnode(exp,SQRex_True);
+				first = sqstd_rex_charnode(exp,SQTrue);
 			}
 			else{
-				first = sqstd_rex_charnode(exp,SQRex_True);
+				first = sqstd_rex_charnode(exp,SQTrue);
 			}
 		}
 	}
@@ -261,7 +261,7 @@ static int sqstd_rex_element(SQRex *exp)
 	case SQREX_SYMBOL_END_OF_STRING: *exp->_p++; ret = sqstd_rex_newnode(exp,OP_EOL);break;
 	case SQREX_SYMBOL_ANY_CHAR: *exp->_p++; ret = sqstd_rex_newnode(exp,OP_DOT);break;
 	default:
-		ret = sqstd_rex_charnode(exp,SQRex_False);
+		ret = sqstd_rex_charnode(exp,SQFalse);
 		break;
 	}
 	/* scope block */
@@ -330,44 +330,44 @@ static int sqstd_rex_list(SQRex *exp)
 	return ret;
 }
 
-static SQRexBool sqstd_rex_matchcclass(int cclass,SQChar c)
+static SQBool sqstd_rex_matchcclass(int cclass,SQChar c)
 {
 	switch(cclass) {
-	case 'a': return isalpha(c)?SQRex_True:SQRex_False;
-	case 'A': return !isalpha(c)?SQRex_True:SQRex_False;
-	case 'w': return (isalnum(c) || c == '_')?SQRex_True:SQRex_False;
-	case 'W': return (!isalnum(c) && c != '_')?SQRex_True:SQRex_False;
-	case 's': return isspace(c)?SQRex_True:SQRex_False;
-	case 'S': return !isspace(c)?SQRex_True:SQRex_False;
-	case 'd': return isdigit(c)?SQRex_True:SQRex_False;
-	case 'D': return !isdigit(c)?SQRex_True:SQRex_False;
-	case 'x': return isxdigit(c)?SQRex_True:SQRex_False;
-	case 'X': return !isxdigit(c)?SQRex_True:SQRex_False;
-	case 'c': return iscntrl(c)?SQRex_True:SQRex_False;
-	case 'C': return !iscntrl(c)?SQRex_True:SQRex_False;
-	case 'p': return ispunct(c)?SQRex_True:SQRex_False;
-	case 'P': return !ispunct(c)?SQRex_True:SQRex_False;
-	case 'l': return islower(c)?SQRex_True:SQRex_False;
-	case 'u': return isupper(c)?SQRex_True:SQRex_False;
+	case 'a': return isalpha(c)?SQTrue:SQFalse;
+	case 'A': return !isalpha(c)?SQTrue:SQFalse;
+	case 'w': return (isalnum(c) || c == '_')?SQTrue:SQFalse;
+	case 'W': return (!isalnum(c) && c != '_')?SQTrue:SQFalse;
+	case 's': return isspace(c)?SQTrue:SQFalse;
+	case 'S': return !isspace(c)?SQTrue:SQFalse;
+	case 'd': return isdigit(c)?SQTrue:SQFalse;
+	case 'D': return !isdigit(c)?SQTrue:SQFalse;
+	case 'x': return isxdigit(c)?SQTrue:SQFalse;
+	case 'X': return !isxdigit(c)?SQTrue:SQFalse;
+	case 'c': return iscntrl(c)?SQTrue:SQFalse;
+	case 'C': return !iscntrl(c)?SQTrue:SQFalse;
+	case 'p': return ispunct(c)?SQTrue:SQFalse;
+	case 'P': return !ispunct(c)?SQTrue:SQFalse;
+	case 'l': return islower(c)?SQTrue:SQFalse;
+	case 'u': return isupper(c)?SQTrue:SQFalse;
 	}
-	return SQRex_False; /*cannot happen*/
+	return SQFalse; /*cannot happen*/
 }
 
-static SQRexBool sqstd_rex_matchclass(SQRex* exp,SQRexNode *node,SQChar c)
+static SQBool sqstd_rex_matchclass(SQRex* exp,SQRexNode *node,SQChar c)
 {
 	do {
 		switch(node->type) {
 			case OP_RANGE:
-				if(c >= node->left && c <= node->right) return SQRex_True;
+				if(c >= node->left && c <= node->right) return SQTrue;
 				break;
 			case OP_CCLASS:
-				if(sqstd_rex_matchcclass(node->left,c)) return SQRex_True;
+				if(sqstd_rex_matchcclass(node->left,c)) return SQTrue;
 				break;
 			default:
-				if(c == node->type)return SQRex_True;
+				if(c == node->type)return SQTrue;
 		}
 	} while((node->next != -1) && (node = &exp->_nodes[node->next]));
-	return SQRex_False;
+	return SQFalse;
 }
 
 static const SQChar *sqstd_rex_matchnode(SQRex* exp,SQRexNode *node,const SQChar *str)
@@ -453,7 +453,7 @@ static const SQChar *sqstd_rex_matchnode(SQRex* exp,SQRexNode *node,const SQChar
 		return str;
 	case OP_NCLASS:
 	case OP_CLASS:
-		if(sqstd_rex_matchclass(exp,&exp->_nodes[node->left],*str)?(type == OP_CLASS?SQRex_True:SQRex_False):(type == OP_NCLASS?SQRex_True:SQRex_False)) {
+		if(sqstd_rex_matchclass(exp,&exp->_nodes[node->left],*str)?(type == OP_CLASS?SQTrue:SQFalse):(type == OP_NCLASS?SQTrue:SQFalse)) {
 			*str++;
 			return str;
 		}
@@ -526,7 +526,7 @@ void sqstd_rex_free(SQRex *exp)
 	}
 }
 
-SQRexBool sqstd_rex_match(SQRex* exp,const SQChar* text)
+SQBool sqstd_rex_match(SQRex* exp,const SQChar* text)
 {
 	const SQChar* res = NULL;
 	exp->_bol = text;
@@ -534,15 +534,15 @@ SQRexBool sqstd_rex_match(SQRex* exp,const SQChar* text)
 	exp->_currsubexp = 0;
 	res = sqstd_rex_matchnode(exp,exp->_nodes,text);
 	if(res == NULL || res != exp->_eol)
-		return SQRex_False;
-	return SQRex_True;
+		return SQFalse;
+	return SQTrue;
 }
 
-SQRexBool sqstd_rex_searchrange(SQRex* exp,const SQChar* text_begin,const SQChar* text_end,const SQChar** out_begin, const SQChar** out_end)
+SQBool sqstd_rex_searchrange(SQRex* exp,const SQChar* text_begin,const SQChar* text_end,const SQChar** out_begin, const SQChar** out_end)
 {
 	const SQChar *cur = NULL;
 	int node = exp->_first;
-	if(text_begin >= text_end) return SQRex_False;
+	if(text_begin >= text_end) return SQFalse;
 	exp->_bol = text_begin;
 	exp->_eol = text_end;
 	do {
@@ -558,16 +558,16 @@ SQRexBool sqstd_rex_searchrange(SQRex* exp,const SQChar* text_begin,const SQChar
 	} while(cur == NULL && text_begin != text_end);
 
 	if(cur == NULL)
-		return SQRex_False;
+		return SQFalse;
 
 	--text_begin;
 
 	if(out_begin) *out_begin = text_begin;
 	if(out_end) *out_end = cur;
-	return SQRex_True;
+	return SQTrue;
 }
 
-SQRexBool sqstd_rex_search(SQRex* exp,const SQChar* text, const SQChar** out_begin, const SQChar** out_end)
+SQBool sqstd_rex_search(SQRex* exp,const SQChar* text, const SQChar** out_begin, const SQChar** out_end)
 {
 	return sqstd_rex_searchrange(exp,text,text + scstrlen(text),out_begin,out_end);
 }
@@ -577,10 +577,10 @@ int sqstd_rex_getsubexpcount(SQRex* exp)
 	return exp->_nsubexpr;
 }
 
-SQRexBool sqstd_rex_getsubexp(SQRex* exp, int n, SQRexMatch *subexp)
+SQBool sqstd_rex_getsubexp(SQRex* exp, int n, SQRexMatch *subexp)
 {
-	if( n<0 || n >= exp->_nsubexpr) return SQRex_False;
+	if( n<0 || n >= exp->_nsubexpr) return SQFalse;
 	*subexp = exp->_matches[n];
-	return SQRex_True;
+	return SQTrue;
 }
 

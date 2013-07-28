@@ -157,18 +157,8 @@ static SQRegFunction _file_methods[] = {
 
 
 
-SQRESULT sqstd_createfile(HSQUIRRELVM v, SQFILE file,int own)
+SQRESULT sqstd_createfile(HSQUIRRELVM v, SQFILE file,SQBool own)
 {
-	/*SQUserPointer p = sq_newuserdata(v, sizeof(SQFile));
-	sq_setreleasehook(v,-1,_file_releasehook);
-	sq_settypetag(v,-1,SQSTD_FILE_TYPE_TAG);
-	new (p) SQFile(file, own?true:false);
-	sq_pushregistrytable(v);
-	sq_pushstring(v,_SC("std_io"),-1);
-	if(SQ_FAILED(sq_rawget(v,-2)))
-		return sq_throwerror(v,_SC("io lib not initialized"));
-	sq_setdelegate(v,-3);
-	sq_pop(v,1);*/
 	int top = sq_gettop(v);
 	sq_pushregistrytable(v);
 	sq_pushstring(v,_SC("std_file"),-1);
@@ -182,7 +172,7 @@ SQRESULT sqstd_createfile(HSQUIRRELVM v, SQFILE file,int own)
 		else{
 			sq_pushnull(v); //false
 		}
-		if(SQ_SUCCEEDED( sq_call(v,3,1) )) {
+		if(SQ_SUCCEEDED( sq_call(v,3,SQTrue) )) {
 			return SQ_OK;
 		}
 	}
@@ -231,7 +221,7 @@ int file_write(SQUserPointer file,SQUserPointer p,int size)
 	return sqstd_fwrite(p,1,size,(SQFILE)file);
 }
 
-SQRESULT sqstd_loadfile(HSQUIRRELVM v,const SQChar *filename,int printerror)
+SQRESULT sqstd_loadfile(HSQUIRRELVM v,const SQChar *filename,SQBool printerror)
 {
 	SQFILE file = sqstd_fopen(filename,_SC("rb"));
 	int ret;
@@ -266,7 +256,7 @@ SQRESULT sqstd_loadfile(HSQUIRRELVM v,const SQChar *filename,int printerror)
 	return sq_throwerror(v,_SC("cannot open the file"));
 }
 
-SQRESULT sqstd_dofile(HSQUIRRELVM v,const SQChar *filename,int retval,int printerror)
+SQRESULT sqstd_dofile(HSQUIRRELVM v,const SQChar *filename,SQBool retval,SQBool printerror)
 {
 	if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,printerror))) {
 		sq_push(v,-2);
@@ -296,7 +286,7 @@ int _g_io_loadfile(HSQUIRRELVM v)
 {
 	const SQChar *filename;
 	sq_getstring(v,2,&filename);
-	if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,0)))
+	if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,SQFalse)))
 		return 1;
 	return SQ_ERROR; //propagates the error
 }
@@ -306,7 +296,7 @@ int _g_io_dofile(HSQUIRRELVM v)
 	const SQChar *filename;
 	sq_getstring(v,2,&filename);
 	sq_push(v,1); //repush the this
-	if(SQ_SUCCEEDED(sqstd_dofile(v,filename,1,0)))
+	if(SQ_SUCCEEDED(sqstd_dofile(v,filename,SQTrue,SQFalse)))
 		return 1;
 	return SQ_ERROR; //propagates the error
 }

@@ -176,7 +176,7 @@ static int base_compilestring(HSQUIRRELVM v)
 	if(nargs>2){
 		sq_getstring(v,3,&name);
 	}
-	if(SQ_SUCCEEDED(sq_compilebuffer(v,src,size,name,0)))
+	if(SQ_SUCCEEDED(sq_compilebuffer(v,src,size,name,SQFalse)))
 		return 1;
 	else
 		return SQ_ERROR;
@@ -211,6 +211,13 @@ static int base_array(HSQUIRRELVM v)
 	return 1;
 }
 
+static int base_type(HSQUIRRELVM v)
+{
+	SQObjectPtr &o = stack_get(v,2);
+	v->Push(SQString::Create(_ss(v),GetTypeName(o),-1));
+	return 1;
+}
+
 static SQRegFunction base_funcs[]={
 	//generic
 	{_SC("seterrorhandler"),base_seterrorhandler,2, NULL},
@@ -225,6 +232,7 @@ static SQRegFunction base_funcs[]={
 	{_SC("newthread"),base_newthread,2, _SC(".c")},
 	{_SC("suspend"),base_suspend,-1, NULL},
 	{_SC("array"),base_array,-2, _SC(".n")},
+	{_SC("type"),base_type,2, NULL},
 #ifndef NO_GARBAGE_COLLECTOR
 	{_SC("collectgarbage"),base_collectgarbage,1, _SC("t")},
 #endif
@@ -332,11 +340,21 @@ static int number_delegate_tochar(HSQUIRRELVM v)
 static int table_rawdelete(HSQUIRRELVM v)
 {
 	//return SQ_SUCCEEDED(sq_getdelegate(v,-1))?1:SQ_ERROR;
-	if(SQ_FAILED(sq_rawdeleteslot(v,1,1)))
+	if(SQ_FAILED(sq_rawdeleteslot(v,1,SQTrue)))
 		return SQ_ERROR;
 	return 1;
 }
 
+
+static int container_rawexists(HSQUIRRELVM v)
+{
+	if(SQ_SUCCEEDED(sq_rawget(v,-2))) {
+		sq_pushbool(v,SQTrue);
+		return 1;
+	}
+	sq_pushbool(v,SQFalse);
+	return 1;
+}
 
 static int table_rawset(HSQUIRRELVM v)
 {
@@ -354,6 +372,7 @@ SQRegFunction SQSharedState::_table_default_delegate_funcz[]={
 	{_SC("rawget"),table_rawget,2, _SC("t")},
 	{_SC("rawset"),table_rawset,3, _SC("t")},
 	{_SC("rawdelete"),table_rawdelete,2, _SC("t")},
+	{_SC("rawin"),container_rawexists,2, _SC("t")},
 	{0,0}
 };
 
@@ -377,7 +396,7 @@ static int array_reverse(HSQUIRRELVM v)
 
 static int array_pop(HSQUIRRELVM v)
 {
-	return SQ_SUCCEEDED(sq_arraypop(v,1,1))?1:SQ_ERROR;
+	return SQ_SUCCEEDED(sq_arraypop(v,1,SQTrue))?1:SQ_ERROR;
 }
 
 static int array_top(HSQUIRRELVM v)
@@ -429,27 +448,29 @@ static int array_resize(HSQUIRRELVM v)
 
 
 //QSORT ala Sedgewick
-int _qsort_compare(HSQUIRRELVM v,SQObjectPtr &arr,SQObjectPtr &a,SQObjectPtr &b,int func)
+bool _qsort_compare(HSQUIRRELVM v,SQObjectPtr &arr,SQObjectPtr &a,SQObjectPtr &b,int func,int &ret)
 {
 	if(func < 0) {
-		return v->ObjCmp(a,b);
+		if(!v->ObjCmp(a,b,ret)) return false;
 	}
 	else {
-		int ret = 0, top = sq_gettop(v);
+		int top = sq_gettop(v);
 		sq_push(v, func);
 		sq_pushroottable(v);
 		v->Push(a);
 		v->Push(b);
-		if(SQ_FAILED(sq_call(v, 3, 1))) {
-			v->RT_Error(_SC("compare func failed"));
+		if(SQ_FAILED(sq_call(v, 3, SQTrue))) {
+			v->Raise_Error(_SC("compare func failed"));
+			return false;
 		}
 		sq_getinteger(v, -1, &ret);
 		sq_settop(v, top);
-		return ret;
+		return true;
 	}
+	return true;
 }
 //QSORT ala Sedgewick
-void _qsort(HSQUIRRELVM v,SQObjectPtr &arr, int l, int r,int func)
+bool _qsort(HSQUIRRELVM v,SQObjectPtr &arr, int l, int r,int func)
 {
 	int i, j;
 	SQArray *a=_array(arr);
@@ -458,28 +479,42 @@ void _qsort(HSQUIRRELVM v,SQObjectPtr &arr, int l, int r,int func)
 		pivot = a->_values[l];
 		i = l; j = r+1;
 		while(1){
-			do ++i; while((i <= r) && (_qsort_compare(v,arr,a->_values[i],pivot,func) <= 0));
-			do --j; while( _qsort_compare(v,arr,a->_values[j],pivot,func) > 0 );
+			int ret;
+			do { 
+				++i; 
+				if(i > r) break;
+				if(!_qsort_compare(v,arr,a->_values[i],pivot,func,ret))
+					return false;
+			} while( ret <= 0);
+			do {
+				--j; 
+				if(!_qsort_compare(v,arr,a->_values[j],pivot,func,ret))
+					return false;
+			}
+			while( ret > 0 );
 			if( i >= j ) break;
 			t = a->_values[i]; a->_values[i] = a->_values[j]; a->_values[j] = t;
 		}
 		t = a->_values[l]; a->_values[l] = a->_values[j]; a->_values[j] = t;
-		_qsort( v, arr, l, j-1,func);
-		_qsort( v, arr, j+1, r,func);
+		if(!_qsort( v, arr, l, j-1,func)) return false;
+		if(!_qsort( v, arr, j+1, r,func)) return false;
 	}
+	return true;
 }
 
 static int array_sort(HSQUIRRELVM v)
 {
-	SQ_TRY {
-		int func = -1;
-		SQObjectPtr &o = stack_get(v,1);
-		SQObject &funcobj = stack_get(v,2);
-		if(_array(o)->Size() > 1) {
-			if(type(funcobj) == OT_CLOSURE || type(funcobj) == OT_NATIVECLOSURE) func = 2;
-			_qsort(v, o, 0, _array(o)->Size()-1, func);
-		}
-	} SQ_CATCH(SQException,e) { v->_lasterror = e._description; return SQ_ERROR; }
+	//SQ_TRY {
+	int func = -1;
+	SQObjectPtr &o = stack_get(v,1);
+	SQObject &funcobj = stack_get(v,2);
+	if(_array(o)->Size() > 1) {
+		if(type(funcobj) == OT_CLOSURE || type(funcobj) == OT_NATIVECLOSURE) func = 2;
+		if(!_qsort(v, o, 0, _array(o)->Size()-1, func))
+			return SQ_ERROR;//sq_aux_throwobject(v,v->_thrownerror);
+			//v->RT_Error(v->_thrownerror);
+	}
+	//} SQ_CATCH(SQException,e) { v->_lasterror = e._description; return SQ_ERROR; }
 	return 0;
 }
 static int array_slice(HSQUIRRELVM v)
@@ -589,7 +624,7 @@ SQRegFunction SQSharedState::_number_default_delegate_funcz[]={
 //CLOSURE DEFAULT DELEGATE//////////////////////////
 static int closure_call(HSQUIRRELVM v)
 {
-	return SQ_SUCCEEDED(sq_call(v,sq_gettop(v)-1,1))?1:SQ_ERROR;
+	return SQ_SUCCEEDED(sq_call(v,sq_gettop(v)-1,SQTrue))?1:SQ_ERROR;
 }
 
 static int closure_acall(HSQUIRRELVM v)
@@ -598,7 +633,7 @@ static int closure_acall(HSQUIRRELVM v)
 	int nparams=aparams->Size();
 	v->Push(stack_get(v,1));
 	for(int i=0;i<nparams;i++)v->Push(aparams->_values[i]);
-	return SQ_SUCCEEDED(sq_call(v,nparams,1))?1:SQ_ERROR;
+	return SQ_SUCCEEDED(sq_call(v,nparams,SQTrue))?1:SQ_ERROR;
 }
 
 SQRegFunction SQSharedState::_closure_default_delegate_funcz[]={
@@ -634,7 +669,7 @@ static int thread_call(HSQUIRRELVM v)
 		_thread(o)->Push(_thread(o)->_roottable);
 		for(int i = 2; i<(nparams+1); i++)
 			sq_move(_thread(o),v,i);
-		if(SQ_SUCCEEDED(sq_call(_thread(o),nparams,1))) {
+		if(SQ_SUCCEEDED(sq_call(_thread(o),nparams,SQTrue))) {
 			sq_move(v,_thread(o),-1);
 			return 1;
 		}
@@ -720,7 +755,8 @@ static int class_setattributes(HSQUIRRELVM v)
 SQRegFunction SQSharedState::_class_default_delegate_funcz[] = {
 	{_SC("getattributes"), class_getattributes, 2, _SC("y.")},
 	{_SC("setattributes"), class_setattributes, 3, _SC("y..")},
-	{0,0},
+	{_SC("rawin"),container_rawexists,2, _SC("y")},
+	{0,0}
 };
 
 static int instance_getclass(HSQUIRRELVM v)
@@ -732,6 +768,7 @@ static int instance_getclass(HSQUIRRELVM v)
 
 SQRegFunction SQSharedState::_instance_default_delegate_funcz[] = {
 	{_SC("getclass"), instance_getclass, 1, _SC("x")},
-	{0,0},
+	{_SC("rawin"),container_rawexists,2, _SC("x")},
+	{0,0}
 };
 

@@ -1,3 +1,18 @@
+***version 2.0 beta 1***
+-added bool type
+-class properties can be redefined in a derived class
+-added ops *= /= and %=
+-new syntax for class attributes declaration </ and /> instead of ( and )
+-increased the max number of literals per function from 65535 to 16777215
+-now free variables have proper lexical scoping
+-added API sq_createinstance(), sq_pushbool(), sq_getbool()
+-added built-in function type()
+-added built-in function obj.rawin(key) in table,class and instance
+-sq_rawget() and sq_rawset() now work also on classes and instances
+-the VM no longer uses C++ exception handling (more squitable for embedded devices)
+-various bufixes
+
+***2004-12-21         ***
 ***version 2.0 alpha 2***
 -globals scoping changed, now if :: is omitted the VM automatically falls back on the root table
 -various bufixes

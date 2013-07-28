@@ -1,6 +1,5 @@
 /*	see copyright notice in squirrel.h */
 
-#include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -158,7 +157,7 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 			sq_createslot(v,-3);
 			sq_pop(v,1);
 			if(compiles_only) {
-				if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,1))){
+				if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,SQTrue))){
 					SQChar *outfile = _SC("out.cnut");
 					if(output) {
 #ifdef SQUNICODE
@@ -175,7 +174,7 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 				return _DONE;
 			}
 			else {
-				if(SQ_SUCCEEDED(sqstd_dofile(v,filename,0,1))) {
+				if(SQ_SUCCEEDED(sqstd_dofile(v,filename,SQFalse,SQTrue))) {
 					return _DONE;
 				}
 				else {
@@ -256,7 +255,7 @@ void Interactive(HSQUIRRELVM v)
 		i=scstrlen(buffer);
 		if(i>0){
 			int oldtop=sq_gettop(v);
-			if(SQ_SUCCEEDED(sq_compilebuffer(v,buffer,i,_SC("interactive console"),1))){
+			if(SQ_SUCCEEDED(sq_compilebuffer(v,buffer,i,_SC("interactive console"),SQTrue))){
 				sq_pushroottable(v);
 				if(SQ_SUCCEEDED(sq_call(v,1,retval)) &&	retval){
 					scprintf(_SC("\n"));
@@ -265,7 +264,7 @@ void Interactive(HSQUIRRELVM v)
 					sq_get(v,-2);
 					sq_pushroottable(v);
 					sq_push(v,-4);
-					sq_call(v,2,0);
+					sq_call(v,2,SQFalse);
 					retval=0;
 					scprintf(_SC("\n"));
 				}

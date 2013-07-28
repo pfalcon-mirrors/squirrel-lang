@@ -21,8 +21,8 @@ public:
 	{
 		REMOVE_FROM_CHAIN(&_ss(this)->_gc_chain,this);
 	}
-	void Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write);
-	void Load(SQVM *v,SQUserPointer up,SQREADFUNC read);
+	bool Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write);
+	bool Load(SQVM *v,SQUserPointer up,SQREADFUNC read);
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
 	void Finalize(){_outervalues.resize(0); }
@@ -33,7 +33,7 @@ public:
 //////////////////////////////////////////////
 struct SQGenerator : public CHAINABLE_OBJ 
 {
-	enum SQGEneratorState{eRunning,eSuspended,eDead};
+	enum SQGeneratorState{eRunning,eSuspended,eDead};
 private:
 	SQGenerator(SQSharedState *ss,SQClosure *closure){_uiRef=0;_closure=closure;_state=eRunning;_ci._generator=_null_;INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);}
 public:
@@ -53,8 +53,8 @@ public:
 	void Release(){
 		sq_delete(this,SQGenerator);
 	}
-	int Yield(SQVM *v);
-	void Resume(SQVM *v,int target);
+	bool Yield(SQVM *v);
+	bool Resume(SQVM *v,int target);
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
 	void Finalize(){_stack.resize(0);_closure=_null_;}
@@ -64,7 +64,7 @@ public:
 	SQObjectPtrVec _vargsstack;
 	SQVM::CallInfo _ci;
 	ExceptionsTraps _etraps;
-	SQGEneratorState _state;
+	SQGeneratorState _state;
 };
 
 struct SQNativeClosure : public CHAINABLE_OBJ

@@ -23,6 +23,7 @@ private:
 	_HashNode *_firstfree;
 	_HashNode *_nodes;
 	int _numofnodes;
+	int _usednodes;
 	
 ///////////////////////////
 	void AllocNodes(int nSize);
@@ -45,7 +46,7 @@ public:
 		for (int i = 0; i < _numofnodes; i++) _nodes[i].~_HashNode();
 		SQ_FREE(_nodes, _numofnodes * sizeof(_HashNode));
 	}
-#ifndef NO_GARBAGE_COLLECTOR
+#ifndef NO_GARBAGE_COLLECTOR 
 	void Mark(SQCollectable **chain);
 #endif
 	inline unsigned long HashKey(const SQObjectPtr &key)

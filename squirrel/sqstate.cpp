@@ -13,7 +13,8 @@
 #include "sqclass.h"
 
 SQObjectPtr _null_;
-SQObjectPtr _notnull_(1);
+SQObjectPtr _true_(true);
+SQObjectPtr _false_(false);
 SQObjectPtr _one_(1);
 SQObjectPtr _minusone_(-1);
 
@@ -49,7 +50,7 @@ bool CompileTypemask(SQIntVec &res,const SQChar *typemask)
 				case 'a': mask |= _RT_ARRAY; break;
 				case 'u': mask |= _RT_USERDATA; break;
 				case 'c': mask |= (_RT_CLOSURE | _RT_NATIVECLOSURE); break;
-//				case 'n': mask |= _RT_NATIVECLOSURE; break;
+				case 'b': mask |= _RT_BOOL; break;
 				case 'g': mask |= _RT_GENERATOR; break;
 				case 'p': mask |= _RT_USERPOINTER; break;
 				case 'v': mask |= _RT_THREAD; break;
@@ -117,6 +118,7 @@ void SQSharedState::Init()
 	newsysstring(_SC("thread"));
 	newsysstring(_SC("class"));
 	newsysstring(_SC("instance"));
+	newsysstring(_SC("bool"));
 	//meta methods
 	newmetamethod(MM_ADD);
 	newmetamethod(MM_SUB);

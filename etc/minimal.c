@@ -34,30 +34,30 @@ void call_foo(HSQUIRRELVM v, int n,float f,const SQChar *s)
 		sq_pushinteger(v,n); 
 		sq_pushfloat(v,f);
 		sq_pushstring(v,s,-1);
-		sq_call(v,4,0); //calls the function 
+		sq_call(v,4,SQFalse); //calls the function 
 	}
 	sq_settop(v,top); //restores the original stack size
 }
 
 int main(int argc, char* argv[]) 
 { 
-HSQUIRRELVM v; 
-v = sq_open(1024); // creates a VM with initial stack size 1024 
+	HSQUIRRELVM v; 
+	v = sq_open(1024); // creates a VM with initial stack size 1024 
 
-//sq_pushroottable(v); //push the root table were to register the lib function
-//sqstd_register_iolib(v); 
-sqstd_seterrorhandlers(v); //registers the default error handlers
+	//sq_pushroottable(v); //push the root table were to register the lib function
+	//sqstd_register_iolib(v); 
+	sqstd_seterrorhandlers(v); //registers the default error handlers
 
-sq_setprintfunc(v, printfunc); //sets the print function
+	sq_setprintfunc(v, printfunc); //sets the print function
 
-sq_pushroottable(v); //push the root table(were the globals of the script will be stored)
-if(SQ_SUCCEEDED(sqstd_dofile(v, _SC("test.nut"), 0, 1))) // also prints syntax errors if any 
-{
-	call_foo(v,1,2.5,_SC("teststring"));
-}
+	sq_pushroottable(v); //push the root table(were the globals of the script will be stored)
+	if(SQ_SUCCEEDED(sqstd_dofile(v, _SC("test.nut"), SQFalse, SQTrue))) // also prints syntax errors if any 
+	{
+		call_foo(v,1,2.5,_SC("teststring"));
+	}
 
-sq_pop(v,1); //pops the root table
-sq_close(v); 
+	sq_pop(v,1); //pops the root table
+	sq_close(v); 
 
-return 0; 
+	return 0; 
 } 

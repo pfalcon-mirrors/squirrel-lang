@@ -215,6 +215,11 @@ struct SQObjectPtr : public SQObject
 		_type=OT_FLOAT;
 		_unVal.fFloat=fFloat;
 	}
+	SQObjectPtr(bool bBool)
+	{
+		_type = OT_BOOL;
+		_unVal.nInteger = bBool?1:0;
+	}
 	SQObjectPtr(SQUserPointer pUserPointer)
 	{
 		_type=OT_USERPOINTER;
@@ -223,6 +228,12 @@ struct SQObjectPtr : public SQObject
 	~SQObjectPtr()
 	{
 		__Release(_type,_unVal);
+	}
+	void Null()
+	{
+		__Release(_type,_unVal);
+		_type=OT_NULL;
+		_unVal.pUserPointer=NULL;
 	}
 	SQObjectPtr& operator=(const SQObjectPtr& obj)
 	{ 
@@ -252,13 +263,13 @@ struct SQObjectPtr : public SQObject
 		SQObjectPtr(const SQChar *){} //safety
 };
 /////////////////////////////////////////////////////////////////////////////////////
-struct SQException
+/*struct SQException
 {
 	SQException(SQSharedState *ss,const SQChar *str);
 	SQException(const SQObjectPtr &desc);
 	SQException(const SQException &b);
 	SQObjectPtr _description;
-};
+};*/
 
 #ifndef NO_GARBAGE_COLLECTOR
 #define MARK_FLAG 0x80000000
