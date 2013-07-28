@@ -100,8 +100,8 @@ const SQChar* SQFunctionProto::GetLocal(SQVM *vm,unsigned int stackbase,unsigned
 int SQFunctionProto::GetLine(SQInstruction *curr)
 {
 	int op=(curr-_instructions._vals)-1;
-	int line=1;
-	for(unsigned int i=0;i<_lineinfos.size();i++){
+	int line=_lineinfos[0]._line;
+	for(unsigned int i=1;i<_lineinfos.size();i++){
 		if(_lineinfos[i]._op>=op)
 			return line;
 		line=_lineinfos[i]._line;

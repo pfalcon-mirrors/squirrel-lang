@@ -360,36 +360,62 @@ static int array_resize(HSQUIRRELVM v)
 	return sq_throwerror(v,_SC("size must be a number"));
 }
 
+
 //QSORT ala Sedgewick
-void _qsort(HSQUIRRELVM v,SQArray &a, int l, int r)
+int _qsort_compare(HSQUIRRELVM v,SQObjectPtr &arr,SQObjectPtr &a,SQObjectPtr &b,int func)
+{
+	if(func<0){
+		return v->ObjCmp(a,b);
+	}
+	else{
+		int ret=0,top=sq_gettop(v);
+		sq_push(v,func);
+		sq_pushroottable(v);
+		v->Push(a);
+		v->Push(b);
+		if(SQ_FAILED(sq_call(v,3,1))){
+			v->RT_Error(_SC("compare func failed"));
+		}
+		sq_getinteger(v,-1,&ret);
+		sq_settop(v,top);
+		return ret;
+	}
+}
+//QSORT ala Sedgewick
+void _qsort(HSQUIRRELVM v,SQObjectPtr &arr, int l, int r,int func)
 {
 	int i, j;
+	SQArray *a=_array(arr);
 	SQObjectPtr pivot,t;
 	if( l < r ){
-		pivot = a._values[l];
+		pivot = a->_values[l];
 		i = l; j = r+1;
 		while(1){
-			do ++i; while((i <= r) && (v->ObjCmp(a._values[i],pivot) <= 0));
-			do --j; while( v->ObjCmp(a._values[j],pivot) > 0 );
+			do ++i; while((i <= r) && (_qsort_compare(v,arr,a->_values[i],pivot,func) <= 0));
+			do --j; while( _qsort_compare(v,arr,a->_values[j],pivot,func) > 0 );
 			if( i >= j ) break;
-			t = a._values[i]; a._values[i] = a._values[j]; a._values[j] = t;
+			t = a->_values[i]; a->_values[i] = a->_values[j]; a->_values[j] = t;
 		}
-		t = a._values[l]; a._values[l] = a._values[j]; a._values[j] = t;
-		_qsort( v, a, l, j-1);
-		_qsort( v, a, j+1, r);
+		t = a->_values[l]; a->_values[l] = a->_values[j]; a->_values[j] = t;
+		_qsort( v, arr, l, j-1,func);
+		_qsort( v, arr, j+1, r,func);
 	}
 }
 
 static int array_sort(HSQUIRRELVM v)
 {
 	if(SQ_FAILED(sq_aux_checkargs(v,1,1,OT_ARRAY)))return -1;
-	SQObject &o=stack_get(v,1);
+	try{
+	int func=-1;
+	SQObjectPtr &o=stack_get(v,1);
+	SQObject &funcobj=stack_get(v,2);
 	if(_array(o)->Size()>1){
-		_qsort(v,*_array(o),0,_array(o)->Size()-1);
+		if(type(funcobj)==OT_CLOSURE || type(funcobj)==OT_NATIVECLOSURE)func=2;
+		_qsort(v,o,0,_array(o)->Size()-1,func);
 	}
+	}catch(SQException &e){v->_lasterror=e._description;return SQ_ERROR;}
 	return 0;
 }
-
 static int array_slice(HSQUIRRELVM v)
 {
 	int sidx,eidx;
@@ -435,9 +461,27 @@ static int string_slice(HSQUIRRELVM v)
 	if(SQ_FAILED(get_slice_params(v,sidx,eidx,o)))return -1;
 	if(sidx<0)sidx=_string(o)->_len+sidx;
 	if(eidx<1)eidx=_string(o)->_len+eidx;
-	if(eidx<=sidx)return sq_throwerror(v,_SC("wrog indexes"));
+	if(eidx<sidx)return sq_throwerror(v,_SC("wrog indexes"));
 	v->Push(SQString::Create(_ss(v),&_stringval(o)[sidx],eidx-sidx));
 	return 1;
+}
+
+static int string_find(HSQUIRRELVM v)
+{
+	int top,start_idx=0;
+	const SQChar *str,*substr,*ret;
+	if(((top=sq_gettop(v))>1) && SQ_SUCCEEDED(sq_getstring(v,1,&str)) && SQ_SUCCEEDED(sq_getstring(v,2,&substr))){
+		if(top>2)sq_getinteger(v,3,&start_idx);
+		if((sq_getsize(v,1)>start_idx) && (start_idx>=0)){
+			ret=scstrstr(&str[start_idx],substr);
+			if(ret){
+				sq_pushinteger(v,(int)(ret-str));
+				return 1;
+			}
+		}
+		return 0;
+	}
+	return sq_throwerror(v,_SC("invalid param"));
 }
 
 #define STRING_TOFUNCZ(func) static int string_##func(HSQUIRRELVM v) \
@@ -461,6 +505,7 @@ SQRegFunction SQSharedState::_string_default_delegate_funcz[]={
 	{_SC("tointeger"),default_delegate_tointeger},
 	{_SC("tofloat"),default_delegate_tofloat},
 	{_SC("slice"),string_slice},
+	{_SC("find"),string_find},
 	{_SC("tolower"),string_tolower},
 	{_SC("toupper"),string_toupper},
 	{0,0}

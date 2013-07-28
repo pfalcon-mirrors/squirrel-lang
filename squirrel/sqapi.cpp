@@ -1,3 +1,6 @@
+/*
+	see copyright notice in squirrel.h
+*/
 #include "sqpcheader.h"
 #include "sqvm.h"
 #include "sqstring.h"

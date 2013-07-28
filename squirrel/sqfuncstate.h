@@ -10,7 +10,7 @@ typedef sqvector<int> IntVec;
 
 struct SQFuncState
 {
-	SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *parent){_sharedstate=ss;_lastline=0;_optimization=true;_func=func;_parent=parent;_stacksize=0;_breaktargets=0;_continuetargets=0;}
+	SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *parent){_sharedstate=ss;_lastline=0;_optimization=true;_func=func;_parent=parent;_stacksize=0;}
 #ifdef _DEBUG_DUMP
 	void Dump();
 #endif
@@ -56,8 +56,8 @@ struct SQFuncState
 	SQLineInfoVec _lineinfos;
 	SQObjectPtr _func;
 	SQFuncState *_parent;
-	int _breaktargets;
-	int _continuetargets;
+	IntVec _breaktargets; //contains number of nested exception traps
+	IntVec _continuetargets;
 	int _lastline;
 	bool _optimization;
 	SQSharedState *_sharedstate;

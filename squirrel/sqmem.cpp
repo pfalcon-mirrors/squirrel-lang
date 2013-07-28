@@ -1,3 +1,6 @@
+/*
+	see copyright notice in squirrel.h
+*/
 #include "sqpcheader.h"
 #include <malloc.h>
 void *sq_vm_malloc(unsigned int size){	return malloc(size); }

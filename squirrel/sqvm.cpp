@@ -354,14 +354,14 @@ bool SQVM::Return(int _arg0,int _arg1,SQObjectPtr &retval)
 	return broot;
 }
 
-//void SQVM::LocalInc(SQObjectPtr &target,SQObjectPtr &a,SQObjectPtr &incr,bool postfix,bool reassing)
-#define LocalInc(target,a,incr) \
+
+#define LOCAL_INC(target,a,incr) \
 { \
 	ARITH_OP( + ,target,a,incr); \
 	a=target; \
 }
 
-#define PLocalInc(target,a,incr) \
+#define PLOCAL_INC(target,a,incr) \
 { \
  	SQObjectPtr trg; \
 	ARITH_OP( + ,trg,a,incr); \
@@ -461,23 +461,23 @@ exception_restore:
 				}
 				continue;
 			case _OP_PLUSEQ:
-				if(sarg3==-1)LocalInc(TARGET,STK(arg1),STK(arg2))
+				if(sarg3==-1)LOCAL_INC(TARGET,STK(arg1),STK(arg2))
 				else DerefInc(TARGET,STK(arg1),STK(arg2),STK(arg3),false);
 				continue;
 			case _OP_INC:
-				if(sarg3==-1)LocalInc(TARGET,STK(arg1),_one_)
+				if(sarg3==-1)LOCAL_INC(TARGET,STK(arg1),_one_)
 				else DerefInc(TARGET,STK(arg1),STK(arg2),_one_,false);
 				continue;
 			case _OP_PINC:
-				if(sarg3==-1)PLocalInc(TARGET,STK(arg1),_one_)
+				if(sarg3==-1)PLOCAL_INC(TARGET,STK(arg1),_one_)
 				else DerefInc(TARGET,STK(arg1),STK(arg2),_one_,true);
 				continue;
 			case _OP_DEC:
-				if(sarg3==-1)LocalInc(TARGET,STK(arg1),_minusone_)
+				if(sarg3==-1)LOCAL_INC(TARGET,STK(arg1),_minusone_)
 				else DerefInc(TARGET,STK(arg1),STK(arg2),_minusone_,false);
 				continue;
 			case _OP_PDEC:
-				if(sarg3==-1)PLocalInc(TARGET,STK(arg1),_minusone_)
+				if(sarg3==-1)PLOCAL_INC(TARGET,STK(arg1),_minusone_)
 				else DerefInc(TARGET,STK(arg1),STK(arg2),_minusone_,true);
 				continue;
 			case _OP_PREPCALL:{
@@ -497,8 +497,7 @@ exception_restore:
 			case _OP_JMP: ci->_ip+=(arg1); continue;
 			case _OP_TAILCALL:
 				temp=STK(arg1);
-				if(type(temp)==OT_CLOSURE)
-				{ 
+				if(type(temp)==OT_CLOSURE){ 
 					ct_tailcall=true;
 					for(int i=0;i<arg3;i++)	STK(i)=STK(arg2+i);
 					ct_target=ci->_target;
@@ -745,8 +744,10 @@ common_call:
 			case _OP_PUSHTRAP:
 				ci->_etraps.push_back(SQExceptionTrap(_top,_stackbase,&ci->_iv->_vals[(ci->_ip-ci->_iv->_vals)+arg1],arg0));traps++;
 				continue;
-			case _OP_POPTRAP:
-				ci->_etraps.pop_back();traps--;
+			case _OP_POPTRAP:{
+				for(int i=0;i<arg0;i++){
+					ci->_etraps.pop_back();traps--;
+				}}
 				continue;
 			case _OP_THROW:	throw SQException(TARGET); continue;
 			}
@@ -805,9 +806,9 @@ void SQVM::CallDebugHook(int type)
 {
 	SQObjectPtr temp;
 	SQFunctionProto *func=_funcproto(_closure(ci->_closure)->_function);
-	Push(_roottable); Push(type); Push(func->GetLine(ci->_ip)); Push(func->_name);
-	Call(_debughook,4,_top-4,temp);
-	Pop(4);
+	Push(_roottable); Push(type); Push(func->_sourcename); Push(func->GetLine(ci->_ip)); Push(func->_name);
+	Call(_debughook,5,_top-5,temp);
+	Pop(5);
 }
 
 SQObjectPtr SQVM::CallNative(SQObjectPtr &nclosure,int nargs,int stackbase,bool tailcall)

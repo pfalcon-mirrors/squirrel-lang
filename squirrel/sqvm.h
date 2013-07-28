@@ -79,7 +79,7 @@ public:
 	void Modulo(const SQObjectPtr &o1,const SQObjectPtr &o2,SQObjectPtr &dest);
 	bool Return(int _arg0,int _arg1,SQObjectPtr &retval);
 
-	//void LocalInc(SQObjectPtr &target,SQObjectPtr &a,SQObjectPtr &incr,bool postfix,bool reassing);
+	
 	void DerefInc(SQObjectPtr &target,SQObjectPtr &self,SQObjectPtr &key,SQObjectPtr &incr,bool postfix);
 #ifdef _DEBUG
 	void dumpstack(int stackbase=-1,bool dumpall=false);

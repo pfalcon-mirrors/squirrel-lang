@@ -7,7 +7,9 @@
 #include "sqbloblib.h"
 
 #ifdef SQUNICODE
-
+#ifdef _WIN32
+#include <wchar.h>
+#endif
 #define scfopen	_wfopen
 #define scfgets fgetws
 #define scremove _wremove
@@ -124,9 +126,6 @@ static int io_fopen(HSQUIRRELVM v)
 {
 	if(sq_gettop(v)>=4)
 	{
-//		SQObjectPtr &file=stack_get(v,2);
-//		SQObjectPtr &mode=stack_get(v,3);
-//		SQObjectPtr &delegate=stack_get(v,4);
 		if(sq_gettype(v,3)!=OT_STRING ||
 			sq_gettype(v,2)!=OT_STRING ||
 			sq_gettype(v,4)!=OT_TABLE)
@@ -183,8 +182,6 @@ static int io_file_read(HSQUIRRELVM v)
 {
 	if(sq_gettop(v)>=2)
 	{
-		//SQObjectPtr &file=stack_get(v,1);
-		//SQObjectPtr &arg=stack_get(v,2);
 		_File *p;
 		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer*)&p)))return sq_throwerror(v,_SC("wrong ud"));
 		switch(sq_gettype(v,2))
@@ -412,10 +409,8 @@ int io_rename(HSQUIRRELVM v)
 	const SQChar *oldn,*newn;
 	if(SQ_SUCCEEDED(sq_getstring(v,2,&oldn))
 		&& SQ_SUCCEEDED(sq_getstring(v,3,&newn))){
-#ifndef SQUNICODE
 		if(screname(oldn,newn)==-1)return sq_throwerror(v,_SC("rename() failed"));
-#endif
-		
+	
 	}
 	return sq_throwerror(v,_SC("wrong param"));
 }

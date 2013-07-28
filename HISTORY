@@ -1,6 +1,14 @@
+***version 0.5 alpha***
+-fixed some minor bug
+-tested with non ASCII identifiers in unicode mode(I've tried chinese chars)
+-added built-in function string.find()
+-the built-in function array.sort() optionally accepts a cmp(a,b) function
+-the debug hook function now has a new prototype debug_hook(event_type,sourcefile,line,functionname)
+-fixed some debug info imprecision
+
 ***version 0.4 alpha***
 -faster VM
--sq_call will pop arguments and closure also in case of failure
+-sq_call will pop the arguments also in case of failure
 -fixed a bug in sq_remove
 -now the VM detects delegation cycles(and throws an exception)
 -new operators ++ and --

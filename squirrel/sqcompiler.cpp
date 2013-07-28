@@ -4,6 +4,9 @@
 #include "sqpcheader.h"
 #include <stdarg.h>
 #include "sqopcodes.h"
+/*
+	see copyright notice in squirrel.h
+*/
 #include "sqstring.h"
 #include "sqfuncproto.h"
 #include "sqfuncstate.h"
@@ -11,10 +14,8 @@
 #include "sqlexer.h"
 #include "sqvm.h"
 
-#define DEREF_NO_DEREF -1
+#define DEREF_NO_DEREF	-1
 #define DEREF_FIELD		-2
-
-#define MAX_KEYS_PER_APPEND 100
 
 struct ExpState
 {
@@ -29,20 +30,19 @@ struct ExpState
 	int _deref;
 };
 
-
 typedef sqvector<ExpState> ExpStateVec;
 
 #define _exst (_expstates.top())
 
 #define BEGIN_BREAKBLE_BLOCK()	int __nbreaks__=_fs->_unresolvedbreaks.size(); \
 							int __ncontinues__=_fs->_unresolvedcontinues.size(); \
-							_fs->_breaktargets++;_fs->_continuetargets++;
+							_fs->_breaktargets.push_back(0);_fs->_continuetargets.push_back(0);
 
 #define END_BREAKBLE_BLOCK(continue_target) {__nbreaks__=_fs->_unresolvedbreaks.size()-__nbreaks__; \
 					__ncontinues__=_fs->_unresolvedcontinues.size()-__ncontinues__; \
 					if(__ncontinues__>0)ResolveContinues(_fs,__ncontinues__,continue_target); \
 					if(__nbreaks__>0)ResolveBreaks(_fs,__nbreaks__); \
-					_fs->_breaktargets--;_fs->_continuetargets--;}
+					_fs->_breaktargets.pop_back();_fs->_continuetargets.pop_back();}
 
 class SQCompiler
 {
@@ -205,13 +205,19 @@ public:
 			else{ _fs->AddInstruction(op,-1); }
 			break;}
 		case BREAK:
-			if(_fs->_breaktargets<=0)Error(_SC("'break' has to be in a loop block"));
+			if(_fs->_breaktargets.size()<=0)Error(_SC("'break' has to be in a loop block"));
+			if(_fs->_breaktargets.top()>0){
+				_fs->AddInstruction(_OP_POPTRAP,_fs->_breaktargets.top(),0);
+			}
 			_fs->AddInstruction(_OP_JMP,0,-1234);
 			_fs->_unresolvedbreaks.push_back(_fs->GetCurrentPos());
 			Lex();
 			break;
 		case CONTINUE:
-			if(_fs->_continuetargets<=0)Error(_SC("'continue' has to be in a loop block"));
+			if(_fs->_continuetargets.size()<=0)Error(_SC("'continue' has to be in a loop block"));
+			if(_fs->_continuetargets.top()>0){
+				_fs->AddInstruction(_OP_POPTRAP,_fs->_continuetargets.top(),0);
+			}
 			_fs->AddInstruction(_OP_JMP,0,-1234);
 			_fs->_unresolvedcontinues.push_back(_fs->GetCurrentPos());
 			Lex();
@@ -786,7 +792,7 @@ public:
 		Lex();Expect(_SC('('));CommaExpr();Expect(_SC(')'));
 		Expect(_SC('{'));
 		int expr=_fs->TopTarget();
-		_fs->_breaktargets++;
+		_fs->_breaktargets.push_back(0);
 		int nbreaks=_fs->_unresolvedbreaks.size();
 		int ncontinues=_fs->_unresolvedcontinues.size();
 		int jzpos=-1;
@@ -852,7 +858,7 @@ public:
 			Lex();Expect(_SC(':'));
 			Statements();
 		}
-		_fs->_breaktargets--;
+		_fs->_breaktargets.pop_back();
 		Expect(_SC('}'));
 		nbreaks=_fs->_unresolvedbreaks.size()-nbreaks;
 		if(nbreaks>0)ResolveBreaks(_fs,nbreaks);
@@ -883,9 +889,13 @@ public:
 		SQObjectPtr exid;
 		Lex();
 		_fs->AddInstruction(_OP_PUSHTRAP,0,0);
+		if(_fs->_breaktargets.size())_fs->_breaktargets.top()++;
+		if(_fs->_continuetargets.size())_fs->_continuetargets.top()++;
 		int trappos=_fs->GetCurrentPos();
 		Statement();
-		_fs->AddInstruction(_OP_POPTRAP,0,0);
+		_fs->AddInstruction(_OP_POPTRAP,1,0);
+		if(_fs->_breaktargets.size())_fs->_breaktargets.top()--;
+		if(_fs->_continuetargets.size())_fs->_continuetargets.top()--;
 		_fs->AddInstruction(_OP_JMP,0,0);
 		int jmppos=_fs->GetCurrentPos();
 		_fs->SetIntructionParam(trappos,1,(_fs->GetCurrentPos()-trappos));

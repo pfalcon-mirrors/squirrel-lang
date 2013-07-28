@@ -144,12 +144,6 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 				return _DONE;
 			}
 			else{
-				const SQChar *err;
-				sq_getlasterror(v);
-				if(SQ_SUCCEEDED(sq_getstring(v,-1,&err))){
-					scprintf(_SC("ERROR %s\n"),err);
-				}
-				else scprintf(_SC("UNKNOWN ERROR"),err);
 				return _VERSION;
 			}
 		}
@@ -333,8 +327,7 @@ void Interactive(HSQUIRRELVM v)
 	BufState bs;
 	bs.buf=buffer;
 	PrintVersionInfos();
-	
-	
+		
 	sq_pushroottable(v);
 	sq_pushstring(v,_SC("quit"),-1);
 	sq_pushuserpointer(v,&done);
@@ -346,7 +339,7 @@ void Interactive(HSQUIRRELVM v)
 	{
 		int i = 0;
 		bs.ptr=0;
-		scprintf(_SC("sq>"));
+		scprintf(_SC("\nsq>"));
 		for(;;) {
 			int c;
 			if(done)return;
