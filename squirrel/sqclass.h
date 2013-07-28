@@ -55,11 +55,19 @@ public:
 
 struct SQInstance : public SQDelegable 
 {
+	void Init(SQSharedState *ss);
 	SQInstance(SQSharedState *ss, SQClass *c);
+	SQInstance(SQSharedState *ss, SQInstance *c);
 public:
 	static SQInstance* Create(SQSharedState *ss,SQClass *theclass) {
 		SQInstance *newinst = (SQInstance *)SQ_MALLOC(sizeof(SQInstance));
 		new (newinst) SQInstance(ss, theclass);
+		return newinst;
+	}
+	SQInstance *Clone(SQSharedState *ss)
+	{
+		SQInstance *newinst = (SQInstance *)SQ_MALLOC(sizeof(SQInstance));
+		new (newinst) SQInstance(ss, this);
 		return newinst;
 	}
 	~SQInstance();

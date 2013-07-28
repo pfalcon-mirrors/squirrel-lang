@@ -91,8 +91,8 @@ void SQVM::Raise_ParamTypeError(int nparam,int typemask,int type)
 		if(typemask & (mask)) {
 			if(found>0) StringCat(exptypes,SQString::Create(_ss(this), _SC("|"), -1), exptypes);
 			found ++;
-			StringCat(exptypes,SQString::Create(_ss(this), GetTypeName(mask), -1), exptypes);
+			StringCat(exptypes,SQString::Create(_ss(this), IdType2Name((SQObjectType)mask), -1), exptypes);
 		}
 	}
-	Raise_Error(_SC("parameter %d has an invalid type '%s' ; expected: '%s'"), nparam, GetTypeName(type), _stringval(exptypes));
+	Raise_Error(_SC("parameter %d has an invalid type '%s' ; expected: '%s'"), nparam, IdType2Name((SQObjectType)type), _stringval(exptypes));
 }

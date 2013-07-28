@@ -18,7 +18,7 @@ bool sq_aux_gettypedarg(HSQUIRRELVM v,int idx,SQObjectType type,SQObjectPtr **o)
 	*o = &stack_get(v,idx);
 	if(type(**o) != type){
 		SQObjectPtr oval = v->PrintObjVal(**o);
-		v->Raise_Error(_SC("wrong argument type, expected '%s' got '%.50s'"),GetTypeName(type),_stringval(oval));
+		v->Raise_Error(_SC("wrong argument type, expected '%s' got '%.50s'"),IdType2Name(type),_stringval(oval));
 		return false;
 	}
 	return true;
@@ -39,7 +39,7 @@ int sq_aux_throwobject(HSQUIRRELVM v,SQObjectPtr &e)
 
 int sq_aux_invalidtype(HSQUIRRELVM v,SQObjectType type)
 {
-	scsprintf(_ss(v)->GetScratchPad(100), _SC("unexpected type %s"), GetTypeName(type));
+	scsprintf(_ss(v)->GetScratchPad(100), _SC("unexpected type %s"), IdType2Name(type));
 	return sq_throwerror(v, _ss(v)->GetScratchPad(-1));
 }
 
@@ -142,10 +142,10 @@ void sq_addref(HSQUIRRELVM v,HSQOBJECT *po)
 	_table(_ss(v)->_refs_table)->NewSlot(*po, refs);
 }
 
-void sq_release(HSQUIRRELVM v,HSQOBJECT *po)
+SQBool sq_release(HSQUIRRELVM v,HSQOBJECT *po)
 {
 	SQObjectPtr refs;
-	if(!ISREFCOUNTED(type(*po))) return;
+	if(!ISREFCOUNTED(type(*po))) return SQTrue;
 	if(_table(_ss(v)->_refs_table)->Get(*po, refs)) {
 		int n = _integer(refs) - 1;
 		if(n <= 0) {
@@ -154,8 +154,10 @@ void sq_release(HSQUIRRELVM v,HSQOBJECT *po)
 		}
 		else {
 			refs = n;_table(_ss(v)->_refs_table)->Set(*po, refs);
+			return SQFalse;
 		}
 	}
+	return SQTrue;
 }
 
 const SQChar *sq_objtostring(HSQOBJECT *o) 
@@ -774,10 +776,15 @@ void sq_resetobject(HSQOBJECT *po)
 	po->_unVal.pUserPointer=NULL;po->_type=OT_NULL;
 }
 
-int sq_throwerror(HSQUIRRELVM v,const SQChar *err)
+SQRESULT sq_throwerror(HSQUIRRELVM v,const SQChar *err)
 {
 	v->_lasterror=SQString::Create(_ss(v),err);
 	return -1;
+}
+
+void sq_reseterror(HSQUIRRELVM v)
+{
+	v->_lasterror = _null_;
 }
 
 void sq_getlasterror(HSQUIRRELVM v)
@@ -850,7 +857,7 @@ SQRESULT sq_wakeupvm(HSQUIRRELVM v,SQBool wakeupret,SQBool retval)
 
 void sq_setreleasehook(HSQUIRRELVM v,int idx,SQRELEASEHOOK hook)
 {
-	if(sq_gettop(v)>=2){
+	if(sq_gettop(v) >= 1){
 		SQObjectPtr &ud=stack_get(v,idx);
 		switch( type(ud) ) {
 		case OT_USERDATA:

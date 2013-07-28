@@ -163,7 +163,7 @@ struct AutoDec{
 
 SQObjectPtr &stack_get(HSQUIRRELVM v, int idx);
 const SQChar *GetTypeName(const SQObjectPtr &obj1);
-const SQChar *GetTypeName(SQObjectType type);
+const SQChar *IdType2Name(SQObjectType type);
 
 #define _ss(_vm_) (_vm_)->_sharedstate
 

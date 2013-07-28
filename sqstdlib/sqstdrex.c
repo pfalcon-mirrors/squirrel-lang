@@ -94,7 +94,7 @@ static void sqstd_rex_error(SQRex *exp,const SQChar *error)
 static void sqstd_rex_expect(SQRex *exp, int n){
 	if((*exp->_p) != n) 
 		sqstd_rex_error(exp, _SC("expected paren"));
-	*exp->_p++;
+	exp->_p++;
 }
 
 static SQBool sqstd_rex_ischar(SQChar c)
@@ -112,13 +112,13 @@ static SQBool sqstd_rex_ischar(SQChar c)
 static SQChar sqstd_rex_escapechar(SQRex *exp)
 {
 	if(*exp->_p == SQREX_SYMBOL_ESCAPE_CHAR){
-		*exp->_p++;
+		exp->_p++;
 		switch(*exp->_p) {
-		case 'v': *exp->_p++; return '\v';
-		case 'n': *exp->_p++; return '\n';
-		case 't': *exp->_p++; return '\t';
-		case 'r': *exp->_p++; return '\r';
-		case 'f': *exp->_p++; return '\f';
+		case 'v': exp->_p++; return '\v';
+		case 'n': exp->_p++; return '\n';
+		case 't': exp->_p++; return '\t';
+		case 'r': exp->_p++; return '\r';
+		case 'f': exp->_p++; return '\f';
 		default: return (*exp->_p++);
 		}
 	} else if(!sqstd_rex_ischar(*exp->_p)) sqstd_rex_error(exp,_SC("letter expected"));
@@ -135,19 +135,19 @@ static int sqstd_rex_charclass(SQRex *exp,int classid)
 static int sqstd_rex_charnode(SQRex *exp,SQBool isclass)
 {
 	if(*exp->_p == SQREX_SYMBOL_ESCAPE_CHAR) {
-		*exp->_p++;
+		exp->_p++;
 		switch(*exp->_p) {
-			case 'n': *exp->_p++; return sqstd_rex_newnode(exp,'\n');
-			case 't': *exp->_p++; return sqstd_rex_newnode(exp,'\t');
-			case 'r': *exp->_p++; return sqstd_rex_newnode(exp,'\r');
-			case 'f': *exp->_p++; return sqstd_rex_newnode(exp,'\f');
-			case 'v': *exp->_p++; return sqstd_rex_newnode(exp,'\v');
+			case 'n': exp->_p++; return sqstd_rex_newnode(exp,'\n');
+			case 't': exp->_p++; return sqstd_rex_newnode(exp,'\t');
+			case 'r': exp->_p++; return sqstd_rex_newnode(exp,'\r');
+			case 'f': exp->_p++; return sqstd_rex_newnode(exp,'\f');
+			case 'v': exp->_p++; return sqstd_rex_newnode(exp,'\v');
 			case 'a': case 'A': case 'w': case 'W': case 's': case 'S': 
 			case 'd': case 'D': case 'x': case 'X': case 'c': case 'C': 
 			case 'p': case 'P': case 'l': case 'u': 
 				{
 				SQChar t = *exp->_p;
-				*exp->_p++; 
+				exp->_p++; 
 				return sqstd_rex_charclass(exp,t);
 				}
 			case 'b': 
@@ -155,7 +155,7 @@ static int sqstd_rex_charnode(SQRex *exp,SQBool isclass)
 				if(!isclass) {
 					int node = sqstd_rex_newnode(exp,OP_WB);
 					exp->_nodes[node].left = *exp->_p;
-					*exp->_p++; 
+					exp->_p++; 
 					return node;
 				} //else default
 			default: return sqstd_rex_newnode(exp,(*exp->_p++));
@@ -173,12 +173,12 @@ static int sqstd_rex_class(SQRex *exp)
 	int first = -1,chain;
 	if(*exp->_p == SQREX_SYMBOL_BEGINNING_OF_STRING){
 		ret = sqstd_rex_newnode(exp,OP_NCLASS);
-		*exp->_p++;
+		exp->_p++;
 	}else ret = sqstd_rex_newnode(exp,OP_CLASS);
 	
 	if(*exp->_p == ']' || *exp->_p == '-'){
 		first = *exp->_p;
-		*exp->_p++;
+		exp->_p++;
 	}
 	chain = ret;
 	while(*exp->_p != ']' && exp->_p != exp->_eol) {
@@ -222,7 +222,7 @@ static int sqstd_rex_parsenumber(SQRex *exp)
 {
 	int ret = *exp->_p-'0';
 	int positions = 10;
-	*exp->_p++;
+	exp->_p++;
 	while(isdigit(*exp->_p)) {
 		ret = ret*10+(*exp->_p++-'0');
 		if(positions==1000000000) sqstd_rex_error(exp,_SC("overflow in numeric constant"));
@@ -238,11 +238,11 @@ static int sqstd_rex_element(SQRex *exp)
 	{
 	case '(': {
 		int expr;
-		*exp->_p++;
+		exp->_p++;
 		
 		
 		if(*exp->_p =='?') {
-			*exp->_p++;
+			exp->_p++;
 			sqstd_rex_expect(exp,':');
 			expr = sqstd_rex_newnode(exp,OP_NOCAPEXPR);
 		}
@@ -254,12 +254,12 @@ static int sqstd_rex_element(SQRex *exp)
 	}
 		break;
 	case '[':
-		*exp->_p++;
+		exp->_p++;
 		ret = sqstd_rex_class(exp);
 		sqstd_rex_expect(exp,']');
 		break;
-	case SQREX_SYMBOL_END_OF_STRING: *exp->_p++; ret = sqstd_rex_newnode(exp,OP_EOL);break;
-	case SQREX_SYMBOL_ANY_CHAR: *exp->_p++; ret = sqstd_rex_newnode(exp,OP_DOT);break;
+	case SQREX_SYMBOL_END_OF_STRING: exp->_p++; ret = sqstd_rex_newnode(exp,OP_EOL);break;
+	case SQREX_SYMBOL_ANY_CHAR: exp->_p++; ret = sqstd_rex_newnode(exp,OP_DOT);break;
 	default:
 		ret = sqstd_rex_charnode(exp,SQFalse);
 		break;
@@ -269,19 +269,19 @@ static int sqstd_rex_element(SQRex *exp)
 		int op;
 		unsigned short p0 = 0, p1 = 0;
 		switch(*exp->_p){
-		case SQREX_SYMBOL_GREEDY_ZERO_OR_MORE: p0 = 0; p1 = 0xFFFF; *exp->_p++; goto __end;
-		case SQREX_SYMBOL_GREEDY_ONE_OR_MORE: p0 = 1; p1 = 0xFFFF; *exp->_p++; goto __end;
-		case SQREX_SYMBOL_GREEDY_ZERO_OR_ONE: p0 = 0; p1 = 1; *exp->_p++; goto __end;
+		case SQREX_SYMBOL_GREEDY_ZERO_OR_MORE: p0 = 0; p1 = 0xFFFF; exp->_p++; goto __end;
+		case SQREX_SYMBOL_GREEDY_ONE_OR_MORE: p0 = 1; p1 = 0xFFFF; exp->_p++; goto __end;
+		case SQREX_SYMBOL_GREEDY_ZERO_OR_ONE: p0 = 0; p1 = 1; exp->_p++; goto __end;
 		case '{':{
-			*exp->_p++;
+			exp->_p++;
 			if(!isdigit(*exp->_p)) sqstd_rex_error(exp,_SC("number expected"));
 			p0 = sqstd_rex_parsenumber(exp);
 			switch(*exp->_p) {
 			case '}':
-				p1 = p0; *exp->_p++;
+				p1 = p0; exp->_p++;
 				goto __end;
 			case ',':
-				*exp->_p++;
+				exp->_p++;
 				p1 = 0xFFFF;
 				if(isdigit(*exp->_p)){
 					p1 = sqstd_rex_parsenumber(exp);
@@ -310,7 +310,7 @@ static int sqstd_rex_list(SQRex *exp)
 {
 	int ret=-1,e;
 	if(*exp->_p == SQREX_SYMBOL_BEGINNING_OF_STRING) {
-		*exp->_p++;
+		exp->_p++;
 		ret = sqstd_rex_newnode(exp,OP_BOL);
 	}
 	e = sqstd_rex_element(exp);
@@ -321,7 +321,7 @@ static int sqstd_rex_list(SQRex *exp)
 
 	if(*exp->_p == SQREX_SYMBOL_BRANCH) {
 		int temp;
-		*exp->_p++;
+		exp->_p++;
 		temp = sqstd_rex_newnode(exp,OP_OR);
 		exp->_nodes[temp].left = ret;
 		exp->_nodes[temp].right = sqstd_rex_list(exp);
@@ -475,7 +475,7 @@ static const SQChar *sqstd_rex_matchnode(SQRex* exp,SQRexNode *node,const SQChar
 /* public api */
 SQRex *sqstd_rex_compile(const SQChar *pattern,const SQChar **error)
 {
-	SQRex *exp = sq_malloc(sizeof(SQRex));
+	SQRex *exp = (SQRex *)sq_malloc(sizeof(SQRex));
 	exp->_p = pattern;
 	exp->_nallocated = (int)scstrlen(pattern) * sizeof(SQChar);
 	exp->_nodes = (SQRexNode *)sq_malloc(exp->_nallocated * sizeof(SQRexNode));

@@ -5,7 +5,7 @@ class Foo {
 		testy = ["stuff",1,2,3];
 	}
 	//attributes of PrintTesty
-	(test = "freakin attribute")
+	</ test = "freakin attribute"/>
 	function PrintTesty()
 	{
 		foreach(i,val in testy)
@@ -14,7 +14,7 @@ class Foo {
 		}
 	}
 	//attributes of testy
-	(flippy = 10 , second = [1,2,3])
+	</ flippy = 10 , second = [1,2,3] />
 	testy = null;
 	
 }

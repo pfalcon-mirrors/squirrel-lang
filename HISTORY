@@ -1,3 +1,10 @@
+***version 2.0 release candidate 1(RC 1)***
+-added API sq_reseterror()
+-modified sq_release()
+-now class instances can be cloned
+-various bufixes
+
+***2005-01-26        ***
 ***version 2.0 beta 1***
 -added bool type
 -class properties can be redefined in a derived class
@@ -9,7 +16,7 @@
 -added built-in function type()
 -added built-in function obj.rawin(key) in table,class and instance
 -sq_rawget() and sq_rawset() now work also on classes and instances
--the VM no longer uses C++ exception handling (more squitable for embedded devices)
+-the VM no longer uses C++ exception handling (more suitable for embedded devices)
 -various bufixes
 
 ***2004-12-21         ***

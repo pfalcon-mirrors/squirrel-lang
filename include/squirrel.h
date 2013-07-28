@@ -105,8 +105,8 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 2.0 beta 1")
-#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2004 Alberto Demichelis")
+#define SQUIRREL_VERSION	_SC("Squirrel 2.0 release candidate 1(RC1)")
+#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2005 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
 #define SQ_VMSTATE_IDLE			0
@@ -305,13 +305,14 @@ SQUIRREL_API SQRESULT sq_call(HSQUIRRELVM v,int params,SQBool retval);
 SQUIRREL_API SQRESULT sq_resume(HSQUIRRELVM v,SQBool retval);
 SQUIRREL_API const SQChar *sq_getlocal(HSQUIRRELVM v,unsigned int level,unsigned int idx);
 SQUIRREL_API SQRESULT sq_throwerror(HSQUIRRELVM v,const SQChar *err);
+SQUIRREL_API void sq_reseterror(HSQUIRRELVM v);
 SQUIRREL_API void sq_getlasterror(HSQUIRRELVM v);
 
 /*raw object handling*/
 SQUIRREL_API SQRESULT sq_getstackobj(HSQUIRRELVM v,int idx,HSQOBJECT *po);
 SQUIRREL_API void sq_pushobject(HSQUIRRELVM v,HSQOBJECT obj);
 SQUIRREL_API void sq_addref(HSQUIRRELVM v,HSQOBJECT *po);
-SQUIRREL_API void sq_release(HSQUIRRELVM v,HSQOBJECT *po);
+SQUIRREL_API SQBool sq_release(HSQUIRRELVM v,HSQOBJECT *po);
 SQUIRREL_API void sq_resetobject(HSQOBJECT *po);
 SQUIRREL_API const SQChar *sq_objtostring(HSQOBJECT *o);
 SQUIRREL_API SQInteger sq_objtointeger(HSQOBJECT *o);

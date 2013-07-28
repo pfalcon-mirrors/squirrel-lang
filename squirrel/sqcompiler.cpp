@@ -481,8 +481,8 @@ public:
 	{
 		MultExp();
 		for(;;) switch(_token) {
-		case _SC('+'): BIN_EXP(_OP_ARITH, &SQCompiler::MultExp,'+'); break;
-		case _SC('-'): BIN_EXP(_OP_ARITH, &SQCompiler::MultExp,'-'); break;
+		case _SC('+'): case _SC('-'):
+			BIN_EXP(_OP_ARITH, &SQCompiler::MultExp,_token); break;
 		default: return;
 		}
 	}
@@ -491,9 +491,8 @@ public:
 	{
 		PrefixedExpr();
 		for(;;) switch(_token) {
-		case _SC('*'): BIN_EXP(_OP_ARITH, &SQCompiler::PrefixedExpr,'*'); break;
-		case _SC('/'): BIN_EXP(_OP_ARITH, &SQCompiler::PrefixedExpr,'/'); break;
-		case _SC('%'): BIN_EXP(_OP_ARITH, &SQCompiler::PrefixedExpr,'%'); break;
+		case _SC('*'): case _SC('/'): case _SC('%'):
+			BIN_EXP(_OP_ARITH, &SQCompiler::PrefixedExpr,_token); break;
 		default: return;
 		}
 	}
@@ -575,7 +574,7 @@ public:
 		switch(_token)
 		{
 		case TK_STRING_LITERAL: {
-				SQObjectPtr id(SQString::Create(_ss(_vm), _lex._svalue));
+				SQObjectPtr id(SQString::Create(_ss(_vm), _lex._svalue,_lex._longstr.size()-1));
 				_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetStringConstant(_stringval(id)));
 				Lex(); 
 			}

@@ -250,7 +250,7 @@ bool SQVM::StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObjectPtr &
 	return true;
 }
 
-const SQChar *GetTypeName(SQObjectType type)
+const SQChar *IdType2Name(SQObjectType type)
 {
 	switch(_RAW_TYPE(type))
 	{
@@ -279,7 +279,7 @@ const SQChar *GetTypeName(SQObjectType type)
 
 const SQChar *GetTypeName(const SQObjectPtr &obj1)
 {
-	return GetTypeName(type(obj1));	
+	return IdType2Name(type(obj1));	
 }
 
 void SQVM::TypeOf(const SQObjectPtr &obj1,SQObjectPtr &dest)
@@ -1190,11 +1190,15 @@ bool SQVM::Clone(const SQObjectPtr &self,SQObjectPtr &target)
 	SQObjectPtr temp_reg;
 	switch(type(self)){
 	case OT_TABLE:
-		target=_table(self)->Clone();
-		if(_table(target)->_delegate){
+		target = _table(self)->Clone();
+		goto cloned_mt;
+	case OT_INSTANCE:
+		target = _instance(self)->Clone(_ss(this));
+cloned_mt:
+		if(_delegable(target)->_delegate){
 			Push(target);
 			Push(self);
-			CallMetaMethod(_table(target),MT_CLONED,2,temp_reg);
+			CallMetaMethod(_delegable(target),MT_CLONED,2,temp_reg);
 		}
 		return true;
 	case OT_ARRAY: 

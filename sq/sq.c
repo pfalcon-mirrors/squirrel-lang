@@ -171,19 +171,19 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 					if(SQ_SUCCEEDED(sqstd_writeclosuretofile(v,outfile)))
 						return _DONE;
 				}
-				return _DONE;
 			}
 			else {
 				if(SQ_SUCCEEDED(sqstd_dofile(v,filename,SQFalse,SQTrue))) {
 					return _DONE;
 				}
-				else {
-					const SQChar *err;
-					sq_getlasterror(v);
-					if(SQ_SUCCEEDED(sq_getstring(v,-1,&err))) {
-						scprintf(_SC("Error [%s]\n"),err);
-						return _DONE;
-					}
+			}
+			//if this point is reached an error occured
+			{
+				const SQChar *err;
+				sq_getlasterror(v);
+				if(SQ_SUCCEEDED(sq_getstring(v,-1,&err))) {
+					scprintf(_SC("Error [%s]\n"),err);
+					return _DONE;
 				}
 			}
 			

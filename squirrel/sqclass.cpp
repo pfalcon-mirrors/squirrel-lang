@@ -123,21 +123,32 @@ bool SQClass::GetAttributes(const SQObjectPtr &key,SQObjectPtr &outval)
 }
 
 ///////////////////////////////////////////////////////////////////////
-SQInstance::SQInstance(SQSharedState *ss, SQClass *c)
+void SQInstance::Init(SQSharedState *ss)
 {
 	_uiRef = 0;
-	_class = c;
 	_userpointer = NULL;
 	_hook = NULL;
-	//_values.copy(_class->_defaultvalues);
-	_values.resize(_class->_defaultvalues.size());
-	for(unsigned int i = 0; i < _class->_defaultvalues.size(); i++) {
-		_values[i] = _class->_defaultvalues[i].val;
-	}
 	__ObjAddRef(_class);
 	_delegate = _class->_members;
 	INIT_CHAIN();
 	ADD_TO_CHAIN(&_sharedstate->_gc_chain, this);
+}
+
+SQInstance::SQInstance(SQSharedState *ss, SQClass *c)
+{
+	_class = c;
+	_values.resize(_class->_defaultvalues.size());
+	for(unsigned int i = 0; i < _class->_defaultvalues.size(); i++) {
+		_values[i] = _class->_defaultvalues[i].val;
+	}
+	Init(ss);
+}
+
+SQInstance::SQInstance(SQSharedState *ss, SQInstance *i)
+{
+	_class = i->_class;
+	_values.copy(i->_values);
+	Init(ss);
 }
 
 void SQInstance::Finalize() 

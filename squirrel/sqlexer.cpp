@@ -112,7 +112,7 @@ void SQLexer::LexBlockComment()
 int SQLexer::Lex()
 {
 	_lasttokenline = _currentline;
-	while(CUR_CHAR>SQUIRREL_EOB) {
+	while(CUR_CHAR != SQUIRREL_EOB) {
 		switch(CUR_CHAR){
 		case _SC('\t'): case _SC('\r'): case _SC(' '): NEXT(); continue;
 		case _SC('\n'):

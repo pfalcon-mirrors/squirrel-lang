@@ -30,7 +30,11 @@ public:
 	SQFloat _fvalue;
 	SQLEXREADFUNC _readf;
 	SQUserPointer _up;
+#ifdef _UNICODE
 	SQChar _currdata;
+#else
+	unsigned char _currdata;
+#endif
 	SQSharedState *_sharedstate;
 	sqvector<SQChar> _longstr;
 };

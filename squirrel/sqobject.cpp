@@ -220,7 +220,7 @@ bool ReadObject(HSQUIRRELVM v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &o)
 		o=_null_;
 		break;
 	default:
-		v->Raise_Error(_SC("cannot serialize a %s"),GetTypeName(t));
+		v->Raise_Error(_SC("cannot serialize a %s"),IdType2Name(t));
 		return false;
 	}
 	return true;
@@ -376,7 +376,7 @@ void SQVM::Mark(SQCollectable **chain)
 		SQSharedState::MarkObject(_roottable, chain);
 		SQSharedState::MarkObject(temp_reg, chain);
 		for(unsigned int i = 0; i < _stack.size(); i++) SQSharedState::MarkObject(_stack[i], chain);
-		for(unsigned int i = 0; i < _vargsstack.size(); i++) SQSharedState::MarkObject(_vargsstack[i], chain);
+		for(unsigned int j = 0; j < _vargsstack.size(); j++) SQSharedState::MarkObject(_vargsstack[j], chain);
 	END_MARK()
 }
 
@@ -409,12 +409,12 @@ void SQClass::Mark(SQCollectable **chain)
 			SQSharedState::MarkObject(_defaultvalues[i].val, chain);
 			SQSharedState::MarkObject(_defaultvalues[i].attrs, chain);
 		}
-		for(unsigned int i =0; i< _methods.size(); i++) {
-			SQSharedState::MarkObject(_methods[i].val, chain);
-			SQSharedState::MarkObject(_methods[i].attrs, chain);
+		for(unsigned int j =0; j< _methods.size(); j++) {
+			SQSharedState::MarkObject(_methods[j].val, chain);
+			SQSharedState::MarkObject(_methods[j].attrs, chain);
 		}
-		for(unsigned int i =0; i< _metamethods.size(); i++) {
-			SQSharedState::MarkObject(_metamethods[i], chain);
+		for(unsigned int k =0; k< _metamethods.size(); k++) {
+			SQSharedState::MarkObject(_metamethods[k], chain);
 		}
 	END_MARK()
 }
@@ -433,7 +433,7 @@ void SQGenerator::Mark(SQCollectable **chain)
 {
 	START_MARK()
 		for(unsigned int i = 0; i < _stack.size(); i++) SQSharedState::MarkObject(_stack[i], chain);
-		for(unsigned int i = 0; i < _vargsstack.size(); i++) SQSharedState::MarkObject(_vargsstack[i], chain);
+		for(unsigned int j = 0; j < _vargsstack.size(); j++) SQSharedState::MarkObject(_vargsstack[j], chain);
 		SQSharedState::MarkObject(_closure, chain);
 	END_MARK()
 }
