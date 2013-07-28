@@ -22,6 +22,7 @@ SQSharedState::SQSharedState()
 {
 	_compilererrorhandler = NULL;
 	_printfunc = NULL;
+	_errorfunc = NULL;
 	_debuginfo = false;
 	_notifyallexceptions = false;
 }
@@ -101,7 +102,8 @@ void SQSharedState::Init()
 #ifndef NO_GARBAGE_COLLECTOR
 	_gc_chain=NULL;
 #endif
-	sq_new(_stringtable,StringTable);
+	_stringtable = (StringTable*)SQ_MALLOC(sizeof(StringTable));
+	new (_stringtable) StringTable(this);
 	sq_new(_metamethods,SQObjectPtrVec);
 	sq_new(_systemstrings,SQObjectPtrVec);
 	sq_new(_types,SQObjectPtrVec);
@@ -485,8 +487,9 @@ void RefTable::AllocNodes(SQUnsignedInteger size)
 * http://www.lua.org/source/4.0.1/src_lstring.c.html
 */
 
-StringTable::StringTable()
+StringTable::StringTable(SQSharedState *ss)
 {
+	_sharedstate = ss;
 	AllocNodes(4);
 	_slotused = 0;
 }
@@ -517,6 +520,7 @@ SQString *StringTable::Add(const SQChar *news,SQInteger len)
 
 	SQString *t=(SQString *)SQ_MALLOC(rsl(len)+sizeof(SQString));
 	new (t) SQString;
+	t->_sharedstate = _sharedstate;
 	memcpy(t->_val,news,rsl(len));
 	t->_val[len] = _SC('\0');
 	t->_len = len;

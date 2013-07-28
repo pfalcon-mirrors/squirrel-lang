@@ -1,3 +1,27 @@
+***version 3.0 alpha 1***
+-first banch from 2.x source tree
+-added 'base' keyword
+-removed 'delegate' keyword
+-now compiled scripts are vararg functions
+-added setdelegate() and getdelegate() table builtin methods
+-added <=> 3 ways compare operator
+-added lambda expression @(a,b) a + b
+-added local function statement
+-added array built-in map(),reduce(),apply(),filter() and find()
+-generators hold only a weak reference of the enviroment object
+-removed 'vargv' and 'vargc' keywords
+-now var args are passed as an array called vargv(as a paramter)
+-removed 'parent' keyword
+-added class getbase() built in method
+-instanceof doesn't throw an exception if the left expression is not a class
+-lexical scoping for free variables(free variables are no longer in the second parameter list)
+-sq_setprintfunc accept error func
+-sq_geterrorfunc()
+-added sq_arrayremove() and sq_arrayinsert()
+-error() built in function(works like print but prints using the errorfunc)
+-added native debug hook
+
+***2008-02-17        ***
 ***version 2.2 stable***
 -added _newslot metamethod in classes
 -added enums added constants

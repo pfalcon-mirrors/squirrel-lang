@@ -43,7 +43,7 @@ function NthToggle::activate ()
 }
 
 
-local n = ARGS.len()!=0?ARGS[0].tointeger():1
+local n = vargv.len()!=0?vargv[0].tointeger():1
 
 local val = 1;
 local toggle = Toggle.new(val);

@@ -2,50 +2,71 @@
 #ifndef _SQCLOSURE_H_
 #define _SQCLOSURE_H_
 
-struct SQFunctionProto;
 
+#define _CALC_CLOSURE_SIZE(func) (sizeof(SQClosure) + (func->_noutervalues*sizeof(SQObjectPtr)) + (func->_ndefaultparams*sizeof(SQObjectPtr)))
+
+struct SQFunctionProto;
+struct SQClass;
 struct SQClosure : public CHAINABLE_OBJ
 {
 private:
-	SQClosure(SQSharedState *ss,SQFunctionProto *func){_function=func; INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);}
+	SQClosure(SQSharedState *ss,SQFunctionProto *func){_function=func; _base = NULL; INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);}
 public:
 	static SQClosure *Create(SQSharedState *ss,SQFunctionProto *func){
-		SQClosure *nc=(SQClosure*)SQ_MALLOC(sizeof(SQClosure));
+		SQInteger size = _CALC_CLOSURE_SIZE(func);
+		SQClosure *nc=(SQClosure*)SQ_MALLOC(size);
 		new (nc) SQClosure(ss,func);
+		nc->_outervalues = (SQObjectPtr *)(nc + 1);
+		nc->_defaultparams = &nc->_outervalues[func->_noutervalues];
+		_CONSTRUCT_VECTOR(SQObjectPtr,func->_noutervalues,nc->_outervalues);
+		_CONSTRUCT_VECTOR(SQObjectPtr,func->_ndefaultparams,nc->_defaultparams);
 		return nc;
 	}
 	void Release(){
-		sq_delete(this,SQClosure);
+		SQFunctionProto *f = _funcproto(_function);
+		SQInteger size = _CALC_CLOSURE_SIZE(f);
+		_DESTRUCT_VECTOR(SQObjectPtr,f->_noutervalues,_outervalues);
+		_DESTRUCT_VECTOR(SQObjectPtr,f->_ndefaultparams,_defaultparams);
+		this->~SQClosure();
+		sq_vm_free(this,size);
 	}
 	SQClosure *Clone()
 	{
-		SQClosure * ret = SQClosure::Create(_opt_ss(this),_funcproto(_function));
+		SQFunctionProto *f = _funcproto(_function);
+		SQClosure * ret = SQClosure::Create(_opt_ss(this),f);
 		ret->_env = _env;
-		ret->_outervalues.copy(_outervalues);
-		ret->_defaultparams.copy(_defaultparams);
+		for(SQInteger i = 0; i < f->_noutervalues; i++)
+			ret->_outervalues[i] = _outervalues[i];
+		for(SQInteger j = 0; j < f->_ndefaultparams; j++)
+			ret->_defaultparams[j] = _defaultparams[j];
 		return ret;
 	}
-	~SQClosure()
-	{
-		REMOVE_FROM_CHAIN(&_ss(this)->_gc_chain,this);
-	}
+	~SQClosure();
+	
 	bool Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write);
 	static bool Load(SQVM *v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &ret);
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
-	void Finalize(){_outervalues.resize(0); }
+	void Finalize(){
+		SQFunctionProto *f = _funcproto(_function);
+		for(SQInteger i = 0; i < f-> _noutervalues; i++)
+			_outervalues[i].Null();
+		for(SQInteger j = 0; j < f-> _ndefaultparams; j++)
+			_defaultparams[j].Null();
+	}
 #endif
 	SQObjectPtr _env;
+	SQClass *_base;
 	SQObjectPtr _function;
-	SQObjectPtrVec _outervalues;
-	SQObjectPtrVec _defaultparams;
+	SQObjectPtr *_outervalues;
+	SQObjectPtr *_defaultparams;
 };
 //////////////////////////////////////////////
 struct SQGenerator : public CHAINABLE_OBJ 
 {
 	enum SQGeneratorState{eRunning,eSuspended,eDead};
 private:
-	SQGenerator(SQSharedState *ss,SQClosure *closure){_closure=closure;_state=eRunning;_ci._generator=_null_;INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);}
+	SQGenerator(SQSharedState *ss,SQClosure *closure){_closure=closure;_state=eRunning;_ci._generator=NULL;INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);}
 public:
 	static SQGenerator *Create(SQSharedState *ss,SQClosure *closure){
 		SQGenerator *nc=(SQGenerator*)SQ_MALLOC(sizeof(SQGenerator));
@@ -63,7 +84,7 @@ public:
 	void Release(){
 		sq_delete(this,SQGenerator);
 	}
-	bool Yield(SQVM *v);
+	bool Yield(SQVM *v,SQInteger target);
 	bool Resume(SQVM *v,SQInteger target);
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
@@ -71,7 +92,7 @@ public:
 #endif
 	SQObjectPtr _closure;
 	SQObjectPtrVec _stack;
-	SQObjectPtrVec _vargsstack;
+	//SQObjectPtrVec _vargsstack;
 	SQVM::CallInfo _ci;
 	ExceptionsTraps _etraps;
 	SQGeneratorState _state;

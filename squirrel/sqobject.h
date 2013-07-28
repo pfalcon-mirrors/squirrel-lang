@@ -55,11 +55,11 @@ enum SQMetaMethod{
 
 struct SQRefCounted
 {
+	SQUnsignedInteger _uiRef;
+	struct SQWeakRef *_weakref;
 	SQRefCounted() { _uiRef = 0; _weakref = NULL; }
 	virtual ~SQRefCounted();
 	SQWeakRef *GetWeakRef(SQObjectType type);
-	SQUnsignedInteger _uiRef;
-	struct SQWeakRef *_weakref;
 	virtual void Release()=0;
 };
 

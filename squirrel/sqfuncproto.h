@@ -6,8 +6,7 @@
 
 enum SQOuterType {
 	otLOCAL = 0,
-	otSYMBOL = 1,
-	otOUTER = 2
+	otOUTER = 1
 };
 
 struct SQOuterVar
@@ -130,7 +129,7 @@ public:
 	SQObjectPtr _name;
     SQInteger _stacksize;
 	bool _bgenerator;
-	bool _varparams;
+	SQInteger _varparams;
 
 	SQInteger _nlocalvarinfos;
 	SQLocalVarInfo *_localvarinfos;

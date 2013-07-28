@@ -32,19 +32,16 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_BITW")},
 	{_SC("_OP_RETURN")},
 	{_SC("_OP_LOADNULLS")},
-	{_SC("_OP_LOADROOTTABLE")},
+	{_SC("_OP_LOADROOT")},
 	{_SC("_OP_LOADBOOL")},
 	{_SC("_OP_DMOVE")},
 	{_SC("_OP_JMP")},
 	{_SC("_OP_JNZ")},
 	{_SC("_OP_JZ")},
 	{_SC("_OP_LOADFREEVAR")},
-	{_SC("_OP_VARGC")},
-	{_SC("_OP_GETVARGV")},
 	{_SC("_OP_NEWTABLE")},
 	{_SC("_OP_NEWARRAY")},
 	{_SC("_OP_APPENDARRAY")},
-	{_SC("_OP_GETPARENT")},
 	{_SC("_OP_COMPARITH")},
 	{_SC("_OP_COMPARITHL")},
 	{_SC("_OP_INC")},
@@ -64,14 +61,14 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_RESUME")},
 	{_SC("_OP_FOREACH")},
 	{_SC("_OP_POSTFOREACH")},
-	{_SC("_OP_DELEGATE")},
 	{_SC("_OP_CLONE")},
 	{_SC("_OP_TYPEOF")},
 	{_SC("_OP_PUSHTRAP")},
 	{_SC("_OP_POPTRAP")},
 	{_SC("_OP_THROW")},
 	{_SC("_OP_CLASS")},
-	{_SC("_OP_NEWSLOTA")}
+	{_SC("_OP_NEWSLOTA")},
+	{_SC("_OP_GETBASE")}
 };
 #endif
 void DumpLiteral(SQObjectPtr &o)
@@ -97,7 +94,7 @@ SQFuncState::SQFuncState(SQSharedState *ss,SQFuncState *parent,CompilerErrorFunc
 		_stacksize = 0;
 		_traps = 0;
 		_returnexp = 0;
-		_varparams = false;
+		_varparams = 0;
 		_errfunc = efunc;
 		_errtarget = ed;
 		_bgenerator = false;
@@ -360,11 +357,6 @@ SQInteger SQFuncState::GetOuterVariable(const SQObject &name)
 		if(_string(_outervalues[i]._name) == _string(name))
 			return i;
 	}
-	return -1;
-}
-
-void SQFuncState::AddOuterValue(const SQObject &name)
-{
 	SQInteger pos=-1;
 	if(_parent) { 
 		pos = _parent->GetLocalVariable(name);
@@ -372,15 +364,17 @@ void SQFuncState::AddOuterValue(const SQObject &name)
 			pos = _parent->GetOuterVariable(name);
 			if(pos != -1) {
 				_outervalues.push_back(SQOuterVar(name,SQObjectPtr(SQInteger(pos)),otOUTER)); //local
-				return;
+				return _outervalues.size() - 1;	
 			}
 		}
 		else {
 			_outervalues.push_back(SQOuterVar(name,SQObjectPtr(SQInteger(pos)),otLOCAL)); //local
-			return;
+			return _outervalues.size() - 1;
+			
+			
 		}
-	}	
-	_outervalues.push_back(SQOuterVar(name,name,otSYMBOL)); //global
+	}
+	return -1;
 }
 
 void SQFuncState::AddParameter(const SQObject &name)

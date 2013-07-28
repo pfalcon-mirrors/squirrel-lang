@@ -11,7 +11,7 @@ struct SQTable;
 
 struct StringTable
 {
-	StringTable();
+	StringTable(SQSharedState*ss);
 	~StringTable();
 	SQString *Add(const SQChar *,SQInteger len);
 	void Remove(SQString *);
@@ -21,6 +21,7 @@ private:
 	SQString **_strings;
 	SQUnsignedInteger _numofslots;
 	SQUnsignedInteger _slotused;
+	SQSharedState *_sharedstate;
 };
 
 struct RefTable {
@@ -102,6 +103,7 @@ public:
 	
 	SQCOMPILERERROR _compilererrorhandler;
 	SQPRINTFUNCTION _printfunc;
+	SQPRINTFUNCTION _errorfunc;
 	bool _debuginfo;
 	bool _notifyallexceptions;
 private:

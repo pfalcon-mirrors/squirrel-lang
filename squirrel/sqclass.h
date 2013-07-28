@@ -5,11 +5,6 @@
 struct SQInstance;
 
 struct SQClassMember {
-	SQClassMember(){}
-	SQClassMember(const SQClassMember &o) {
-		val = o.val;
-		attrs = o.attrs;
-	}
 	SQObjectPtr val;
 	SQObjectPtr attrs;
 };

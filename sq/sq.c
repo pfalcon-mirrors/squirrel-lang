@@ -20,11 +20,11 @@
 #ifdef SQUNICODE
 #define scfprintf fwprintf
 #define scfopen	_wfopen
-#define scvprintf vwprintf
+#define scvprintf vfwprintf
 #else
 #define scfprintf fprintf
 #define scfopen	fopen
-#define scvprintf vprintf
+#define scvprintf vfprintf
 #endif
 
 
@@ -52,7 +52,15 @@ void printfunc(HSQUIRRELVM v,const SQChar *s,...)
 {
 	va_list vl;
 	va_start(vl, s);
-	scvprintf( s, vl);
+	scvprintf(stdout, s, vl);
+	va_end(vl);
+}
+
+void errorfunc(HSQUIRRELVM v,const SQChar *s,...)
+{
+	va_list vl;
+	va_start(vl, s);
+	scvprintf(stderr, s, vl);
 	va_end(vl);
 }
 
@@ -87,6 +95,7 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 	if(argc>1)
 	{
 		int arg=1,exitloop=0;
+		
 		while(arg < argc && !exitloop)
 		{
 
@@ -136,26 +145,12 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 #endif
 
 			arg++;
-			sq_pushroottable(v);
-			sq_pushstring(v,_SC("ARGS"),-1);
-			sq_newarray(v,0);
-			for(i=arg;i<argc;i++)
-			{
-				const SQChar *a;
-#ifdef SQUNICODE
-				int alen=(int)strlen(argv[i]);
-				a=sq_getscratchpad(v,(int)(alen*sizeof(SQChar)));
-				mbstowcs(sq_getscratchpad(v,-1),argv[i],alen);
-				sq_getscratchpad(v,-1)[alen] = _SC('\0');
-#else
-				a=argv[i];
-#endif
-				sq_pushstring(v,a,-1);
-
-				sq_arrayappend(v,-2);
-			}
-			sq_createslot(v,-3);
-			sq_pop(v,1);
+			
+			//sq_pushstring(v,_SC("ARGS"),-1);
+			//sq_newarray(v,0);
+			
+			//sq_createslot(v,-3);
+			//sq_pop(v,1);
 			if(compiles_only) {
 				if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,SQTrue))){
 					SQChar *outfile = _SC("out.cnut");
@@ -173,7 +168,28 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 				}
 			}
 			else {
-				if(SQ_SUCCEEDED(sqstd_dofile(v,filename,SQFalse,SQTrue))) {
+				//if(SQ_SUCCEEDED(sqstd_dofile(v,filename,SQFalse,SQTrue))) {
+					//return _DONE;
+				//}
+				if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,SQTrue))) {
+					int callargs = 1;
+					sq_pushroottable(v);
+					for(i=arg;i<argc;i++)
+					{
+						const SQChar *a;
+#ifdef SQUNICODE
+						int alen=(int)strlen(argv[i]);
+						a=sq_getscratchpad(v,(int)(alen*sizeof(SQChar)));
+						mbstowcs(sq_getscratchpad(v,-1),argv[i],alen);
+						sq_getscratchpad(v,-1)[alen] = _SC('\0');
+#else
+						a=argv[i];
+#endif
+						sq_pushstring(v,a,-1);
+						callargs++;
+						//sq_arrayappend(v,-2);
+					}
+					sq_call(v,callargs,SQFalse,SQTrue);
 					return _DONE;
 				}
 			}
@@ -285,7 +301,7 @@ int main(int argc, char* argv[])
 #endif
 	
 	v=sq_open(1024);
-	sq_setprintfunc(v,printfunc);
+	sq_setprintfunc(v,printfunc,errorfunc);
 
 	sq_pushroottable(v);
 

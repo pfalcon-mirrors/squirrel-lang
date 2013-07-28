@@ -5,6 +5,7 @@
 #include "sqvm.h"
 #include "sqtable.h"
 #include "sqclass.h"
+#include "sqfuncproto.h"
 #include "sqclosure.h"
 
 SQClass::SQClass(SQSharedState *ss,SQClass *base)
@@ -61,14 +62,20 @@ bool SQClass::NewSlot(SQSharedState *ss,const SQObjectPtr &key,const SQObjectPtr
 			_metamethods[mmidx] = val;
 		} 
 		else {
+			SQObjectPtr theval = val;
+			if(_base && type(val) == OT_CLOSURE) {
+				theval = _closure(val)->Clone();
+				_closure(theval)->_base = _base;
+				__ObjAddRef(_base); //ref for the closure
+			}
 			if(type(temp) == OT_NULL) {
 				SQClassMember m;
-				m.val = val;
+				m.val = theval;
 				_members->NewSlot(key,SQObjectPtr(_make_method_idx(_methods.size())));
 				_methods.push_back(m);
 			}
 			else {
-				_methods[_member_idx(temp)].val = val;
+				_methods[_member_idx(temp)].val = theval;
 			}
 		}
 		return true;

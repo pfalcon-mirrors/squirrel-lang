@@ -11,18 +11,28 @@
 #endif
 
 #ifdef SQUNICODE 
-#define scvprintf vwprintf 
+
+#define scvprintf vfwprintf
 #else 
-#define scvprintf vprintf 
+
+#define scvprintf vfprintf
 #endif 
 
-void printfunc(HSQUIRRELVM v, const SQChar *s, ...) 
-{ 
-va_list arglist; 
-va_start(arglist, s); 
-scvprintf(s, arglist); 
-va_end(arglist); 
-} 
+void printfunc(HSQUIRRELVM v,const SQChar *s,...)
+{
+	va_list vl;
+	va_start(vl, s);
+	scvprintf(stdout, s, vl);
+	va_end(vl);
+}
+
+void errorfunc(HSQUIRRELVM v,const SQChar *s,...)
+{
+	va_list vl;
+	va_start(vl, s);
+	scvprintf(stderr, s, vl);
+	va_end(vl);
+}
 
 void call_foo(HSQUIRRELVM v, int n,float f,const SQChar *s)
 {
@@ -48,7 +58,7 @@ int main(int argc, char* argv[])
 	//sqstd_register_iolib(v); 
 	sqstd_seterrorhandlers(v); //registers the default error handlers
 
-	sq_setprintfunc(v, printfunc); //sets the print function
+	sq_setprintfunc(v, printfunc,errorfunc); //sets the print function
 
 	sq_pushroottable(v); //push the root table(were the globals of the script will be stored)
 	if(SQ_SUCCEEDED(sqstd_dofile(v, _SC("test.nut"), SQFalse, SQTrue))) // also prints syntax errors if any 

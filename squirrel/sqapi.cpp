@@ -98,11 +98,22 @@ void sq_seterrorhandler(HSQUIRRELVM v)
 	}
 }
 
+void sq_setnativedebughook(HSQUIRRELVM v,SQDEBUGHOOK hook)
+{
+	v->_debughook_native = hook;
+	v->_debughook_closure = _null_;
+	v->_debughook = hook?false:true;
+}
+
 void sq_setdebughook(HSQUIRRELVM v)
 {
 	SQObject o = stack_get(v,-1);
 	if(sq_isclosure(o) || sq_isnativeclosure(o) || sq_isnull(o)) {
-		v->_debughook = o;
+		v->_debughook_closure = o;
+		v->_debughook_native = NULL;
+		if(sq_isnull(o)) {
+			v->_debughook = false;
+		}
 		v->Pop();
 	}
 }
@@ -288,11 +299,11 @@ SQRESULT sq_arrayresize(HSQUIRRELVM v,SQInteger idx,SQInteger newsize)
 	sq_aux_paramscheck(v,1);
 	SQObjectPtr *arr;
 	_GETSAFE_OBJ(v, idx, OT_ARRAY,arr);
-	if(_array(*arr)->Size() > 0) {
+	if(newsize >= 0) {
 		_array(*arr)->Resize(newsize);
 		return SQ_OK;
 	}
-	return SQ_OK;
+	return sq_throwerror(v,_SC("negative size"));
 }
 
 
@@ -316,6 +327,24 @@ SQRESULT sq_arrayreverse(HSQUIRRELVM v,SQInteger idx)
 	return SQ_OK;
 }
 
+SQRESULT sq_arrayremove(HSQUIRRELVM v,SQInteger idx,SQInteger itemidx)
+{
+	sq_aux_paramscheck(v, 1); 
+	SQObjectPtr *arr;
+	_GETSAFE_OBJ(v, idx, OT_ARRAY,arr); 
+	return _array(*arr)->Remove(itemidx) ? SQ_OK : sq_throwerror(v,_SC("index out of range")); 
+}
+
+SQRESULT sq_arrayinsert(HSQUIRRELVM v,SQInteger idx,SQInteger destpos)
+{
+	sq_aux_paramscheck(v, 1); 
+	SQObjectPtr *arr;
+	_GETSAFE_OBJ(v, idx, OT_ARRAY,arr);
+	SQRESULT ret = _array(*arr)->Insert(destpos, v->GetUp(-1)) ? SQ_OK : sq_throwerror(v,_SC("index out of range"));
+	v->Pop();
+	return ret;
+}
+
 void sq_newclosure(HSQUIRRELVM v,SQFUNCTION func,SQUnsignedInteger nfreevars)
 {
 	SQNativeClosure *nc = SQNativeClosure::Create(_ss(v), func);
@@ -334,7 +363,7 @@ SQRESULT sq_getclosureinfo(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger *nparam
 		SQClosure *c = _closure(o);
 		SQFunctionProto *proto = _funcproto(c->_function);
 		*nparams = (SQUnsignedInteger)proto->_nparameters;
-        *nfreevars = (SQUnsignedInteger)c->_outervalues.size();
+		*nfreevars = (SQUnsignedInteger)proto->_noutervalues;
 		return SQ_OK;
 	}
 	return sq_throwerror(v,_SC("the object is not a closure"));
@@ -1037,9 +1066,9 @@ const SQChar *sq_getfreevariable(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger n
 	SQObjectPtr &self = stack_get(v,idx);
 	const SQChar *name = NULL;
 	if(type(self) == OT_CLOSURE) {
-		if(_closure(self)->_outervalues.size()>nval) {
+		SQFunctionProto *fp = _funcproto(_closure(self)->_function);
+		if(((SQUnsignedInteger)fp->_noutervalues) > nval) {
 			v->Push(_closure(self)->_outervalues[nval]);
-			SQFunctionProto *fp = _funcproto(_closure(self)->_function);
 			SQOuterVar &ov = fp->_outervalues[nval];
 			name = _stringval(ov._name);
 		}
@@ -1052,11 +1081,13 @@ SQRESULT sq_setfreevariable(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger nval)
 	SQObjectPtr &self=stack_get(v,idx);
 	switch(type(self))
 	{
-	case OT_CLOSURE:
-		if(_closure(self)->_outervalues.size()>nval){
+	case OT_CLOSURE:{
+		SQFunctionProto *fp = _funcproto(_closure(self)->_function);
+		if(((SQUnsignedInteger)fp->_noutervalues) > nval){
 			_closure(self)->_outervalues[nval]=stack_get(v,-1);
 		}
 		else return sq_throwerror(v,_SC("invalid free var index"));
+					}
 		break;
 	case OT_NATIVECLOSURE:
 		if(_nativeclosure(self)->_outervalues.size()>nval){
@@ -1223,14 +1254,20 @@ void sq_move(HSQUIRRELVM dest,HSQUIRRELVM src,SQInteger idx)
 	dest->Push(stack_get(src,idx));
 }
 
-void sq_setprintfunc(HSQUIRRELVM v, SQPRINTFUNCTION printfunc)
+void sq_setprintfunc(HSQUIRRELVM v, SQPRINTFUNCTION printfunc,SQPRINTFUNCTION errfunc)
 {
 	_ss(v)->_printfunc = printfunc;
+	_ss(v)->_errorfunc = errfunc;
 }
 
 SQPRINTFUNCTION sq_getprintfunc(HSQUIRRELVM v)
 {
 	return _ss(v)->_printfunc;
+}
+
+SQPRINTFUNCTION sq_geterrorfunc(HSQUIRRELVM v)
+{
+	return _ss(v)->_errorfunc;
 }
 
 void *sq_malloc(SQUnsignedInteger size)
