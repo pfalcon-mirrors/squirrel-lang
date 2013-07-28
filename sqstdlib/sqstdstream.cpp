@@ -13,7 +13,7 @@
 	SQStream *self = NULL; \
 	if(SQ_FAILED(sq_getinstanceup(v,1,(SQUserPointer*)&self,(SQUserPointer)SQSTD_STREAM_TYPE_TAG))) \
 		return sq_throwerror(v,_SC("invalid type tag")); \
-	if(!self->IsValid())  \
+	if(!self || !self->IsValid())  \
 		return sq_throwerror(v,_SC("the stream is invalid"));
 
 SQInteger _stream_readblob(HSQUIRRELVM v)

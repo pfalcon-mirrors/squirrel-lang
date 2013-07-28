@@ -150,11 +150,23 @@ static SQInteger _file_constructor(HSQUIRRELVM v)
 	return 0;
 }
 
+static SQInteger _file_close(HSQUIRRELVM v)
+{
+	SQFile *self = NULL;
+	if(SQ_SUCCEEDED(sq_getinstanceup(v,1,(SQUserPointer*)&self,(SQUserPointer)SQSTD_FILE_TYPE_TAG))
+		&& self != NULL)
+	{
+		self->Close();
+	}
+	return 0;
+}
+
 //bindings
 #define _DECL_FILE_FUNC(name,nparams,typecheck) {_SC(#name),_file_##name,nparams,typecheck}
 static SQRegFunction _file_methods[] = {
 	_DECL_FILE_FUNC(constructor,3,_SC("x")),
 	_DECL_FILE_FUNC(_typeof,1,_SC("x")),
+	_DECL_FILE_FUNC(close,1,_SC("x")),
 	{0,0,0,0},
 };
 
