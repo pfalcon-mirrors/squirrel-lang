@@ -1,3 +1,14 @@
+***varsion 0.7 alpha***
+-fixed critical bug int the tail call system
+-fixed bug in the continue statement code generation
+-fixed func call param issue(thanks to Rewoonenco Andrew)
+-added _delslot metamethod(thanks to Rewoonenco Andrew)
+-new multiline string expression ( delimited by <[ and ]> )
+-normal strings ("") do not allow embedded new line anymore
+-reduced vm memory footprint(C refs are shared between friend VMs)
+-new api method sq_deleteslot()
+-new debug hook event 'r' is triggered when a function returns
+
 ***varsion 0.6 alpha***
 -fixed switch statement(was executing the default case after a break)
 -sq_call() doesn't pop the closure (just the params)

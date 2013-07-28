@@ -48,6 +48,7 @@ public:
 	SQObjectPtrVec *_systemstrings;
 	SQObjectPtrVec *_types;
 	StringTable *_stringtable;
+	SQObjectPtr _refs_table;
 #if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
 	SQCollectable *_gc_chain;
 #endif

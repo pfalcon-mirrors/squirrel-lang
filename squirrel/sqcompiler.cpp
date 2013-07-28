@@ -448,7 +448,7 @@ public:
 				}
 				break;
 			case _SC('['):
-				if(_lex._prevtoken==_SC('\n'))Error("cannot brake deref/or comma needed after [exp]=exp slot declaration");
+				if(_lex._prevtoken==_SC('\n'))Error(_SC("cannot brake deref/or comma needed after [exp]=exp slot declaration"));
 				Lex(); Expression(); Expect(_SC(']')); 
 				pos=-1;
 				if(NeedGet())Emit2ArgsOP(_OP_GET);
@@ -700,7 +700,7 @@ public:
 		Statement();
 		CleanStack(stacksize);
 		Expect(WHILE);
-		int continuetrg=_fs->GetCurrentPos()+1;
+		int continuetrg=_fs->GetCurrentPos();
 		Expect(_SC('('));CommaExpr();Expect(_SC(')'));
 		_fs->AddInstruction(_OP_JNZ,_fs->PopTarget(),jzpos-_fs->GetCurrentPos()-1);
 		END_BREAKBLE_BLOCK(continuetrg);
@@ -736,7 +736,7 @@ public:
 		}
 		BEGIN_BREAKBLE_BLOCK()
 		Statement();
-		int continuetrg=_fs->GetCurrentPos()+1;
+		int continuetrg=_fs->GetCurrentPos();
 		if(expsize>0){
 			for(int i=0;i<expsize;i++)
 				_fs->AddInstruction(exp[i]);
@@ -784,7 +784,7 @@ public:
 		_fs->SetIntructionParam(foreachpos,1,_fs->GetCurrentPos()-foreachpos);
 		//restore the local variable stack(remove index,val and ref idx)
 		CleanStack(stacksize);
-		END_BREAKBLE_BLOCK(foreachpos);
+		END_BREAKBLE_BLOCK(foreachpos-1);
 	}
 	void SwitchStatement()
 	{
@@ -1011,7 +1011,7 @@ public:
 			int pos=funcstate->_unresolvedcontinues.back();
 			funcstate->_unresolvedcontinues.pop_back();
 			//set the jmp instruction
-			funcstate->SetIntructionParams(pos,0,targetpos-pos-1,0);
+			funcstate->SetIntructionParams(pos,0,targetpos-pos,0);
 			ntoresolve--;
 		}
 	}

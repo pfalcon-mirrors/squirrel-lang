@@ -106,7 +106,7 @@ int SQFunctionProto::GetLine(SQInstruction *curr)
 			return line;
 		line=_lineinfos[i]._line;
 	}
-	return -1;
+	return line;
 }
 
 int WriteObject(HSQUIRRELVM v,SQUserPointer up,SQWRITEFUNC write,SQObjectPtr &o)

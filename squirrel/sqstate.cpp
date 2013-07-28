@@ -77,7 +77,9 @@ void SQSharedState::Init()
 	newmetamethod(MM_CALL);
 	newmetamethod(MM_CLONE);
 	newmetamethod(MM_NEWSLOT);
+	newmetamethod(MM_DELSLOT);
 
+	_refs_table=SQTable::Create(this,0);
 	_table_default_delegate=CreateDefaultDelegate(this,_table_default_delegate_funcz);
 	_array_default_delegate=CreateDefaultDelegate(this,_array_default_delegate_funcz);
 	_string_default_delegate=CreateDefaultDelegate(this,_string_default_delegate_funcz);
@@ -89,6 +91,8 @@ void SQSharedState::Init()
 
 SQSharedState::~SQSharedState()
 {
+	_table(_refs_table)->Clear();
+	_refs_table=_null_;
 	while(!_systemstrings->empty()){
 		_systemstrings->back()=_null_;
 		_systemstrings->pop_back();
@@ -150,7 +154,6 @@ void SQVM::Mark(SQCollectable **chain)
 	SQSharedState::MarkObject(_lasterror,chain);
 	SQSharedState::MarkObject(_errorhandler,chain);
 	SQSharedState::MarkObject(_debughook,chain);
-	SQSharedState::MarkObject(_refs_table,chain);
 	SQSharedState::MarkObject(temp,chain);
 	for(unsigned int i=0;i<_stack.size();i++)SQSharedState::MarkObject(_stack[i],chain);
 }
@@ -165,7 +168,7 @@ int SQSharedState::CollectGarbage(SQVM *vm)
 		vms->Mark(&tchain);
 		vms=vms->_next;
 	}
-
+	MarkObject(_refs_table,&tchain);
 	MarkObject(_table_default_delegate,&tchain);
 	MarkObject(_array_default_delegate,&tchain);
 	MarkObject(_string_default_delegate,&tchain);

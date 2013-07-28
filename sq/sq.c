@@ -59,9 +59,14 @@ int printerror(HSQUIRRELVM v)
 int compile_file(HSQUIRRELVM v)
 {
 	const SQChar *sFileName;
-	if(sq_gettop(v)>=1){
+	int lineinfo=0;
+	if(sq_gettop(v)>1){
 		if(SQ_SUCCEEDED(sq_getstring(v,2,&sFileName))){
-			return CompileScriptFromFile(v,sFileName,1,0);
+			if(sq_gettop(v)>2){
+				SQObjectType t=sq_gettype(v,3);
+				lineinfo=(t!=OT_NULL?1:0);
+			}
+			return CompileScriptFromFile(v,sFileName,1,lineinfo);
 		}
 	}
 	return sq_throwerror(v,_SC("(compile_file)wrong argument number"));

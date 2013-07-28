@@ -16,6 +16,7 @@ private:
 	int ReadString(int ndelim);
 	int ReadNumber();
 	void LexBlockComment();
+	int ReadMultilineString();
 	int ReadID();
 	void Next();
 	const SQChar *_source;
@@ -35,6 +36,7 @@ public:
 	SQUserPointer _up;
 	SQChar _currdata;
 	SQSharedState *_sharedstate;
+	sqvector<SQChar> _longstr;
 };
 
 #endif

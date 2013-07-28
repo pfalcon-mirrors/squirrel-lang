@@ -21,6 +21,7 @@ enum SQMetaMethod{
 	MT_CALL=11,
 	MT_CLONE=12,
 	MT_NEWSLOT=13,
+	MT_DELSLOT=14,
 };
 
 #define MM_ADD		_SC("_add")
@@ -37,6 +38,7 @@ enum SQMetaMethod{
 #define MM_CALL		_SC("_call")
 #define MM_CLONE	_SC("_clone")
 #define MM_NEWSLOT	_SC("_newslot")
+#define MM_DELSLOT	_SC("_delslot")
 
 #define MINPOWER2 4
 

@@ -109,27 +109,27 @@ void sq_addref(HSQUIRRELVM v,HSQOBJECT *po)
 {
 	SQObjectPtr refs;
 	if(type(*po)==OT_NULL)return;
-	if(_table(v->_refs_table)->Get(*po,refs)){
+	if(_table(_ss(v)->_refs_table)->Get(*po,refs)){
 		refs=_integer(refs)+1;
 	}
 	else{
 		refs=1;
 	}
-	_table(v->_refs_table)->NewSlot(*po,refs);
+	_table(_ss(v)->_refs_table)->NewSlot(*po,refs);
 }
 
 void sq_release(HSQUIRRELVM v,HSQOBJECT *po)
 {
 	SQObjectPtr refs;
 	if(type(*po)==OT_NULL)return;
-	if(_table(v->_refs_table)->Get(*po,refs)){
+	if(_table(_ss(v)->_refs_table)->Get(*po,refs)){
 		int n=_integer(refs)-1;
 		if(n<=0){
-			_table(v->_refs_table)->Remove(*po);
+			_table(_ss(v)->_refs_table)->Remove(*po);
 			sq_resetobject(po);
 		}
 		else {
-			refs=n;_table(v->_refs_table)->Set(*po,refs);
+			refs=n;_table(_ss(v)->_refs_table)->Set(*po,refs);
 		}
 	}
 }
@@ -396,12 +396,27 @@ SQRESULT sq_createslot(HSQUIRRELVM v,int idx)
 		sq_aux_paramscheck(v,3);
 		SQObjectPtr &self=sq_aux_gettypedarg(v,idx,OT_TABLE);
 		SQObjectPtr &key=v->GetUp(-2);
-		if(type(key)==OT_NULL)return 0;
+		if(type(key)==OT_NULL)return sq_throwerror(v,_SC("null is not a valid key"));
 		v->NewSlot(self,key,v->GetUp(-1));
 		v->Pop(2);
 		return SQ_OK;
 	}
 	catch(SQException &e){return sq_aux_throwobject(v,e);}
+}
+
+SQRESULT sq_deleteslot(HSQUIRRELVM v,int idx,int pushval)
+{
+	try{
+		sq_aux_paramscheck(v,2);
+		SQObjectPtr &self=sq_aux_gettypedarg(v,idx,OT_TABLE);
+		SQObjectPtr &key=v->GetUp(-1);
+		if(type(key)==OT_NULL)return sq_throwerror(v,_SC("null is not a valid key"));
+		SQObjectPtr res;
+		v->DeleteSlot(self,key,res);
+		if(pushval)	v->GetUp(-1) = res;
+		else v->Pop(1);
+		return SQ_OK;
+	}catch(SQException &e){return sq_aux_throwobject(v,e);}
 }
 
 SQRESULT sq_set(HSQUIRRELVM v,int idx)
@@ -592,7 +607,7 @@ SQRESULT sq_wakeupvm(HSQUIRRELVM v,int wakeupret,int retval)
 	try{
 		SQObjectPtr ret;
 		if(!v->_suspended)
-			return sq_throwerror(v,"cannot resume a vm that is not running any code");
+			return sq_throwerror(v,_SC("cannot resume a vm that is not running any code"));
 		if(wakeupret){
 			v->GetAt(v->_stackbase+v->_suspended_target)=v->GetUp(-1); //retval
 			v->Pop();

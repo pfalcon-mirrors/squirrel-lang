@@ -7,7 +7,7 @@ inline unsigned int _hashstr (const SQChar *s, size_t l)
 		unsigned int h = l;  /* seed */
 		size_t step = (l>>5)|1;  /* if string is too long, don't hash all its chars */
 		for (; l>=step; l-=step)
-		h = h ^ ((h<<5)+(h>>2)+(unsigned char)*(s++));
+			h = h ^ ((h<<5)+(h>>2)+(unsigned char)*(s++));
 		return h;
 }
 
@@ -16,13 +16,13 @@ struct SQString : public SQRefCounted
 	SQString(){}
 	~SQString(){}
 public:
-	static SQString *Create(SQSharedState *ss,const SQChar *,int len=-1 );
-	int Next(const SQObjectPtr &refpos,SQObjectPtr &outkey,SQObjectPtr &outval)
+	static SQString *Create(SQSharedState *ss, const SQChar *, int len = -1 );
+	int Next(const SQObjectPtr &refpos, SQObjectPtr &outkey, SQObjectPtr &outval)
 	{
-		int idx=(int)TranslateIndex(refpos);
-		while(idx<_len){
-			outkey=(SQInteger)idx;
-			outval=SQInteger(_val[idx]);
+		int idx = (int)TranslateIndex(refpos);
+		while(idx < _len){
+			outkey = (SQInteger)idx;
+			outval = SQInteger(_val[idx]);
 			//return idx for the next iteration
 			return ++idx;
 		}

@@ -135,6 +135,7 @@ int SQLexer::Lex()
 			if ( CUR_CHAR == _SC('=') ) { NEXT(); RETURN_TOKEN(LE) }
 			else if ( CUR_CHAR == _SC('-') ) { NEXT(); RETURN_TOKEN(NEWSLOT); }
 			else if ( CUR_CHAR == _SC('<') ) { NEXT(); RETURN_TOKEN(SHIFTL); }
+			else if ( CUR_CHAR == _SC('[') ) { NEXT(); ReadMultilineString(); RETURN_TOKEN(STRING_LITERAL); }
 			else { RETURN_TOKEN('<') }
 		case _SC('>'):
 			NEXT();
@@ -212,6 +213,38 @@ int SQLexer::GetIDType(SQChar *s)
 	}
 	return IDENTIFIER;
 }
+
+
+int SQLexer::ReadMultilineString()
+{
+	_longstr.resize(0);
+	if(CUR_CHAR==_SC('\n')){ NEXT();}
+	for(int nest = 1; nest>0;){
+		switch(CUR_CHAR){
+			case _SC(']'): {NEXT(); 
+				if(CUR_CHAR==_SC('>')) {
+					nest--; NEXT(); 
+					if(nest>0){
+						_longstr.push_back(_SC(']'));_longstr.push_back(_SC('>'));
+					}
+				}else {_longstr.push_back(_SC(']'));}
+						   } continue;
+			case _SC('<'): {_longstr.push_back(CUR_CHAR); NEXT(); if(CUR_CHAR==_SC('[')) { _longstr.push_back(CUR_CHAR);nest++; NEXT(); }}; continue;
+			case _SC('\\'): {
+				NEXT();
+				switch(CUR_CHAR){
+				case '<':case '>':{_longstr.push_back(CUR_CHAR);NEXT();}continue;
+				default:{_longstr.push_back(_SC('\\'));_longstr.push_back(CUR_CHAR);NEXT();}continue;
+				}
+			}
+			case SQUIRREL_EOB: throw ParserException(_SC("missing \"]>\" in a long string"));
+			default: {_longstr.push_back(CUR_CHAR); NEXT();}
+		}
+	}
+	_longstr.push_back(_SC('\0'));
+	_svalue=&_longstr[0];
+	return STRING_LITERAL;
+}
 int SQLexer::ReadString(int ndelim)
 {
 	int size=0;
@@ -225,6 +258,7 @@ int SQLexer::ReadString(int ndelim)
 		case SQUIRREL_EOB:
 			throw ParserException(_SC("unfinished string"));
 			return -1;
+		case _SC('\n'): throw ParserException(_SC("newline in a constant"));
 		case _SC('\\'):
 			NEXT();
 			switch(CUR_CHAR){

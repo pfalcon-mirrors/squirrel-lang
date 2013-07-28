@@ -97,7 +97,7 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 0.6 (alpha)")
+#define SQUIRREL_VERSION	_SC("Squirrel 0.7 (alpha)")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
@@ -238,6 +238,7 @@ SQUIRREL_API SQChar *sq_getscratchpad(HSQUIRRELVM v,int minsize);
 SQUIRREL_API void sq_pushroottable(HSQUIRRELVM v);
 SQUIRREL_API SQRESULT sq_setroottable(HSQUIRRELVM v);
 SQUIRREL_API SQRESULT sq_createslot(HSQUIRRELVM v,int idx);
+SQUIRREL_API SQRESULT sq_deleteslot(HSQUIRRELVM v,int idx,int pushval);
 SQUIRREL_API SQRESULT sq_set(HSQUIRRELVM v,int idx);
 SQUIRREL_API SQRESULT sq_get(HSQUIRRELVM v,int idx);
 SQUIRREL_API SQRESULT sq_rawget(HSQUIRRELVM v,int idx);
