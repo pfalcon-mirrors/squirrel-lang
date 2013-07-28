@@ -291,7 +291,7 @@ struct SQObjectPtr : public SQObject
 	{
 		__Release(_type ,_unVal);
 		_type = OT_NULL;
-		_unVal.raw = NULL;
+		_unVal.raw = (SQRawObjectVal)NULL;
 	}
 	private:
 		SQObjectPtr(const SQChar *){} //safety

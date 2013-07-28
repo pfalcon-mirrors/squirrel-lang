@@ -181,10 +181,10 @@ typedef char SQChar;
 #define _PRINT_INT_FMT _SC("%d")
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 3.0.1 stable")
+#define SQUIRREL_VERSION	_SC("Squirrel 3.0.2 stable")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2011 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
-#define SQUIRREL_VERSION_NUMBER	301
+#define SQUIRREL_VERSION_NUMBER	302
 
 #define SQ_VMSTATE_IDLE			0
 #define SQ_VMSTATE_RUNNING		1
@@ -361,6 +361,7 @@ SQUIRREL_API void sq_pushuserpointer(HSQUIRRELVM v,SQUserPointer p);
 SQUIRREL_API void sq_pushnull(HSQUIRRELVM v);
 SQUIRREL_API SQObjectType sq_gettype(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQInteger sq_getsize(HSQUIRRELVM v,SQInteger idx);
+SQUIRREL_API SQHash sq_gethash(HSQUIRRELVM v, SQInteger idx);
 SQUIRREL_API SQRESULT sq_getbase(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQBool sq_instanceof(HSQUIRRELVM v);
 SQUIRREL_API SQRESULT sq_tostring(HSQUIRRELVM v,SQInteger idx);
