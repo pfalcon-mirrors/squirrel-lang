@@ -53,7 +53,7 @@ public:
 	}
 	SQArray *Clone(){SQArray *anew=Create(_opt_ss(this),Size()); anew->_values.copy(_values); return anew; }
 	int Size() const {return _values.size();}
-	void Resize(int size) { _values.resize(size); ShrinkIfNeeded(); }
+	void Resize(int size,SQObjectPtr &fill = _null_) { _values.resize(size,fill); ShrinkIfNeeded(); }
 	void Reserve(int size) { _values.reserve(size); }
 	void Append(const SQObject &o){_values.push_back(o);}
 	void Extend(const SQArray *a);

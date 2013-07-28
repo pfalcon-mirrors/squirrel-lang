@@ -188,7 +188,7 @@ int ReadObject(HSQUIRRELVM v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &o)
 		o=_null_;
 		break;
 	default:
-		assert(0);
+		v->RT_Error(_SC("cannot serialize a %s"),GetTypeName(t));
 	}
 	return nreaded;
 }

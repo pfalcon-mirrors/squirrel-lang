@@ -76,6 +76,7 @@ SQTable *CreateDefaultDelegate(SQSharedState *ss,SQRegFunction *funcz)
 	while(funcz[i].name!=0){
 		SQNativeClosure *nc = SQNativeClosure::Create(ss,funcz[i].f);
 		nc->_nparamscheck = funcz[i].nparamscheck;
+		nc->_name = SQString::Create(ss,funcz[i].name);
 		if(funcz[i].typemask && !CompileTypemask(nc->_typecheck,funcz[i].typemask))
 			return NULL;
 		t->NewSlot(SQString::Create(ss,funcz[i].name),nc);

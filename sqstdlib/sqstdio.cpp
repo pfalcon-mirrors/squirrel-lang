@@ -250,7 +250,7 @@ SQRESULT sqstd_dofile(HSQUIRRELVM v,const SQChar *filename,int retval,int printe
 	if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,printerror))) {
 		sq_push(v,-2);
 		if(SQ_SUCCEEDED(sq_call(v,1,retval))) {
-			sq_remove(v,-2); //removes the closure
+			sq_remove(v,retval?-2:-1); //removes the closure
 			return 1;
 		}
 		sq_pop(v,1); //removes the closure

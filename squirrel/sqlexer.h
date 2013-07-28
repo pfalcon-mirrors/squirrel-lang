@@ -16,11 +16,9 @@ private:
 	int ReadString(int ndelim,bool verbatim);
 	int ReadNumber();
 	void LexBlockComment();
-	//int ReadMultilineString();
 	int ReadID();
 	void Next();
 	int _curtoken;
-	//SQChar _tempstring[MAX_STRING];
 	SQTable *_keywords;
 public:
 	int _prevtoken;

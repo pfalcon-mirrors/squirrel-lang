@@ -1,3 +1,14 @@
+***version 1.0 beta 4***
+fixed a bug in the integer.tochar() built-in method
+fixed unary minus operator
+fixed bug in dofile()
+fixed inconsistency between != and == operators(on float/integer comparison)
+added javascript style unsigned right shift operator '>>>'
+added array(size) constructor built-in function
+array.resize(size,[fill]) built-in function accepts an optional 'fill' value
+improved debug API, added sq_getclosureinfo() and sq_setnativeclosurename()
+
+***2004-05-23        ***
 ***version 1.0 beta 3***
 -minor vm bug fixes
 -string allocation is now faster

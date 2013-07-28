@@ -184,7 +184,7 @@ void SQVM::StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObjectPtr &
 			break;
 		}
 		case OT_FLOAT:
-			scsprintf(_sp(rsl(NUMBER_MAX_CHAR+_string(obj)->_len+1)),_SC("%.14g%s"),_float(str),_stringval(obj));
+			scsprintf(_sp(rsl(NUMBER_MAX_CHAR+_string(obj)->_len+1)),_SC("%g%s"),_float(str),_stringval(obj));
 			break;
 		case OT_INTEGER:
 			scsprintf(_sp(rsl(NUMBER_MAX_CHAR+_string(obj)->_len+1)),_SC("%d%s"),_integer(str),_stringval(obj));
@@ -195,7 +195,7 @@ void SQVM::StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObjectPtr &
 		dest=SQString::Create(_ss(this),_spval);
 		break;
 	case OT_FLOAT:
-		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+_string(str)->_len+1)),_SC("%s%.14g"),_stringval(str),_float(obj));
+		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+_string(str)->_len+1)),_SC("%s%g"),_stringval(str),_float(obj));
 		dest=SQString::Create(_ss(this),_spval);
 		break;
 	case OT_INTEGER:
@@ -422,18 +422,25 @@ SQObjectPtr SQVM::Execute(SQObjectPtr &closure, int target, int nargs, int stack
 	int ct_target;
 	bool ct_tailcall;
 
-	switch(et){
-		case ET_CALL: 
-			StartCall(_closure(closure), _top - nargs, nargs, stackbase, false); ci->_root = true;
-			if (type(_debughook) != OT_NULL && _rawval(_debughook) != _rawval(ci->_closure))
-				CallDebugHook(_SC('c'));
-			break;
-		case ET_RESUME_GENERATOR: _generator(closure)->Resume(this, target); ci->_root = true; traps += ci->_etraps; break;
-		case ET_RESUME_VM:
-			traps = _suspended_traps;
-			ci->_root = _suspended_root;
-			_suspended = false;
-			break;
+	SQ_TRY {
+		switch(et){
+			case ET_CALL: 
+				StartCall(_closure(closure), _top - nargs, nargs, stackbase, false); ci->_root = true;
+				if (type(_debughook) != OT_NULL && _rawval(_debughook) != _rawval(ci->_closure))
+					CallDebugHook(_SC('c'));
+				break;
+			case ET_RESUME_GENERATOR: _generator(closure)->Resume(this, target); ci->_root = true; traps += ci->_etraps; break;
+			case ET_RESUME_VM:
+				traps = _suspended_traps;
+				ci->_root = _suspended_root;
+				_suspended = false;
+				break;
+		}
+	}
+	SQ_CATCH(SQException,e) { 
+//call the handler if there are no calls in the stack, if not relies on the previous node
+		if(ci == NULL) CallErrorHandler(e);
+		throw e;
 	}
 
 exception_restore:
@@ -611,6 +618,13 @@ common_call:
 			case _OP_BWXOR:	 BW_OP( ^ ); continue;
 			case _OP_SHIFTL: BW_OP( << ); continue;
 			case _OP_SHIFTR: BW_OP( >> ); continue;
+			case _OP_USHIFTR: { 
+					const SQObjectPtr &o1=STK(arg2),&o2=STK(arg1); 
+					if((type(o1)==OT_INTEGER) && (type(o2)==OT_INTEGER)) { 
+						TARGET = (SQInteger)(*((unsigned int*)&o1._unVal.nInteger) >> _integer(o2)); 
+					} else RT_Error(_SC("bitwise op between '%s' and '%s'"),GetTypeName(o1),GetTypeName(o2)); 
+							  }
+                continue;
 			case _OP_EQ:{
 				SQObjectPtr &o1 = STK(arg2);
 				SQObjectPtr &o2 = COND_LITERAL;
@@ -620,11 +634,18 @@ common_call:
 									((!ObjCmp(STK(arg2), COND_LITERAL)?_notnull_:_null_))
 							:_null_);
 					}continue;
-			case _OP_NE:{
-				SQObjectPtr &o1 = STK(arg2);
-				SQObjectPtr &o2 = COND_LITERAL;
-				TARGET= type(o1) == type(o2)?((_userpointer(o1) != _userpointer(o2)?_notnull_:_null_)):_notnull_;
-					}continue;
+			case _OP_NE:{ 
+				SQObjectPtr &o1 = STK(arg2); 
+				SQObjectPtr &o2 = COND_LITERAL; 
+				if(type(o1) != type(o2)) { 
+					TARGET = sq_isnumeric(o1) && sq_isnumeric(o2)? 
+							((tofloat(o1) != tofloat(o2))? _notnull_ : _null_) 
+							:_notnull_; 
+					} 
+				else { 
+					TARGET = _userpointer(o1) != _userpointer(o2)?_notnull_:_null_; 
+				} 
+					} continue; 
 			case _OP_G:		 TARGET = ((ObjCmp(STK(arg2), COND_LITERAL) > 0)?_notnull_:_null_);	continue;
 			case _OP_GE:	 TARGET = ((ObjCmp(STK(arg2), COND_LITERAL) >= 0)?_notnull_:_null_);	continue;
 			case _OP_L:		 TARGET = ((ObjCmp(STK(arg2), COND_LITERAL) < 0)?_notnull_:_null_);	continue;
@@ -646,13 +667,12 @@ common_call:
 					SQObjectPtr &o = STK(arg1);
 					switch(type(o)) {
 					case OT_INTEGER:
-						_integer(o) = -_integer(o);
-						TARGET = o;
+						TARGET = -_integer(o);
 					continue;
 					case OT_FLOAT:
-						_float(o) = -_float(o);
-						TARGET = o;
-					continue;
+						TARGET = -_float(o);
+
+						continue;
 					case OT_TABLE:
 						if(_table(o)->_delegate) {
 							Push(o);
@@ -843,12 +863,7 @@ common_call:
 				}while(_callsstack.size());
 			}
 			//call the hook
-			if(type(_errorhandler) != OT_NULL) {
-				SQObjectPtr out;
-				Push(_roottable); Push(e._description);
-				Call(_errorhandler, 2, _top-2, out);
-				Pop(2);
-			}
+			CallErrorHandler(e);
 			//remove call stack until a C function is found or the cstack is empty
 			if(ci) do{
 				if(type(ci->_generator) == OT_GENERATOR) _generator(ci->_generator)->Kill();
@@ -864,6 +879,16 @@ common_call:
 		throw e;
 	}
 	RT_Error(_SC("internal vm error Execute() returns without executing OP_RETURN"));
+}
+
+void SQVM::CallErrorHandler(SQException &e)
+{
+	if(type(_errorhandler) != OT_NULL) {
+		SQObjectPtr out;
+		Push(_roottable); Push(e._description);
+		Call(_errorhandler, 2, _top-2, out);
+		Pop(2);
+	}
 }
 
 void SQVM::CallDebugHook(int type,int forcedline)
@@ -899,7 +924,8 @@ bool SQVM::CallNative(SQNativeClosure *nclosure,int nargs,int stackbase,bool tai
 	_top = stackbase + nargs;
 	PUSH_CALLINFO(this, CallInfo());
 	ci->_etraps = 0;
-	ci->_closure = SQObjectPtr(nclosure);
+	ci->_closure._unVal.pNativeClosure = nclosure;
+	ci->_closure._type = OT_NATIVECLOSURE;
 	ci->_prevstkbase = stackbase - _stackbase;
 	ci->_ncalls = 1;
 	_stackbase = stackbase;
@@ -913,7 +939,7 @@ bool SQVM::CallNative(SQNativeClosure *nclosure,int nargs,int stackbase,bool tai
 	_nnativecalls--;
 	bool suspend = false;
 	if( ret == SQ_SUSPEND_FLAG) suspend = true;
-	else if (ret < 0) RT_Error(_stringval(_lasterror));
+	else if (ret < 0) RT_Error(_lasterror);
 	
 	if (ret != 0){ retval = TOP(); }
 	else { retval = _null_; }
@@ -1119,7 +1145,7 @@ bool SQVM::CallMetaMethod(SQTable *mt,SQMetaMethod mm,int nparams,SQObjectPtr &o
 	return false;
 }
 
-#ifdef _DEBUG
+#ifdef _DEBUG_DUMP
 void SQVM::dumpstack(int stackbase,bool dumpall)
 {
 	int size=dumpall?_stack.size():_top;

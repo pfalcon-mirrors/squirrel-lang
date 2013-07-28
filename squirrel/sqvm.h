@@ -56,6 +56,7 @@ public:
 	SQRESULT Suspend();
 
 	void CallDebugHook(int type,int forcedline=0);
+	void CallErrorHandler(SQException &e);
 	bool Get(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &dest, bool raw, bool root = true);
 	bool Set(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val);
 	void NewSlot(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val);
@@ -67,6 +68,7 @@ public:
 	void CompareError(const SQObject &o1, const SQObject &o2);
 	void ParamTypeError(int nparam,int typemask,int type);
 	void RT_Error(const SQChar *s, ...);
+	void RT_Error(SQObjectPtr &desc);
 	SQString *PrintObjVal(const SQObject &o);
 	void TypeOf(const SQObjectPtr &obj1, SQObjectPtr &dest);
 	bool CallMetaMethod(SQTable *mt, SQMetaMethod mm, int nparams, SQObjectPtr &outres);
@@ -75,7 +77,7 @@ public:
 	bool Return(int _arg0, int _arg1, SQObjectPtr &retval);
 	
 	void DerefInc(SQObjectPtr &target, SQObjectPtr &self, SQObjectPtr &key, SQObjectPtr &incr, bool postfix);
-#ifdef _DEBUG
+#ifdef _DEBUG_DUMP
 	void dumpstack(int stackbase=-1, bool dumpall = false);
 #endif
 

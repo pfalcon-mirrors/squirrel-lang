@@ -147,7 +147,7 @@ static int base_print(HSQUIRRELVM v)
 	SQObjectPtr &o=stack_get(v,2);
 	switch(type(o)){
 	case OT_STRING:
-		if(_ss(v)->_printfunc) _ss(v)->_printfunc(v,_stringval(o));
+		if(_ss(v)->_printfunc) _ss(v)->_printfunc(v,_SC("%s"),_stringval(o));
 		break;
 	case OT_INTEGER:
 		if(_ss(v)->_printfunc) _ss(v)->_printfunc(v,_SC("%d"),_integer(o));
@@ -195,6 +195,21 @@ static int base_suspend(HSQUIRRELVM v)
 	return sq_suspendvm(v);
 }
 
+static int base_array(HSQUIRRELVM v)
+{
+	SQArray *a;
+	SQObject &size = stack_get(v,2);
+	if(sq_gettop(v) > 2) {
+		a = SQArray::Create(_ss(v),0);
+		a->Resize(tointeger(size),stack_get(v,3));
+	}
+	else {
+		a = SQArray::Create(_ss(v),tointeger(size));
+	}
+	v->Push(a);
+	return 1;
+}
+
 static SQRegFunction base_funcs[]={
 	//generic
 	{_SC("seterrorhandler"),base_seterrorhandler,2, _SC("tc")},
@@ -208,6 +223,7 @@ static SQRegFunction base_funcs[]={
 	{_SC("compilestring"),base_compilestring,-2, _SC("tss")},
 	{_SC("newthread"),base_newthread,2, _SC("tc")},
 	{_SC("suspend"),base_suspend,-1, _SC("t")},
+	{_SC("array"),base_array,-1, _SC("n")},
 #ifndef NO_GARBAGE_COLLECTOR
 	{_SC("collectgarbage"),base_collectgarbage,1, _SC("t")},
 #endif
@@ -221,6 +237,7 @@ void sq_base_register(HSQUIRRELVM v)
 	while(base_funcs[i].name!=0) {
 		sq_pushstring(v,base_funcs[i].name,-1);
 		sq_newclosure(v,base_funcs[i].f,0);
+		sq_setnativeclosurename(v,-1,base_funcs[i].name);
 		sq_setparamscheck(v,base_funcs[i].nparamscheck,NULL);
 		sq_createslot(v,-3);
 		i++;
@@ -301,7 +318,7 @@ static int default_delegate_tostring(HSQUIRRELVM v)
 
 static int number_delegate_tochar(HSQUIRRELVM v)
 {
-	SQObject &o=stack_get(v,2);
+	SQObject &o=stack_get(v,1);
 	SQChar c=tointeger(o);
 	v->Push(SQString::Create(_ss(v),(const SQChar *)&c,1));
 	return 1;
@@ -399,8 +416,11 @@ static int array_resize(HSQUIRRELVM v)
 {
 	SQObject &o = stack_get(v, 1);
 	SQObject &nsize = stack_get(v, 2);
+	SQObjectPtr fill;
 	if(sq_isnumeric(nsize)) {
-		_array(o)->Resize(tointeger(nsize));
+		if(sq_gettop(v) > 2)
+			fill = stack_get(v, 3);
+		_array(o)->Resize(tointeger(nsize),fill);
 		return 0;
 	}
 	return sq_throwerror(v, _SC("size must be a number"));
@@ -490,7 +510,7 @@ SQRegFunction SQSharedState::_array_default_delegate_funcz[]={
 	{_SC("top"),array_top,1, _SC("a")},
 	{_SC("insert"),array_insert,3, _SC("an")},
 	{_SC("remove"),array_remove,2, _SC("an")},
-	{_SC("resize"),array_resize,2, _SC("an")},
+	{_SC("resize"),array_resize,-2, _SC("an")},
 	{_SC("reverse"),array_reverse,1, _SC("a")},
 	{_SC("sort"),array_sort,-1, _SC("ac")},
 	{_SC("slice"),array_slice,-1, _SC("ann")},

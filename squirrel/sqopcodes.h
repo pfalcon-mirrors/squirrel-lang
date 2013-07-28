@@ -67,6 +67,7 @@ enum SQOpcode
 	_OP_DMOVE=				0x3B,
 	_OP_GETPARENT=			0x3C,
 	_OP_LOADNULLS=			0x3D,
+	_OP_USHIFTR=			0x3E,
 };
 
 struct SQInstructionDesc {

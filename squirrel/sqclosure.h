@@ -89,6 +89,7 @@ public:
 	void Finalize(){_outervalues.resize(0);}
 #endif
 	SQFUNCTION _function;
+	SQObjectPtr _name;
 	SQObjectPtrVec _outervalues;
 	SQIntVec _typecheck;
 	int _nparamscheck;

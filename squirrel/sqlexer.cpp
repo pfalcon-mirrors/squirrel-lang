@@ -140,7 +140,14 @@ int SQLexer::Lex()
 		case _SC('>'):
 			NEXT();
 			if (CUR_CHAR == _SC('=')){ NEXT(); RETURN_TOKEN(TK_GE);}
-			else if(CUR_CHAR == _SC('>')){ NEXT(); RETURN_TOKEN(TK_SHIFTR);}
+			else if(CUR_CHAR == _SC('>')){ 
+				NEXT(); 
+				if(CUR_CHAR == _SC('>')){
+					NEXT();
+					RETURN_TOKEN(TK_USHIFTR);
+				}
+				RETURN_TOKEN(TK_SHIFTR);
+			}
 			else { RETURN_TOKEN('>') }
 		case _SC('!'):
 			NEXT();

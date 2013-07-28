@@ -224,7 +224,7 @@ void PrintCallStack(HSQUIRRELVM v)
 		const SQChar *src=_SC("unknown");
 		if(si.funcname)fn=si.funcname;
 		if(si.source)src=si.source;
-		scfprintf(stderr,_SC("*FUNCTION [%s] %s line [%d]\n"),fn,src,si.line);
+		scfprintf(stderr,_SC("*FUNCTION [%s()] %s line [%d]\n"),fn,src,si.line);
 		level++;
 	}
 	level=0;

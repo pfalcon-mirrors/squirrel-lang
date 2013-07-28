@@ -73,7 +73,8 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_PREPCALLK"),1,1,1,1},
 	{_SC("_OP_DMOVE"),1,1,1,1},
 	{_SC("_OP_GETPARENT"),1,1,0,0},
-	{_SC("_OP_LOADNULLS"),1,1,0,0}
+	{_SC("_OP_LOADNULLS"),1,1,0,0},
+	{_SC("_OP_USHIFTR"),1,1,1,0},
 };
 #endif
 void DumpLiteral(SQObjectPtr &o)

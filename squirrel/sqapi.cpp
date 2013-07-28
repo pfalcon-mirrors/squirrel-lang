@@ -273,6 +273,30 @@ void sq_newclosure(HSQUIRRELVM v,SQFUNCTION func,unsigned int nfreevars)
 	v->Push(SQObjectPtr(nc));	
 }
 
+SQRESULT sq_getclosureinfo(HSQUIRRELVM v,int idx,unsigned int *nparams,unsigned int *nfreevars)
+{
+	SQObjectPtr o = stack_get(v, idx);
+	if(sq_isclosure(o)) {
+		SQClosure *c = _closure(o);
+		SQFunctionProto *proto = _funcproto(c->_function);
+		*nparams = (unsigned int)proto->_parameters.size();
+        *nfreevars = (unsigned int)c->_outervalues.size();
+		return SQ_OK;
+	}
+	return sq_throwerror(v,_SC("the object is not a closure"));
+}
+
+SQRESULT sq_setnativeclosurename(HSQUIRRELVM v,int idx,const SQChar *name)
+{
+	SQObjectPtr o = stack_get(v, idx);
+	if(sq_isnativeclosure(o)) {
+		SQNativeClosure *nc = _nativeclosure(o);
+		nc->_name = SQString::Create(_ss(v),name);
+		return SQ_OK;
+	}
+	return sq_throwerror(v,_SC("the object is not a nativeclosure"));
+}
+
 SQRESULT sq_setparamscheck(HSQUIRRELVM v,int nparamscheck,const SQChar *typemask)
 {
 	SQObjectPtr o = stack_get(v, -1);

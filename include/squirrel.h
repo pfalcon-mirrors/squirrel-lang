@@ -97,7 +97,7 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 1.0 (beta 3)")
+#define SQUIRREL_VERSION	_SC("Squirrel 1.0 (beta 4)")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2004 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
@@ -245,6 +245,8 @@ SQUIRREL_API SQRESULT sq_getuserdata(HSQUIRRELVM v,int idx,SQUserPointer *p,unsi
 SQUIRREL_API SQRESULT sq_settypetag(HSQUIRRELVM v,int idx,unsigned int typetag);
 SQUIRREL_API void sq_setreleasehook(HSQUIRRELVM v,int idx,SQUSERDATARELEASE hook);
 SQUIRREL_API SQChar *sq_getscratchpad(HSQUIRRELVM v,int minsize);
+SQUIRREL_API SQRESULT sq_getclosureinfo(HSQUIRRELVM v,int idx,unsigned int *nparams,unsigned int *nfreevars);
+SQUIRREL_API SQRESULT sq_setnativeclosurename(HSQUIRRELVM v,int idx,const SQChar *name);
 
 /*object manipulation*/
 SQUIRREL_API void sq_pushroottable(HSQUIRRELVM v);

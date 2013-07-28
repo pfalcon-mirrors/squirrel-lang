@@ -415,6 +415,7 @@ public:
 	{
 		PlusExp();
 		for(;;) switch(_token) {
+		case TK_USHIFTR: BIN_EXP(_OP_USHIFTR, &SQCompiler::PlusExp); break;
 		case TK_SHIFTL: BIN_EXP(_OP_SHIFTL, &SQCompiler::PlusExp); break;
 		case TK_SHIFTR: BIN_EXP(_OP_SHIFTR, &SQCompiler::PlusExp); break;
 		default: return;	

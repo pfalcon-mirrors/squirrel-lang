@@ -25,7 +25,10 @@ SQRESULT sq_stackinfos(HSQUIRRELVM v, int level, SQStackInfos *si)
 						}
 			break;
 		case OT_NATIVECLOSURE:
-			si->source = si->funcname = _SC("NATIVE");
+			si->source = _SC("NATIVE");
+			si->funcname = _SC("unknown");
+			if(type(_nativeclosure(ci._closure)->_name) == OT_STRING)
+				si->funcname = _stringval(_nativeclosure(ci._closure)->_name);
 			si->line = -1;
 			break;
 		}
@@ -41,6 +44,11 @@ void SQVM::RT_Error(const SQChar *s, ...)
 	scvsprintf(_sp(rsl(scstrlen(s)+(NUMBER_MAX_CHAR*2))), s, vl);
 	va_end(vl);
 	throw SQException(_ss(this), _spval);
+}
+
+void SQVM::RT_Error(SQObjectPtr &desc)
+{
+	throw SQException(desc);
 }
 
 SQString *SQVM::PrintObjVal(const SQObject &o)
