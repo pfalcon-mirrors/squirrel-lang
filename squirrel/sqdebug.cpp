@@ -1,7 +1,7 @@
 /*
 	see copyright notice in squirrel.h
 */
-#include "stdafx.h"
+#include "sqpcheader.h"
 #include "sqvm.h"
 #include "sqfuncproto.h"
 #include "sqclosure.h"
@@ -28,7 +28,6 @@ int sq_stackinfos(HSQUIRRELVM v,int level,SQStackInfos *si)
 			si->line=-1;
 			break;
 		}
-		
 		return 1;
 	}
 	return 0;

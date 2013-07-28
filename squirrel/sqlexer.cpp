@@ -1,7 +1,7 @@
 /*
 	see copyright notice in squirrel.h
 */
-#include "stdafx.h"
+#include "sqpcheader.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include "sqtable.h"
@@ -17,11 +17,17 @@
 #define NEXT() Next();_currentcolumn++
 #define APPEND_CHAR(c) {_tempstring[size]=(c);size++;}
 #define TERMINATE_BUFFER() _tempstring[size]=_SC('\0');
-#define ADD_KEYWORD(key,id) _keywords->NewSlot( SQString::Create(#key) , SQInteger(id) )
+#define ADD_KEYWORD(key,id) _keywords->NewSlot( SQString::Create(ss,#key) , SQInteger(id) )
 
-SQLexer::SQLexer()
+SQLexer::SQLexer(){}
+SQLexer::~SQLexer()
 {
-	_keywords=SQTable::Create(26);
+	_keywords->Release();
+}
+void SQLexer::Init(SQSharedState *ss,SQREADFUNC rg,SQUserPointer up)
+{
+	_sharedstate=ss;
+	_keywords=SQTable::Create(ss,26);
 	ADD_KEYWORD(while,WHILE);
 	ADD_KEYWORD(do,DO);
 	ADD_KEYWORD(if,IF);
@@ -48,13 +54,7 @@ SQLexer::SQLexer()
 	ADD_KEYWORD(case,CASE);
 	ADD_KEYWORD(default,DEFAULT);
 	ADD_KEYWORD(this,THIS);
-}
-SQLexer::~SQLexer()
-{
-	_keywords->Release();
-}
-void SQLexer::Init(SQREADFUNC rg,SQUserPointer up)
-{
+
 	_readf=rg;
 	_up=up;
 	_currentline=1;
@@ -63,7 +63,6 @@ void SQLexer::Init(SQREADFUNC rg,SQUserPointer up)
 	_prevtoken=-1;
 	_lastline=_source;
 	Next();
-	
 }
 
 void SQLexer::Next()
@@ -181,8 +180,7 @@ int SQLexer::Lex()
 			else { NEXT(); RETURN_TOKEN(PLUSEQ) }
 		case SQUIRREL_EOB:
 			return 0;
-		default:
-			{
+		default:{
 				if (isdigit(CUR_CHAR)) {
 					int ret=ReadNumber();
 					RETURN_TOKEN(ret);
@@ -201,14 +199,13 @@ int SQLexer::Lex()
 			}
 		}
 	}
-
 	return 0;    
 }
 	
 int SQLexer::GetIDType(SQChar *s)
 {
 	SQObjectPtr t;
-	if(_keywords->Get(SQString::Create(s),t)){
+	if(_keywords->Get(SQString::Create(_sharedstate,s),t)){
 		return int(_integer(t));
 	}
 	return IDENTIFIER;
@@ -240,7 +237,6 @@ int SQLexer::ReadString(int ndelim)
 			case _SC('\\'): APPEND_CHAR(_SC('\\')); NEXT(); break;
 			case _SC('"'): APPEND_CHAR(_SC('"')); NEXT(); break;
 			case _SC('\''): APPEND_CHAR(_SC('\'')); NEXT(); break;
-			
 			default:
 				throw ParserException("unrecognised escaper char");
 				break;
@@ -264,7 +260,6 @@ int SQLexer::ReadString(int ndelim)
 	}
 	_svalue = _tempstring;
 	return STRING_LITERAL;
-	
 }
 
 int SQLexer::ReadNumber()
@@ -293,7 +288,6 @@ int SQLexer::ReadNumber()
 			NEXT();
 		}
 	}
-	
 	TERMINATE_BUFFER();
 	switch(type){
 	case TFLOAT:

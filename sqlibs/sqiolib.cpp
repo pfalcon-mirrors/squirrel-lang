@@ -436,6 +436,8 @@ int sq_iolib_register(HSQUIRRELVM v)
 		i++;
 	}
 	////
+	sq_newclosure(v,io_fopen,1);
+	sq_createslot(v,-3);
 
 	//AHHHHH COPY & PASTE <<FIXME>>
 	SQUserPointer ud=sq_newuserdata(v,sizeof(_File));
@@ -467,8 +469,7 @@ int sq_iolib_register(HSQUIRRELVM v)
 	sq_pop(v,2);
 	
 	//
-	sq_newclosure(v,io_fopen,1);
-	sq_createslot(v,-3);
+	
 	i=0;
 	while(io_funcs[i].name!=0)
 	{

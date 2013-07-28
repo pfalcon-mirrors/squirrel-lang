@@ -55,10 +55,10 @@ public:
 		return f;
 	}
 	void Release(){ sq_delete(this,SQFunctionProto);}
-	const SQChar* GetLocal(SQVM *vm,unsigned int stackbase,unsigned int nseq,unsigned int nop);
+	const SQChar* GetLocal(SQVM *v,unsigned int stackbase,unsigned int nseq,unsigned int nop);
 	int GetLine(SQInstruction *curr);
-	void Save(SQUserPointer up,SQWRITEFUNC write);
-	void Load(SQUserPointer up,SQREADFUNC read);
+	void Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write);
+	void Load(SQVM *v,SQUserPointer up,SQREADFUNC read);
 	SQObjectPtrVec _literals;
 	SQObjectPtrVec _functions;
 	SQObjectPtrVec _parameters;

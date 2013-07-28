@@ -17,7 +17,7 @@ struct SQString : public SQRefCounted
 	~SQString(){}
 public:
 	
-	static SQString *Create(const SQChar *,int len=-1 );
+	static SQString *Create(SQSharedState *ss,const SQChar *,int len=-1 );
 	int Next(const SQObjectPtr &refpos,SQObjectPtr &outkey,SQObjectPtr &outval)
 	{
 		//first iteration
@@ -31,7 +31,7 @@ public:
 			idx=(unsigned int)_integer(refpos);
 			break;
 		default:
-			sqraiseerror("critical vm error iterating a string with a non number idx");
+			sqraise_str_error(_sharedstate,"critical vm error iterating a string with a non number idx");
 			break;
 		}
 		
@@ -47,6 +47,7 @@ public:
 		return -1;
 	}
 	void Release();
+	SQSharedState *_sharedstate;
 	SQString *_next; //chain for the string table
 	int _len;
 	int _hash;

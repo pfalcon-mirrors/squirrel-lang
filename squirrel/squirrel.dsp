@@ -63,8 +63,8 @@ LIB32=link.exe -lib
 # PROP Output_Dir "Debug"
 # PROP Intermediate_Dir "Debug"
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ  /c
-# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "..\include" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ  /c
+# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
+# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "..\include" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
 # ADD BASE RSC /l 0x410 /d "_DEBUG"
 # ADD RSC /l 0x410 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -163,6 +163,10 @@ SOURCE=.\sqlexer.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\sqmem.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\sqobject.cpp
 
 !IF  "$(CFG)" == "squirrel - Win32 Release"
@@ -251,6 +255,10 @@ SOURCE=.\sqopcodes.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\sqpcheader.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\sqstate.h
 # End Source File
 # Begin Source File
@@ -272,10 +280,6 @@ SOURCE=.\squtils.h
 # Begin Source File
 
 SOURCE=.\sqvm.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\stdafx.h
 # End Source File
 # End Group
 # End Target

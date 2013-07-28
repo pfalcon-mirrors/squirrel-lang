@@ -4,18 +4,18 @@
 
 struct SQUserData : CHAINABLE_OBJ 
 {
-	SQUserData(){_uiRef=0;_delegate=0;_hook=NULL;INIT_CHAIN();}
+	SQUserData(SQSharedState *ss){_uiRef=0;_delegate=0;_hook=NULL;INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);}
 	~SQUserData()
 	{
-		REMOVE_FROM_CHAIN(&GS->_gc_chain,this);
+		REMOVE_FROM_CHAIN(&_ss(this)->_gc_chain,this);
 		SetDelegate(NULL);
 	}
-	static SQUserData* Create(int size)
+	static SQUserData* Create(SQSharedState *ss,int size)
 	{
 		SQUserData* ud=(SQUserData*)SQ_MALLOC(sizeof(SQUserData)+(size-1));
-		new (ud) SQUserData;
+		new (ud) SQUserData(ss);
 		ud->_size=size-1;
-		ADD_TO_CHAIN(&GS->_gc_chain,ud);
+		
 		return ud;
 	}
 #ifdef GARBAGE_COLLECTOR

@@ -39,7 +39,7 @@ extern "C" {
 #define SQUIRREL_API extern
 #endif
 
-#define SQUIRREL_VERSION	"Squirrel 0.1 (pre-alpha)"
+#define SQUIRREL_VERSION	"Squirrel 0.2 (pre-alpha)"
 #define SQUIRREL_COPYRIGHT	"Copyright (C) 2003 Alberto Demichelis"
 #define SQUIRREL_AUTHOR		"Alberto Demichelis"
 
@@ -132,7 +132,7 @@ typedef struct SQVM* HSQUIRRELVM;
 typedef SQObject HSQOBJECT;
 typedef int (*SQFUNCTION)(HSQUIRRELVM);
 typedef int (*SQUSERDATARELEASE)(SQUserPointer);
-typedef void (*SQCOMPILERERROR)(const SQChar * /*desc*/,const SQChar * /*source*/,int /*line*/,int /*column*/);
+typedef void (*SQCOMPILERERROR)(HSQUIRRELVM,const SQChar * /*desc*/,const SQChar * /*source*/,int /*line*/,int /*column*/);
 
 typedef int (*SQWRITEFUNC)(SQUserPointer,SQUserPointer,int);
 typedef int (*SQREADFUNC)(SQUserPointer,SQUserPointer,int);
@@ -146,15 +146,12 @@ typedef struct tagSQRegFunction{
 	SQFUNCTION f;
 }SQRegFunction;
 
-/*enviroment*/
-SQUIRREL_API SQRESULT sq_open(SQUIRREL_MALLOC _malloc,SQUIRREL_REALLOC _realloc,SQUIRREL_FREE _free);
-SQUIRREL_API SQRESULT sq_close();
-
 /*vm*/
-SQUIRREL_API HSQUIRRELVM sq_newvm(int initialstacksize);
+SQUIRREL_API HSQUIRRELVM sq_newvm(HSQUIRRELVM friendvm,int initialstacksize);
 SQUIRREL_API void sq_seterrorhandler(HSQUIRRELVM v);
 SQUIRREL_API void sq_releasevm(HSQUIRRELVM v);
-
+SQUIRREL_API void sq_setforeignptr(HSQUIRRELVM v,SQUserPointer p);
+SQUIRREL_API SQUserPointer sq_getforeignptr(HSQUIRRELVM v);
 
 /*compiler*/
 SQUIRREL_API SQRESULT sq_compile(HSQUIRRELVM v,SQREADFUNC read,SQUserPointer p,const SQChar *sourcename,int raiseerror,int lineinfo);
@@ -207,6 +204,7 @@ SQUIRREL_API SQRESULT sq_next(HSQUIRRELVM v,int idx);
 
 /*calls*/
 SQUIRREL_API SQRESULT sq_call(HSQUIRRELVM v,int params,int retval);
+SQUIRREL_API SQRESULT sq_resume(HSQUIRRELVM v,int retval);
 SQUIRREL_API const SQChar *sq_getlocal(HSQUIRRELVM v,unsigned int level,unsigned int idx);
 SQUIRREL_API SQRESULT sq_throwerror(HSQUIRRELVM v,const SQChar *err);
 

@@ -1,0 +1,14 @@
+***version 0.2 pre-alpha***
+-new reentrant VM (sq_open and sq_close are now obsolete)
+-sq_newvm() has a new prototype
+-allocators are now linked in the VM(see sqmem.cpp)
+-_newslot meta method added
+-rawset creates a slot if doesn't exists
+-the compiler error callback pass the vm handle(thanks Pierre Renaux)
+-sq_setforeignptr() sq_getforeingptr() are now public
+-sq_resume() now is possible to resume generators from C
+-sq_getlasterror() retrieve the last thrown error
+-improved/fixed docs
+
+***version 0.1 pre-alpha***
+first release

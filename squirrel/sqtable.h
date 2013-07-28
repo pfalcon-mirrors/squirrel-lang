@@ -23,11 +23,12 @@ private:
 	_HashNode *_firstfree;
 	_HashNode *_nodes;
 	int _numofnodes;
+	
 ///////////////////////////
 	void AllocNodes(int nSize);
 	
 	void Rehash();
-	SQTable(int nInitialSize)
+	SQTable(SQSharedState *ss,int nInitialSize)
 	{
 		int pow2size=MINPOWER2;
 		while(nInitialSize>pow2size)pow2size=pow2size<<1;
@@ -35,13 +36,14 @@ private:
 		_uiRef=0;
 		_delegate=NULL;
 		INIT_CHAIN();
+		ADD_TO_CHAIN(&_sharedstate->_gc_chain,this);
 	}
 public:
-	static SQTable* Create(int nInitialSize)
+	SQTable *_delegate;
+	static SQTable* Create(SQSharedState *ss,int nInitialSize)
 	{
 		SQTable *newtable=(SQTable*)SQ_MALLOC(sizeof(SQTable));
-		new (newtable) SQTable(nInitialSize);
-		ADD_TO_CHAIN(&GS->_gc_chain,newtable);
+		new (newtable) SQTable(ss,nInitialSize);
 		newtable->_delegate=NULL;
 		return newtable;
 	}
@@ -53,7 +55,7 @@ public:
 	~SQTable()
 	{
 		SetDelegate(NULL);
-		REMOVE_FROM_CHAIN(&GS->_gc_chain,this);
+		REMOVE_FROM_CHAIN(&_sharedstate->_gc_chain,this);
 		for(int i=0;i<_numofnodes;i++)_nodes[i].~_HashNode();
 		SQ_FREE(_nodes,_numofnodes*sizeof(_HashNode));
 	}
@@ -76,7 +78,6 @@ public:
 		do{
 			if(type(n->key)==type(key) && _rawval(n->key)==_rawval(key)){
 				return n;
-				
 			}
 			n=n->next;
 		}while(n);
@@ -128,13 +129,14 @@ public:
 		}
 		return false;
 	}
+	//returns true if a new slot has been created false if it was already present
 	bool NewSlot(const SQObjectPtr &key,const SQObjectPtr &val)
 	{
 		unsigned long h=HashKey(key)&(_numofnodes-1);
 		_HashNode *n=_Get(key,h);
 		if(n){
 			n->val=val;
-			return true;
+			return false;
 		}
 		_HashNode *mp=&_nodes[h];
 		n=mp;
@@ -186,7 +188,8 @@ public:
 			idx=(int)_integer(refpos);
 			break;
 		default:
-			sqraiseerror("critical vm error iterating a table with a non number idx");
+			////sqraiseerror("critical vm error iterating a table with a non number idx");
+			assert(0);
 			break;
 		}
 		
@@ -219,7 +222,6 @@ public:
 		}
 		_delegate=mt;
 	}
-	SQTable *_delegate;
 };
 
 SQTable *Table_CreateUnifiedMethods();

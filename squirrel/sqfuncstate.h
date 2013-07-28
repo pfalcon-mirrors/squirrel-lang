@@ -10,7 +10,7 @@ typedef sqvector<int> IntVec;
 
 struct SQFuncState
 {
-	SQFuncState(SQFunctionProto *func,SQFuncState *parent){_lastline=0;_optimization=true;_func=func;_parent=parent;_stacksize=0;_breaktargets=0;_continuetargets=0;}
+	SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *parent){_sharedstate=ss;_lastline=0;_optimization=true;_func=func;_parent=parent;_stacksize=0;_breaktargets=0;_continuetargets=0;}
 #ifdef _DEBUG_DUMP
 	void Dump();
 #endif
@@ -60,6 +60,7 @@ struct SQFuncState
 	int _continuetargets;
 	int _lastline;
 	bool _optimization;
+	SQSharedState *_sharedstate;
 private:
 	int GetConstant(SQObjectPtr cons);
 };

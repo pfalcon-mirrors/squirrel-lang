@@ -26,9 +26,6 @@ struct SQExceptionTrap{
 
 typedef sqvector<SQExceptionTrap> ExceptionsTraps;
 struct SQVM 
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
-	: public SQCollectable
-#endif
 {
 
 struct CallInfo{
@@ -61,10 +58,10 @@ struct CallInfo{
 
 typedef sqvector<CallInfo> CallInfoVec;
 public:
-	SQVM();
+	SQVM(SQSharedState *ss);
 	~SQVM();
 	bool Init(int stacksize);
-	SQObjectPtr Execute(SQObjectPtr &func,int target,int nargs,int stackbase);
+	SQObjectPtr Execute(SQObjectPtr &func,int target,int nargs,int stackbase,bool bresume=false);
 	//start a native call return when the NATIVE closure returns
 	SQObjectPtr CallNative(SQObjectPtr &nclosure,int nargs,int stackbase,bool tailcall);
 	//start a SQUIRREL call in the same "Execution loop"
@@ -83,6 +80,8 @@ public:
 	bool Set(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr &val);
 	void NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr &val);
 	int ObjCmp(const SQObjectPtr &o1,const SQObjectPtr &o2);
+	void StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObjectPtr &dest);
+	void IdxError(SQObject &o);
 
 	void TypeOf(const SQObjectPtr &obj1,SQObjectPtr &dest);
 	bool CallMetaMethod(SQTable *mt,SQMetaMethod mm,int nparams,SQObjectPtr &outres);
@@ -133,6 +132,10 @@ public:
 	CallInfo *ci;
 	SQCOMPILERERROR _compilererrorhandler;
 	void *_foreignptr;
+	//VMs sharing the same state
+	SQVM *_next;
+	SQVM *_prev;
+	SQSharedState *_sharedstate;
 };
 
 
@@ -140,6 +143,14 @@ SQObjectPtr &stack_get(HSQUIRRELVM v,int idx);
 const SQChar *GetTypeName(const SQObjectPtr &obj1);
 const SQChar *GetTypeName(SQObjectType type);
 void IdxError(SQObject &o);
+
+#define _ss(_vm_) (_vm_)->_sharedstate
+
+#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
+#define _opt_ss(_vm_) (_vm_)->_sharedstate
+#else
+#define _opt_ss(_vm_) NULL
+#endif
 
 #define PUSH_CALLINFO(v,nci){ \
 	v->_callsstack.push_back(nci); \

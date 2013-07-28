@@ -1,7 +1,7 @@
 /*
 	see copyright notice in squirrel.h
 */
-#include "stdafx.h"
+#include "sqpcheader.h"
 #include <math.h>
 #include <stdlib.h>
 #include "sqopcodes.h"
@@ -25,7 +25,7 @@
 			}	\
 		} else { \
 		if(!ArithMetaMethod(#op[0],o1,o2,TARGET)) \
-			sqraiseerror("arith op on wrong type"); \
+			sqraise_str_error(_ss(this),"arith op on wrong type"); \
 		} \
 	}
 
@@ -33,7 +33,7 @@
 		const SQObjectPtr &o1=STK(arg2),&o2=STK(arg1); \
 		if((type(o1)==OT_INTEGER) && (type(o2)==OT_INTEGER)) { \
 			TARGET=(SQInteger)(_integer(o1) op _integer(o2)); \
-		} else sqraiseerror("applying bitwise op on non integer values"); \
+		} else sqraise_str_error(_ss(this),"applying bitwise op on non integer values"); \
 	}
 
 
@@ -45,9 +45,14 @@ SQVM::~SQVM()
 	int size=_stack.size();
 	for(int i=0;i<size;i++)
 		_stack[i]=_null_;
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
-	RemoveFromChain(&GS->_vms_chain,this);
-#endif
+
+	
+	if(_prev) _prev->_next=_next;
+	else _sharedstate->_vms_chain=_next;
+	if(_next)
+		_next->_prev=_prev;
+	_next=NULL;
+	_prev=NULL;
 }
 
 bool SQVM::ArithMetaMethod(int op,const SQObjectPtr &o1,const SQObjectPtr &o2,SQObjectPtr &dest)
@@ -101,7 +106,7 @@ void SQVM::Modulo(const SQObjectPtr &o1,const SQObjectPtr &o2,SQObjectPtr &dest)
 			}
 			break;
 		}
-		sqraiseerror("arith op on wrong type");
+		sqraise_str_error(_ss(this),"arith op on wrong type");
 	}
 }
 
@@ -126,7 +131,7 @@ int SQVM::ObjCmp(const SQObjectPtr &o1,const SQObjectPtr &o2)
 			if(_userdata(o1)->_delegate)CallMetaMethod(_userdata(o1)->_delegate,MT_CMP,2,res);
 			break;
 		}
-		if(type(res)!=OT_INTEGER)sqraiseerror("comparing uncompatible types");
+		if(type(res)!=OT_INTEGER)sqraise_str_error(_ss(this),"comparing uncompatible types");
 		return _integer(res);
 	}
 	else{
@@ -144,12 +149,12 @@ int SQVM::ObjCmp(const SQObjectPtr &o1,const SQObjectPtr &o2)
 		}
 		else if(type(o1)==OT_NULL)return -1;
 		else if(type(o2)==OT_NULL)return 1;
-		else sqraiseerror("comparing uncompatible types"); 
+		else sqraise_str_error(_ss(this),"comparing uncompatible types"); 
 		
 	}
 }
 
-static inline void StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObjectPtr &dest)
+void SQVM::StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObjectPtr &dest)
 {
 	switch(type(obj))
 	{
@@ -168,18 +173,18 @@ static inline void StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObj
 			sprintf(_sp(NUMBER_MAX_CHAR+_string(obj)->_len+1),"%d%s",_integer(str),_stringval(obj));
 			break;
 		default:
-			sqraiseerror("_tostring reflex not implemented");
+			sqraise_str_error(_ss(this),"_tostring reflex not implemented");
 			break;
 		}
-		dest=SQString::Create(_spval);
+		dest=SQString::Create(_ss(this),_spval);
 		break;
 	case OT_FLOAT:
 		sprintf(_sp(NUMBER_MAX_CHAR+_string(str)->_len+1),"%s%.14g",_stringval(str),_float(obj));
-		dest=SQString::Create(_spval);
+		dest=SQString::Create(_ss(this),_spval);
 		break;
 	case OT_INTEGER:
 		sprintf(_sp(NUMBER_MAX_CHAR+_string(str)->_len+1),"%s%d",_stringval(str),_integer(obj));
-		dest=SQString::Create(_spval);
+		dest=SQString::Create(_ss(this),_spval);
 		break;
 	default:
 		assert(0);
@@ -187,9 +192,9 @@ static inline void StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObj
 	}
 }
 
-SQException::SQException(const SQChar *desc)
+SQException::SQException(SQSharedState *ss,const SQChar *str)
 {
-	_description=SQString::Create(desc);
+	_description=SQString::Create(ss,str);
 }
 
 SQException::SQException(const SQException &b)
@@ -222,7 +227,7 @@ const SQChar *GetTypeName(SQObjectType type)
 	case OT_FUNCPROTO:
 		return "function";
 	default:
-		sqraiseerror("critical vm error");
+		return NULL;
 	}
 }
 
@@ -249,15 +254,18 @@ void SQVM::TypeOf(const SQObjectPtr &obj1,SQObjectPtr &dest)
 				return;
 		}
 	}
-	dest=SQString::Create(GetTypeName(obj1));
+	dest=SQString::Create(_ss(this),GetTypeName(obj1));
 }
 
-SQVM::SQVM()
+SQVM::SQVM(SQSharedState *ss)
 {
+	this->_sharedstate=ss;
 	_foreignptr=NULL;
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
-	AddToChain(&GS->_vms_chain,this);
-#endif
+
+	_prev=NULL;
+	_next=_sharedstate->_vms_chain;
+	if(_sharedstate->_vms_chain) (_sharedstate->_vms_chain)->_prev=this;
+	_sharedstate->_vms_chain=this;
 }
 
 bool SQVM::Init(int stacksize)
@@ -267,16 +275,16 @@ bool SQVM::Init(int stacksize)
 	_callsstack.reserve(16);
 	_stackbase=0;
 	_top=0;
-	SQTable *rt=SQTable::Create(0);
+	SQTable *rt=SQTable::Create(_ss(this),0);
 	_roottable=rt;
-	_refs_table=SQTable::Create(0);
+	_refs_table=SQTable::Create(_ss(this),0);
 	sq_base_register(this);
 	return true;
 }
 
 void SQVM::ThrowError(const SQChar *err)
 {
-	_lasterror=SQString::Create(err);
+	_lasterror=SQString::Create(_ss(this),err);
 }
 
 extern SQInstructionDesc g_InstrDesc[];
@@ -327,7 +335,7 @@ void SQVM::StartCall(SQObjectPtr &closure,int target,int nargs,int stackbase,boo
 	ci->_root=false;
 }
 
-void IdxError(SQObject &o)
+void SQVM::IdxError(SQObject &o)
 {
 	char sTemp[150];
 	char *s;
@@ -348,7 +356,7 @@ void IdxError(SQObject &o)
 		break;
 	}
 	sprintf(sTemp,"the index '%s' does not exists",s);
-	sqraiseerror(sTemp);
+	sqraise_str_error(_ss(this),sTemp);
 }
 
 #define STK(a) _stack._vals[_stackbase+(a)]
@@ -388,13 +396,17 @@ bool SQVM::Return(int _arg0,int _arg1,SQObjectPtr &retval)
 #define arg3 (_i_._arg3)
 #define sarg3 (*((char *)&(_i_._arg3)))
 
-SQObjectPtr SQVM::Execute(SQObjectPtr &closure,int target,int nargs,int stackbase)
+SQObjectPtr SQVM::Execute(SQObjectPtr &closure,int target,int nargs,int stackbase,bool bresume)
 {
 	int traps=0;
 	//temp vars for OP_CALL
 	int ct_target;
 	bool ct_tailcall;
-	StartCall(closure,_top-nargs,nargs,stackbase,false);
+	if(!bresume)
+		StartCall(closure,_top-nargs,nargs,stackbase,false);
+	else
+		_generator(closure)->Resume(this,target);
+	
 	ci->_root=true;
 
 exception_restore:
@@ -416,13 +428,13 @@ exception_restore:
 				TARGET=_roottable;
 				continue;
 			case _OP_MOVE:
-				TARGET=STK(arg1)/*=STK(arg2)*/;
+				TARGET=STK(arg1);
 				continue;
 			case _OP_NEWTABLE:
-				TARGET=SQTable::Create(arg1);
+				TARGET=SQTable::Create(_ss(this),arg1);
 				continue;
 			case _OP_NEWARRAY:
-				TARGET=SQArray::Create(0); _array(TARGET)->Reserve(arg1);
+				TARGET=SQArray::Create(_ss(this),0); _array(TARGET)->Reserve(arg1);
 				continue;
 			case _OP_APPENDARRAY:
 				if(sarg2!=-1)
@@ -441,7 +453,7 @@ exception_restore:
 					if(_table(STK(arg1))->Get(STK(arg2),temp))
 						_table(STK(arg1))->Remove(STK(arg2));
 					TARGET=temp;
-				}else sqraiseerror("the delete op works only on tables");
+				}else sqraise_str_error(_ss(this),"the delete op works only on tables");
 				continue;
 			case _OP_SET:
 				if(!Set(STK(arg1),STK(arg2),STK(arg3)))
@@ -521,7 +533,7 @@ common_call:
 					case OT_CLOSURE:{
 						StartCall(temp,ct_target,arg3,ct_tailcall?_stackbase:_stackbase+arg2,ct_tailcall);
 						if(_closure(temp)->_bgenerator){
-							SQGenerator *gen=SQGenerator::Create(_closure(temp));
+							SQGenerator *gen=SQGenerator::Create(_ss(this),_closure(temp));
 							gen->Yield(this);
 							Return(1,ct_target,temp);
 							STK(ct_target)=gen;
@@ -544,15 +556,15 @@ common_call:
 							STK(ct_target)=temp;
 							break;
 						}
-						sqraiseerror("calling a table")}
+						sqraise_str_error(_ss(this),"calling a table")}
 					case OT_USERDATA:
 						if(_userdata(temp)->_delegate && CallMetaMethod(_userdata(temp)->_delegate,MT_CALL,arg3,temp)){
 							STK(ct_target)=temp;
 							break;
 						}
-						sqraiseerror("calling a userdata")
+						sqraise_str_error(_ss(this),"calling a userdata")
 					default:
-						sqraiseerror("calling a non closure value")
+						sqraise_str_error(_ss(this),"calling a non closure value")
 					}
 				}
 				  continue;
@@ -637,7 +649,7 @@ common_call:
 							continue;
 						break;
 					}
-					sqraiseerror("trying to negate a non number value");
+					sqraise_str_error(_ss(this),"trying to negate a non number value");
 				}
 				continue;
 				break;
@@ -649,11 +661,11 @@ common_call:
 					TARGET=SQInteger(~_integer(STK(arg1)));
 					continue;
 				}
-				sqraiseerror("trying to apply a bitwise op on a non integer value");
+				sqraise_str_error(_ss(this),"trying to apply a bitwise op on a non integer value");
 			case _OP_CLOSURE:{
 					int nouters;
 					SQFunctionProto *func=_funcproto(_funcproto(_closure(ci->_closure)->_function)->_functions[arg1]);
-					SQClosure *closure=SQClosure::Create(func);
+					SQClosure *closure=SQClosure::Create(_ss(this),func);
 					if(nouters=func->_outervalues.size()){
 						closure->_outervalues.reserve(nouters);
 						for(int i=0;i<nouters;i++){
@@ -677,13 +689,13 @@ common_call:
 					_generator(ci->_generator)->Yield(this);
 					if(arg1!=-1)STK(arg1)=temp;
 				}
-				else sqraiseerror("only genenerator can be yielded");
+				else sqraise_str_error(_ss(this),"only genenerator can be yielded");
 				if(Return(sarg0,arg1,temp))
 					return temp;
 				}
 				continue;
 			case _OP_RESUME:
-				if(type(STK(arg1))!=OT_GENERATOR)sqraiseerror("only generators can be resumed");
+				if(type(STK(arg1))!=OT_GENERATOR)sqraise_str_error(_ss(this),"only generators can be resumed");
 				_generator(STK(arg1))->Resume(this,arg0);
                 continue;
 			case _OP_RETURN:
@@ -714,7 +726,7 @@ common_call:
 							STK(arg2+2)=STK(arg2)=itr;
 							if(type(itr)==OT_NULL)break;
                             if(!Get(STK(arg0),itr,STK(arg2+1),false))
-								sqraiseerror("_nexti returned an invalid idx");
+								sqraise_str_error(_ss(this),"_nexti returned an invalid idx");
 							continue;
 						}
 					}
@@ -731,14 +743,14 @@ common_call:
 						continue;
 					}
 					default:
-					sqraiseerror("iterating a non table/array/string value");
+					sqraise_str_error(_ss(this),"iterating a non table/array/string value");
 					break;
 				}
 				ci->_ip+=(arg1);
 				continue;
 							 }
 			case _OP_DELEGATE:
-				if(type(STK(arg1))!=OT_TABLE)sqraiseerror("delegating a non table");
+				if(type(STK(arg1))!=OT_TABLE)sqraise_str_error(_ss(this),"delegating a non table");
 				switch(type(STK(arg2))){
 				case OT_TABLE:
 					_table(STK(arg1))->SetDelegate(_table(STK(arg2)));
@@ -747,7 +759,7 @@ common_call:
 					_table(STK(arg1))->SetDelegate(NULL);
 					break;
 				default:
-					sqraiseerror("can use only tables as delegate");
+					sqraise_str_error(_ss(this),"can use only tables as delegate");
 					break;
 				}
 				TARGET=STK(arg1);
@@ -765,7 +777,7 @@ common_call:
 				case OT_ARRAY: 
 					TARGET=_array(STK(arg1))->Clone();
 					continue;
-				default: sqraiseerror("cloning a non table");
+				default: sqraise_str_error(_ss(this),"cloning a non table");
 				}
 				continue;
 			case _OP_TYPEOF:
@@ -859,7 +871,7 @@ SQObjectPtr SQVM::CallNative(SQObjectPtr &nclosure,int nargs,int stackbase,bool 
 	}
 	ci->_prevtop=(oldtop-oldstackbase);
 	int ret=(_nativeclosure(nclosure)->_function)(this);
-	if(ret<0)sqraiseerror(_stringval(_lasterror));
+	if(ret<0)sqraise_str_error(_ss(this),_stringval(_lasterror));
 	SQObjectPtr retval;
 	if(ret!=0){ retval=TOP(); }
 	_stackbase=oldstackbase;
@@ -924,7 +936,7 @@ bool SQVM::Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,
 	case OT_INTEGER:case OT_FLOAT:	return _number_ddel->Get(key,dest);
 	case OT_GENERATOR:	return _generator_ddel->Get(key,dest);
 	case OT_CLOSURE: case OT_NATIVECLOSURE:	return _closure_ddel->Get(key,dest);
-	default:sqraiseerror("indexing a wrong type");
+	default:sqraise_str_error(_ss(this),"indexing a wrong type");
 	}
 }
 
@@ -948,7 +960,7 @@ bool SQVM::Set(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr 
 		return true;
 		break;
 	case OT_ARRAY:
-		if(!sq_isnumeric(key)) sqraiseerror("indexing an array with a non numerical index");
+		if(!sq_isnumeric(key)) sqraise_str_error(_ss(this),"indexing an array with a non numerical index");
 		return _array(self)->Set(tointeger(key),val);
 		break;
 	case OT_USERDATA:
@@ -959,7 +971,7 @@ bool SQVM::Set(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr 
 		}
 		break;
 	default:
-		sqraiseerror("setting a wrong type");
+		sqraise_str_error(_ss(this),"setting a wrong type");
 		break;
 	}
 	return false;
@@ -969,12 +981,19 @@ bool SQVM::Set(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr 
 void SQVM::NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr &val)
 {
 	switch(type(self)){
-	case OT_TABLE:
-		if(type(key)==OT_NULL)sqraiseerror("null cannot be used as index");
-		_table(self)->NewSlot(key,val);
-		break;
+	case OT_TABLE:{
+		bool rawcall=true;
+		if(type(key)==OT_NULL)sqraise_str_error(_ss(this),"null cannot be used as index");
+		if(_table(self)->_delegate){
+			SQObjectPtr res;
+			Push(self);Push(key);Push(val);
+			if(!_table(self)->Get(key,res))
+				rawcall=!CallMetaMethod(_table(self)->_delegate,MT_NEWSLOT,3,res);
+		}
+		if(rawcall)_table(self)->NewSlot(key,val);
+		break;}
 	default:
-		sqraiseerror("trying to add a field to a wrong type");
+		sqraise_str_error(_ss(this),"trying to add a field to a wrong type");
 		break;
 	}
 }
@@ -996,7 +1015,7 @@ bool SQVM::Call(SQObjectPtr &closure,int nparams,int stackbase,SQObjectPtr &outr
 bool SQVM::CallMetaMethod(SQTable *mt,SQMetaMethod mm,int nparams,SQObjectPtr &outres)
 {
 	SQObjectPtr closure;
-	if(mt->Get((*GS->_metamethods)[mm],closure)){
+	if(mt->Get((*_ss(this)->_metamethods)[mm],closure)){
 		if(Call(closure,nparams,_top-nparams,outres)){
 			Pop(nparams);
 			return true;

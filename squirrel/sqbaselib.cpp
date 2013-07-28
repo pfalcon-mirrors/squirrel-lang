@@ -1,7 +1,7 @@
 /*
 	see copyright notice in squirrel.h
 */
-#include "stdafx.h"
+#include "sqpcheader.h"
 #include "sqvm.h"
 #include "sqstring.h"
 #include "sqtable.h"
@@ -53,7 +53,7 @@ bool str2num(const SQChar *s,SQObjectPtr &res)
 #ifdef GARBAGE_COLLECTOR
 static int base_collect_garbage(HSQUIRRELVM v)
 {
-	sq_pushinteger(v,GS->CollectGarbage(v));
+	sq_pushinteger(v,_ss(v)->CollectGarbage(v));
 	return 1;
 }
 #endif
@@ -150,7 +150,7 @@ static int base_ascii2string(HSQUIRRELVM v)
 		SQObject &o=stack_get(v,2);
 		if(type(o)&SQOBJECT_NUMERIC){
 			unsigned char c=tointeger(o);
-			v->Push(SQString::Create((const SQChar *)&c,1));
+			v->Push(SQString::Create(_ss(v),(const SQChar *)&c,1));
 			return 1;
 		}return sq_throwerror(v,"has to be a number");
 	}
@@ -248,12 +248,12 @@ static int default_delegate_tostring(HSQUIRRELVM v)
 			v->Push(o);
 			break;
 		case OT_INTEGER:
-			sprintf(_sp(NUMBER_MAX_CHAR+1),"%d",_integer(o));
-			v->Push(SQString::Create(_spval));
+			sprintf(_ss(v)->GetScratchPad(NUMBER_MAX_CHAR+1),"%d",_integer(o));
+			v->Push(SQString::Create(_ss(v),_ss(v)->GetScratchPad(-1)));
 			break;
 		case OT_FLOAT:
-			sprintf(_sp(NUMBER_MAX_CHAR+1),"%.14g",_float(o));
-			v->Push(SQString::Create(_spval));
+			sprintf(_ss(v)->GetScratchPad(NUMBER_MAX_CHAR+1),"%.14g",_float(o));
+			v->Push(SQString::Create(_ss(v),_ss(v)->GetScratchPad(-1)));
 			break;
 		default:
 			v->Push(_null_);
@@ -284,7 +284,7 @@ static int table_rawget(HSQUIRRELVM v)
 	return sq_rawget(v,-2);
 }
 
-SQRegFunction SQGlobalState::_table_default_delegate_funcz[]={
+SQRegFunction SQSharedState::_table_default_delegate_funcz[]={
 	{"len",default_delegate_len},
 	{"rawget",table_rawget},
 	{"rawset",table_rawset},
@@ -396,7 +396,7 @@ static int array_slice(HSQUIRRELVM v)
 	if(sidx<0)sidx=_array(o)->Size()+sidx;
 	if(eidx<1)eidx=_array(o)->Size()+eidx;
 	if(eidx<=sidx)return sq_throwerror(v,"wrog indexes");
-	SQArray *arr=SQArray::Create(eidx-sidx);
+	SQArray *arr=SQArray::Create(_ss(v),eidx-sidx);
 	SQObjectPtr t;
 	int count=0;
 	for(int i=sidx;i<eidx;i++){
@@ -408,7 +408,7 @@ static int array_slice(HSQUIRRELVM v)
 	
 }
 
-SQRegFunction SQGlobalState::_array_default_delegate_funcz[]={
+SQRegFunction SQSharedState::_array_default_delegate_funcz[]={
 	{"len",default_delegate_len},
 	{"append",array_append},
 	{"push",array_append},
@@ -432,7 +432,7 @@ static int string_slice(HSQUIRRELVM v)
 	if(sidx<0)sidx=_string(o)->_len+sidx;
 	if(eidx<1)eidx=_string(o)->_len+eidx;
 	if(eidx<=sidx)return sq_throwerror(v,"wrog indexes");
-	v->Push(SQString::Create(&_stringval(o)[sidx],eidx-sidx));
+	v->Push(SQString::Create(_ss(v),&_stringval(o)[sidx],eidx-sidx));
 	return 1;
 }
 
@@ -442,9 +442,9 @@ static int string_slice(HSQUIRRELVM v)
 	SQObject str=stack_get(v,1); \
 	int len=_string(str)->_len; \
 	const SQChar *sThis=_stringval(str); \
-	SQChar *sNew=_sp(len); \
+	SQChar *sNew=(_ss(v)->GetScratchPad(len)); \
 	for(int i=0;i<len;i++) sNew[i]=func(sThis[i]); \
-	v->Push(SQString::Create(sNew,len)); \
+	v->Push(SQString::Create(_ss(v),sNew,len)); \
 	return 1; \
 }
 
@@ -452,7 +452,7 @@ static int string_slice(HSQUIRRELVM v)
 STRING_TOFUNCZ(tolower)
 STRING_TOFUNCZ(toupper)
 
-SQRegFunction SQGlobalState::_string_default_delegate_funcz[]={
+SQRegFunction SQSharedState::_string_default_delegate_funcz[]={
 	{"len",default_delegate_len},
 	{"tointeger",default_delegate_tointeger},
 	{"tofloat",default_delegate_tofloat},
@@ -463,7 +463,7 @@ SQRegFunction SQGlobalState::_string_default_delegate_funcz[]={
 };
 
 //INTEGER DEFAULT DELEGATE//////////////////////////
-SQRegFunction SQGlobalState::_number_default_delegate_funcz[]={
+SQRegFunction SQSharedState::_number_default_delegate_funcz[]={
 	{"tointeger",default_delegate_tointeger},
 	{"tofloat",default_delegate_tofloat},
 	{"tostring",default_delegate_tostring},
@@ -486,7 +486,7 @@ static int closure_acall(HSQUIRRELVM v)
 	return sq_call(v,nparams,1);
 }
 
-SQRegFunction SQGlobalState::_closure_default_delegate_funcz[]={
+SQRegFunction SQSharedState::_closure_default_delegate_funcz[]={
 	{"call",closure_call},
 	{"acall",closure_acall},
 	{0,0}
@@ -498,14 +498,14 @@ static int generator_getstatus(HSQUIRRELVM v)
 	if(SQ_FAILED(sq_aux_checkargs(v,1,1,OT_GENERATOR)))return -1;
 	SQObject &o=stack_get(v,1);
 	switch(_generator(o)->_state){
-		case SQGenerator::eSuspended:v->Push(SQString::Create("suspended"));break;
-		case SQGenerator::eRunning:v->Push(SQString::Create("running"));break;
-		case SQGenerator::eDead:v->Push(SQString::Create("dead"));break;
+		case SQGenerator::eSuspended:v->Push(SQString::Create(_ss(v),"suspended"));break;
+		case SQGenerator::eRunning:v->Push(SQString::Create(_ss(v),"running"));break;
+		case SQGenerator::eDead:v->Push(SQString::Create(_ss(v),"dead"));break;
 	}
 	return 1;
 }
 
-SQRegFunction SQGlobalState::_generator_default_delegate_funcz[]={
+SQRegFunction SQSharedState::_generator_default_delegate_funcz[]={
 	{"getstatus",generator_getstatus},
 	{0,0}
 };

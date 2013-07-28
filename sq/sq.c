@@ -239,7 +239,7 @@ int file_write(SQUserPointer file,SQUserPointer p,int size)
 	return fwrite(p,1,size,(FILE *)file);
 }
 
-void compiler_error(const SQChar *sErr,const SQChar *sSource,int line,int column)
+void compiler_error(HSQUIRRELVM v,const SQChar *sErr,const SQChar *sSource,int line,int column)
 {
 	fprintf(stderr,"ERROR %s line=(%d) column=(%d) [%s]",sErr,line,column,sSource);
 }
@@ -335,15 +335,15 @@ void x_free(void *p,unsigned int size){
 
 int main(int argc, char* argv[])
 {
-	HSQUIRRELVM v;
+	HSQUIRRELVM v,v2;
 	const char *filename=NULL;
 #if defined(_MSC_VER) && defined(_DEBUG)
 	_CrtSetAllocHook(MemAllocHook);
 #endif
 	
-	sq_open(x_malloc,x_realloc,x_free);
-	v=sq_newvm(g_stacksize);
-
+	///sq_open(x_malloc,x_realloc,x_free);
+	v=sq_newvm(NULL,g_stacksize);
+	
 	sq_pushroottable(v);
 	sq_blob_register(v,x_malloc,x_free);
 	sq_iolib_register(v);
@@ -394,7 +394,8 @@ int main(int argc, char* argv[])
 		PrintUsage();
 	}
 	sq_releasevm(v);
-	sq_close();
+	
+	//sq_close();
 	
 #if defined(_MSC_VER) && defined(_DEBUG)
 	_getch();

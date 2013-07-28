@@ -5,17 +5,15 @@
 struct SQArray : public CHAINABLE_OBJ
 {
 private:
-	SQArray(int nsize){_values.resize(nsize);_uiRef=0;}
+	SQArray(SQSharedState *ss,int nsize){_values.resize(nsize);_uiRef=0;INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);}
 	~SQArray()
 	{
-		REMOVE_FROM_CHAIN(&GS->_gc_chain,this);
+		REMOVE_FROM_CHAIN(&_ss(this)->_gc_chain,this);
 	}
 public:
-	static SQArray* Create(int nInitialSize)
-	{
+	static SQArray* Create(SQSharedState *ss,int nInitialSize){
 		SQArray *newarray=(SQArray*)SQ_MALLOC(sizeof(SQArray));
-		new (newarray) SQArray(nInitialSize);
-		ADD_TO_CHAIN(&GS->_gc_chain,newarray);
+		new (newarray) SQArray(ss,nInitialSize);
 		return newarray;
 	}
 #ifdef GARBAGE_COLLECTOR
@@ -50,7 +48,7 @@ public:
 			idx=(unsigned int)_integer(refpos);
 			break;
 		default:
-			sqraiseerror("critical vm error iterating a table with a non number idx");
+			assert(0);
 			break;
 		}
 		
@@ -64,7 +62,7 @@ public:
 		//nothing to iterate anymore
 		return -1;
 	}
-	SQArray *Clone(){SQArray *anew=Create(Size()); anew->_values.copy(_values); return anew; }
+	SQArray *Clone(){SQArray *anew=Create(_opt_ss(this),Size()); anew->_values.copy(_values); return anew; }
 	int Size(){return _values.size();}
 	void Resize(int size) { _values.resize(size); }
 	void Reserve(int size) { _values.reserve(size); }

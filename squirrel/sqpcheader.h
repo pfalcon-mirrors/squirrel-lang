@@ -1,12 +1,9 @@
-/*	see copyright notice in squirrel.h */
-
-#ifndef _STDAFX_H_
-#define _STDAFX_H_ 
+//header for precompiled headers
+#ifndef _SQPCHEADER_H_
+#define _SQPCHEADER_H_
 
 #if defined(_MSC_VER) && defined(_DEBUG)
-
 #include <crtdbg.h>
-
 #endif 
 
 #include <stdio.h>
@@ -18,4 +15,4 @@
 #include "sqobject.h"
 #include "sqstate.h"
 
-#endif //_STDAFX_H_ 
+#endif //_SQPCHEADER_H_

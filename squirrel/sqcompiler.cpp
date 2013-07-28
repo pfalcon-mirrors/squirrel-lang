@@ -1,7 +1,7 @@
 /*
 	see copyright notice in squirrel.h
 */
-#include "stdafx.h"
+#include "sqpcheader.h"
 #include <stdarg.h>
 #include "sqopcodes.h"
 #include "sqstring.h"
@@ -47,10 +47,11 @@ typedef sqvector<ExpState> ExpStateVec;
 class SQCompiler
 {
 public:
-	SQCompiler(SQREADFUNC rg,SQUserPointer up,const SQChar* sourcename,bool raiseerror,bool lineinfo)
+	SQCompiler(SQVM *v,SQREADFUNC rg,SQUserPointer up,const SQChar* sourcename,bool raiseerror,bool lineinfo)
 	{
-		_lex.Init(rg,up);
-		_sourcename=SQString::Create(sourcename);
+		_vm=v;
+		_lex.Init(_ss(v),rg,up);
+		_sourcename=SQString::Create(_ss(v),sourcename);
 		_lineinfo=lineinfo;_raiseerror=raiseerror;
 	}
 	void Error(const SQChar *s,...)
@@ -85,16 +86,16 @@ public:
 				switch(tok)
 				{
 				case IDENTIFIER:
-					ret=SQString::Create("IDENTIFIER");
+					ret=SQString::Create(_ss(_vm),"IDENTIFIER");
 					break;
 				case STRING_LITERAL:
-					ret=SQString::Create("STRING_LITERAL");
+					ret=SQString::Create(_ss(_vm),"STRING_LITERAL");
 					break;
 				case INTEGER:
-					ret=SQString::Create("INTEGER");
+					ret=SQString::Create(_ss(_vm),"INTEGER");
 					break;
 				case FLOAT:
-					ret=SQString::Create("FLOAT");
+					ret=SQString::Create(_ss(_vm),"FLOAT");
 					break;
 				default:
 					ret=_lex.Tok2Str(tok);
@@ -106,10 +107,10 @@ public:
 		switch(tok)
 		{
 		case IDENTIFIER:
-			ret=SQString::Create(_lex._svalue);
+			ret=SQString::Create(_ss(_vm),_lex._svalue);
 			break;
 		case STRING_LITERAL:
-			ret=SQString::Create(_lex._svalue);
+			ret=SQString::Create(_ss(_vm),_lex._svalue);
 			break;
 		case INTEGER:
 			ret=_lex._nvalue;
@@ -129,16 +130,16 @@ public:
 			Error("end of statement expected (; or lf)");
 		}
 	}
-	bool Compile(SQVM *vm,SQObjectPtr &o)
+	bool Compile(SQObjectPtr &o)
 	{
 		try{
 			_debugline=1;
 			_debugop=0;
 			Lex();
-			SQFuncState funcstate(SQFunctionProto::Create(),NULL);
-			_funcproto(funcstate._func)->_name=SQString::Create("main");
+			SQFuncState funcstate(_ss(_vm),SQFunctionProto::Create(),NULL);
+			_funcproto(funcstate._func)->_name=SQString::Create(_ss(_vm),"main");
 			_fs=&funcstate;
-			_fs->AddParameter(SQString::Create("this"));
+			_fs->AddParameter(SQString::Create(_ss(_vm),"this"));
 			_funcproto(_fs->_func)->_sourcename=_sourcename;
 			int stacksize=_fs->GetStackSize();
 			while(_token>0){
@@ -157,9 +158,9 @@ public:
 #endif
 		}
 		catch(ParserException &ex){
-			if(_raiseerror && vm->_compilererrorhandler){
+			if(_raiseerror && _vm->_compilererrorhandler){
 				SQObjectPtr ret;
-				vm->_compilererrorhandler(ex.desc,type(_sourcename)==OT_STRING?_stringval(_sourcename):"unknown",
+				_vm->_compilererrorhandler(_vm,ex.desc,type(_sourcename)==OT_STRING?_stringval(_sourcename):"unknown",
 					_lex._currentline,_lex._currentcolumn);
 			}
 			return false;
@@ -450,14 +451,14 @@ public:
 		switch(_token)
 		{
 		case STRING_LITERAL:{
-				SQObjectPtr id(SQString::Create(_lex._svalue));
+				SQObjectPtr id(SQString::Create(_ss(_vm),_lex._svalue));
 				_fs->AddInstruction(_OP_LOAD,_fs->PushTarget(),_fs->GetStringConstant(_stringval(id)));
 				Lex(); 
 			}
 			break;
 		case IDENTIFIER:
 		case THIS:{
-			SQObjectPtr id(_token==IDENTIFIER?SQString::Create(_lex._svalue):SQString::Create("this"));
+			SQObjectPtr id(_token==IDENTIFIER?SQString::Create(_ss(_vm),_lex._svalue):SQString::Create(_ss(_vm),"this"));
 				int pos=-1;
 				Lex();
 				if((pos=_fs->GetLocalVariable(id))==-1){
@@ -747,7 +748,7 @@ public:
 			Lex();valname=Expect(IDENTIFIER);
 		}
 		else{
-			idxname=SQString::Create("@INDEX@");
+			idxname=SQString::Create(_ss(_vm),"@INDEX@");
 		}
 		Expect(IN);
 		
@@ -763,7 +764,7 @@ public:
 		int valuepos=_fs->PushLocalVariable(valname);
 		_fs->AddInstruction(_OP_LOADNULL,valuepos);
 		//push reference index
-		int itrpos=_fs->PushLocalVariable(SQString::Create("@ITERATOR@")); //use invalid id to make it inaccessible
+		int itrpos=_fs->PushLocalVariable(SQString::Create(_ss(_vm),"@ITERATOR@")); //use invalid id to make it inaccessible
 		_fs->AddInstruction(_OP_LOADNULL,itrpos);
 		int jmppos=_fs->GetCurrentPos();
 		_fs->AddInstruction(_OP_FOREACH,container,0,indexpos);
@@ -920,10 +921,10 @@ public:
 	}
 	void CreateFunction(SQObjectPtr name)
 	{
-		SQFuncState funcstate(SQFunctionProto::Create(),_fs);
+		SQFuncState funcstate(_ss(_vm),SQFunctionProto::Create(),_fs);
 		_funcproto(funcstate._func)->_name=name;
 		SQObjectPtr paramname;
-		funcstate.AddParameter(SQString::Create("this"));
+		funcstate.AddParameter(SQString::Create(_ss(_vm),"this"));
 		_funcproto(funcstate._func)->_sourcename=_sourcename;
 		while(_token!=')'){
 			paramname=Expect(IDENTIFIER);
@@ -996,10 +997,11 @@ private:
 	int _debugline;
 	int _debugop;
 	ExpStateVec _expstates;
+	SQVM *_vm;
 };
 
 bool Compile(SQVM *vm,SQREADFUNC rg,SQUserPointer up,const SQChar *sourcename,SQObjectPtr &out,bool raiseerror,bool lineinfo)
 {
-	SQCompiler p(rg,up,sourcename,raiseerror,lineinfo);
-	return p.Compile(vm,out);
+	SQCompiler p(vm,rg,up,sourcename,raiseerror,lineinfo);
+	return p.Compile(out);
 }

@@ -1,7 +1,7 @@
 /*
 	see copyright notice in squirrel.h
 */
-#include "stdafx.h"
+#include "sqpcheader.h"
 #include "sqfuncproto.h"
 #include "sqstring.h"
 #include "sqopcodes.h"
@@ -137,7 +137,7 @@ void SQFuncState::Dump()
 #endif
 int SQFuncState::GetStringConstant(const SQChar *cons)
 {
-	return GetConstant(SQString::Create(cons));
+	return GetConstant(SQString::Create(_sharedstate,cons));
 }
 
 int SQFuncState::GetNumericConstant(const SQInteger cons)

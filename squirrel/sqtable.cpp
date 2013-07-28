@@ -1,9 +1,9 @@
 /*
 	see copyright notice in squirrel.h
 */
-#include "stdafx.h"
-#include "sqtable.h"
+#include "sqpcheader.h"
 #include "sqvm.h"
+#include "sqtable.h"
 #include "sqfuncproto.h"
 #include "sqclosure.h"
 
@@ -54,7 +54,7 @@ void SQTable::Rehash()
 
 SQTable *SQTable::Clone()
 {
-	SQTable *nt=Create(_numofnodes);
+	SQTable *nt=Create(_opt_ss(this),_numofnodes);
 	SQInteger ridx=0;
 	SQObjectPtr key,val;
 	while((ridx=Next(ridx,key,val))!=-1){

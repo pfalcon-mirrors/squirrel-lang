@@ -6,12 +6,12 @@ struct SQFunctionProto;
 struct SQClosure : public CHAINABLE_OBJ
 {
 private:
-	SQClosure(SQFunctionProto *func){_uiRef=0;_function=func;_bgenerator=func->_bgenerator; INIT_CHAIN();}
+	SQClosure(SQSharedState *ss,SQFunctionProto *func){_uiRef=0;_function=func;_bgenerator=func->_bgenerator; INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);}
 public:
-	static SQClosure *Create(SQFunctionProto *func){
+	static SQClosure *Create(SQSharedState *ss,SQFunctionProto *func){
 		SQClosure *nc=(SQClosure*)SQ_MALLOC(sizeof(SQClosure));
-		new (nc) SQClosure(func);
-		ADD_TO_CHAIN(&GS->_gc_chain,nc);
+		new (nc) SQClosure(ss,func);
+		
 		return nc;
 	}
 	void Release(){
@@ -19,10 +19,10 @@ public:
 	}
 	~SQClosure()
 	{
-		REMOVE_FROM_CHAIN(&GS->_gc_chain,this);
+		REMOVE_FROM_CHAIN(&_ss(this)->_gc_chain,this);
 	}
-	void Save(SQUserPointer up,SQWRITEFUNC write);
-	void Load(SQUserPointer up,SQREADFUNC read);
+	void Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write);
+	void Load(SQVM *v,SQUserPointer up,SQREADFUNC read);
 #ifdef GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
 #endif
@@ -38,17 +38,16 @@ struct SQGenerator : public CHAINABLE_OBJ
 {
 	enum SQGEneratorState{eRunning,eSuspended,eDead};
 private:
-	SQGenerator(SQClosure *closure){_uiRef=0;_closure=closure;_state=eRunning;_ci._generator=_null_;INIT_CHAIN();}
+	SQGenerator(SQSharedState *ss,SQClosure *closure){_uiRef=0;_closure=closure;_state=eRunning;_ci._generator=_null_;INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);}
 public:
-	static SQGenerator *Create(SQClosure *closure){
+	static SQGenerator *Create(SQSharedState *ss,SQClosure *closure){
 		SQGenerator *nc=(SQGenerator*)SQ_MALLOC(sizeof(SQGenerator));
-		new (nc) SQGenerator(closure);
-		ADD_TO_CHAIN(&GS->_gc_chain,nc);
+		new (nc) SQGenerator(ss,closure);
 		return nc;
 	}
 	~SQGenerator()
 	{
-		REMOVE_FROM_CHAIN(&GS->_gc_chain,this);
+		REMOVE_FROM_CHAIN(&_ss(this)->_gc_chain,this);
 	}
     void Kill(){
 		_state=eDead;
@@ -74,18 +73,18 @@ public:
 struct SQNativeClosure : public CHAINABLE_OBJ
 {
 private:
-	SQNativeClosure(SQFUNCTION func){_uiRef=0;_function=func;INIT_CHAIN();	}
+	SQNativeClosure(SQSharedState *ss,SQFUNCTION func){_uiRef=0;_function=func;INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);	}
 public:
-	static SQNativeClosure *Create(SQFUNCTION func)
+	static SQNativeClosure *Create(SQSharedState *ss,SQFUNCTION func)
 	{
 		SQNativeClosure *nc=(SQNativeClosure*)SQ_MALLOC(sizeof(SQNativeClosure));
-		new (nc) SQNativeClosure(func);
-		ADD_TO_CHAIN(&GS->_gc_chain,nc);
+		new (nc) SQNativeClosure(ss,func);
+		
 		return nc;
 	}
 	~SQNativeClosure()
 	{
-		REMOVE_FROM_CHAIN(&GS->_gc_chain,this);
+		REMOVE_FROM_CHAIN(&_ss(this)->_gc_chain,this);
 	}
 	void Release(){
 		sq_delete(this,SQNativeClosure);

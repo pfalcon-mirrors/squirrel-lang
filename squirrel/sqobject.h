@@ -4,6 +4,8 @@
 
 #include "squtils.h"
 
+struct SQSharedState;
+
 enum SQMetaMethod{
 	MT_ADD=0,
 	MT_SUB=1,
@@ -18,6 +20,7 @@ enum SQMetaMethod{
 	MT_CMP=10,
 	MT_CALL=11,
 	MT_CLONE=12,
+	MT_NEWSLOT=13,
 };
 
 #define MM_ADD		"_add"
@@ -33,6 +36,7 @@ enum SQMetaMethod{
 #define MM_CMP		"_cmp"
 #define MM_CALL		"_call"
 #define MM_CLONE	"_clone"
+#define MM_NEWSLOT	"_newslot"
 
 #define MINPOWER2 4
 
@@ -195,12 +199,14 @@ struct SQObjectPtr : public SQObject
 		__Release(tOldType,unOldVal);
 		return *this;
 	}
+	private:
+		SQObjectPtr(const SQChar *){} //safety
 };
 /////////////////////////////////////////////////////////////////////////////////////
 struct SQException
 {
+	SQException(SQSharedState *ss,const SQChar *str);
 	SQException(const SQObjectPtr &desc);
-	SQException(const SQChar *desc);
 	SQException(const SQException &b);
 	SQObjectPtr _description;
 };
@@ -210,6 +216,7 @@ struct SQException
 struct SQCollectable : public SQRefCounted {
 	SQCollectable *_next;
 	SQCollectable *_prev;
+	SQSharedState *_sharedstate;
 	virtual void Release()=0;
 #ifdef GARBAGE_COLLECTOR
 	virtual void Mark(SQCollectable **chain)=0;
@@ -223,7 +230,7 @@ struct SQCollectable : public SQRefCounted {
 #define ADD_TO_CHAIN(chain,obj) AddToChain(chain,obj)
 #define REMOVE_FROM_CHAIN(chain,obj) {if(!(_uiRef&MARK_FLAG))RemoveFromChain(chain,obj);}
 #define CHAINABLE_OBJ SQCollectable
-#define INIT_CHAIN() {_next=NULL;_prev=NULL;}
+#define INIT_CHAIN() {_next=NULL;_prev=NULL;_sharedstate=ss;}
 #else
 
 #define ADD_TO_CHAIN(chain,obj) ((void)0)
@@ -233,6 +240,7 @@ struct SQCollectable : public SQRefCounted {
 #endif
 
 #define sqraiseerror(str) throw SQException(str);
+#define sqraise_str_error(ss,str) throw SQException(ss,str);
 
 typedef sqvector<SQObjectPtr> SQObjectPtrVec;
 

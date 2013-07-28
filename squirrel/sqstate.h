@@ -27,26 +27,26 @@ private:
 	unsigned int _slotused;
 };
 
-#define ADD_STRING(str,len) GS->_stringtable->Add(str,len)
-#define REMOVE_STRING(bstr) GS->_stringtable->Remove(bstr)
+#define ADD_STRING(ss,str,len) ss->_stringtable->Add(str,len)
+#define REMOVE_STRING(ss,bstr) ss->_stringtable->Remove(bstr)
 
 struct SQObjectPtr;
 typedef sqvector<SQObjectPtr> SQObjectPtrVec;
 
-struct SQGlobalState
+struct SQSharedState
 {
-	SQGlobalState();
-	~SQGlobalState();
-	void Init(SQUIRREL_MALLOC _malloc,SQUIRREL_REALLOC _realloc,SQUIRREL_FREE _free);
+	SQSharedState();
+	~SQSharedState();
+	void Init();
 public:
 	SQChar* GetScratchPad(int size);
 #ifdef GARBAGE_COLLECTOR
 	int CollectGarbage(SQVM *vm); 
 	static void MarkObject(SQObjectPtr &o,SQCollectable **chain);
 #endif
-	SQUIRREL_MALLOC _sq_malloc;
+	/*SQUIRREL_MALLOC _sq_malloc;
 	SQUIRREL_REALLOC _sq_realloc;
-	SQUIRREL_FREE _sq_free;
+	SQUIRREL_FREE _sq_free;*/
 
 	SQObjectPtrVec *_metamethods;
 	SQObjectPtrVec *_systemstrings;
@@ -54,11 +54,9 @@ public:
 	StringTable *_stringtable;
 #if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
 	SQCollectable *_gc_chain;
-	SQCollectable *_vms_chain;
+	
 #endif
-	SQObjectPtr _null;
-	SQObjectPtr _notnull;
-
+	SQVM *_vms_chain;
 	SQObjectPtr _table_default_delegate;
 	static SQRegFunction _table_default_delegate_funcz[];
 	SQObjectPtr _array_default_delegate;
@@ -78,17 +76,21 @@ private:
 
 //#define _null_ (GS->_null)
 //#define _notnull_ (GS->_notnull)
-#define _sp(s) (GS->GetScratchPad(s))
-#define _spval (GS->GetScratchPad(-1))
+#define _sp(s) (_sharedstate->GetScratchPad(s))
+#define _spval (_sharedstate->GetScratchPad(-1))
 
-#define _table_ddel		_table(GS->_table_default_delegate) 
-#define _array_ddel		_table(GS->_array_default_delegate) 
-#define _string_ddel	_table(GS->_string_default_delegate) 
-#define _number_ddel	_table(GS->_number_default_delegate) 
-#define _generator_ddel	_table(GS->_generator_default_delegate) 
-#define _closure_ddel	_table(GS->_closure_default_delegate) 
+#define _table_ddel		_table(_sharedstate->_table_default_delegate) 
+#define _array_ddel		_table(_sharedstate->_array_default_delegate) 
+#define _string_ddel	_table(_sharedstate->_string_default_delegate) 
+#define _number_ddel	_table(_sharedstate->_number_default_delegate) 
+#define _generator_ddel	_table(_sharedstate->_generator_default_delegate) 
+#define _closure_ddel	_table(_sharedstate->_closure_default_delegate) 
 
-extern SQGlobalState *GS;
+//extern SQSharedState *GS;
 extern SQObjectPtr _null_;
 extern SQObjectPtr _notnull_;
+
+void *sq_vm_malloc(unsigned int size);
+void *sq_vm_realloc(void *p,unsigned int oldsize,unsigned int size);
+void sq_vm_free(void *p,unsigned int size);
 #endif //_SQSTATE_H_
