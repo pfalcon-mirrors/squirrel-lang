@@ -96,7 +96,7 @@ SOURCE=.\sqstdmath.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\sqstdrex.c
+SOURCE=.\sqstdrex.cpp
 # End Source File
 # Begin Source File
 

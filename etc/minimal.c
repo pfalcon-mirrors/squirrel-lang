@@ -26,7 +26,7 @@ va_end(arglist);
 
 void call_foo(HSQUIRRELVM v, int n,float f,const SQChar *s)
 {
-	int top = sq_gettop(v); //saves the stack size before the call
+	SQInteger top = sq_gettop(v); //saves the stack size before the call
 	sq_pushroottable(v); //pushes the global table
 	sq_pushstring(v,_SC("foo"),-1);
 	if(SQ_SUCCEEDED(sq_get(v,-2))) { //gets the field 'foo' from the global table
@@ -34,7 +34,7 @@ void call_foo(HSQUIRRELVM v, int n,float f,const SQChar *s)
 		sq_pushinteger(v,n); 
 		sq_pushfloat(v,f);
 		sq_pushstring(v,s,-1);
-		sq_call(v,4,SQFalse); //calls the function 
+		sq_call(v,4,SQFalse,SQTrue); //calls the function 
 	}
 	sq_settop(v,top); //restores the original stack size
 }

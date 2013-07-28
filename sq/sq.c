@@ -40,7 +40,7 @@ int MemAllocHook( int allocType, void *userData, size_t size, int blockType,
 #endif
 
 
-int quit(HSQUIRRELVM v)
+SQInteger quit(HSQUIRRELVM v)
 {
 	int *done;
 	sq_getuserpointer(v,-1,(SQUserPointer*)&done);
@@ -58,7 +58,7 @@ void printfunc(HSQUIRRELVM v,const SQChar *s,...)
 
 void PrintVersionInfos()
 {
-	scfprintf(stdout,_SC("%s %s\n"),SQUIRREL_VERSION,SQUIRREL_COPYRIGHT);
+	scfprintf(stdout,_SC("%s %s (%d bits)\n"),SQUIRREL_VERSION,SQUIRREL_COPYRIGHT,sizeof(SQInteger)*8);
 }
 
 void PrintUsage()
@@ -198,10 +198,10 @@ void Interactive(HSQUIRRELVM v)
 	
 #define MAXINPUT 1024
 	SQChar buffer[MAXINPUT];
-	int blocks =0;
-	int string=0;
-	int retval=0;
-	int done=0;
+	SQInteger blocks =0;
+	SQInteger string=0;
+	SQInteger retval=0;
+	SQInteger done=0;
 	PrintVersionInfos();
 		
 	sq_pushroottable(v);
@@ -214,7 +214,7 @@ void Interactive(HSQUIRRELVM v)
 
     while (!done) 
 	{
-		int i = 0;
+		SQInteger i = 0;
 		scprintf(_SC("\nsq>"));
 		for(;;) {
 			int c;
@@ -254,17 +254,17 @@ void Interactive(HSQUIRRELVM v)
 		}
 		i=scstrlen(buffer);
 		if(i>0){
-			int oldtop=sq_gettop(v);
+			SQInteger oldtop=sq_gettop(v);
 			if(SQ_SUCCEEDED(sq_compilebuffer(v,buffer,i,_SC("interactive console"),SQTrue))){
 				sq_pushroottable(v);
-				if(SQ_SUCCEEDED(sq_call(v,1,retval)) &&	retval){
+				if(SQ_SUCCEEDED(sq_call(v,1,retval,SQTrue)) &&	retval){
 					scprintf(_SC("\n"));
 					sq_pushroottable(v);
 					sq_pushstring(v,_SC("print"),-1);
 					sq_get(v,-2);
 					sq_pushroottable(v);
 					sq_push(v,-4);
-					sq_call(v,2,SQFalse);
+					sq_call(v,2,SQFalse,SQTrue);
 					retval=0;
 					scprintf(_SC("\n"));
 				}

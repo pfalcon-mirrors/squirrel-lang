@@ -36,7 +36,17 @@ SRCS= \
 
 	
 	
-squirrellib:
-	gcc -O3  -fno-rtti -Os -c $(SRCS) $(INCZ) $(DEFS)
+sq32:
+	gcc -O2  -fno-rtti -Wall -c $(SRCS) $(INCZ) $(DEFS)
+	ar rc $(OUT) *.o
+	rm *.o
+
+sqprof:
+	gcc -O2 -pg -fno-rtti -pie -gstabs -g3 -Wall -c $(SRCS) $(INCZ) $(DEFS)
+	ar rc $(OUT) *.o
+	rm *.o
+
+sq64:
+	gcc -O2  -D_SQ64 -fno-rtti -Wall -c $(SRCS) $(INCZ) $(DEFS)
 	ar rc $(OUT) *.o
 	rm *.o

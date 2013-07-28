@@ -1,3 +1,28 @@
+***version 2.1 stable***
+-added static class fields, new keyword static
+-added 64bits architecture support
+-added global slot _intsize_ int the base lib to recognize 32bits and 64bits builds
+-added functions with fixed environment, closure.bindenv() built-in function
+-all types except userdata and null implement the tostring() method
+-string concatenation now invokes metamethod _tostring
+-new metamethods for class objects _newmember and _inherited
+-sq_call() sq_resume() sq_wakeupvm() have a new signature
+-new C referencing implementation(scales more with the amount of references)
+-refactored hash table
+-new api functions sq_newslot(),sq_tobool(),sq_getbase(), sq_instanceof(), sq_bindenv()
+-the api func sq_createslot was deprecated but still supported in form of C macro on top of sq_newslot
+-sq_setreleasehook() now also works for classes
+-stream.readstr() and stream.writestr() have been deprecated(this affects file and blob)
+-fixed squirrel.h undeclared api calls
+-fixed few minor bugs
+-SQChar is now defined as wchar_t
+-removed warning when building with -Wall -pedantic for GCC users
+-added new std io function writeclosuretofile()
+-added new std string functions strip(),rstrip(),lstrip() and split()
+-regular expressions operators (+,*) now have more POSIX greedyness behaviour
+-class constructors are now invoked as normal functions
+
+***2005-10-02	       ***
 ***version 2.0.5 stable***
 -fixed some 64bits incompatibilities (thx sarge)
 -fixed minor bug in the stdlib format() function (thx Rick)

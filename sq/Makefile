@@ -11,6 +11,11 @@ OBJS= sq.o
 SRCS= sq.c
 	
 	
-sq:
-	g++ -O3 -fno-rtti -Os -o $(OUT) $(SRCS) $(INCZ) $(LIBZ) $(LIB)
+sq32:
+	g++ -O2 -fno-rtti -o $(OUT) $(SRCS) $(INCZ) $(LIBZ) $(LIB)
+
+sqprof:
+	g++ -O2 -pg -fno-rtti -pie -gstabs -g3 -o $(OUT) $(SRCS) $(INCZ) $(LIBZ) $(LIB)
 	
+sq64:
+	g++ -O2 -fno-rtti -D_SQ64 -o $(OUT) $(SRCS) $(INCZ) $(LIBZ) $(LIB)

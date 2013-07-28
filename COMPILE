@@ -1,4 +1,4 @@
-Squirrel 2.0.5 stable
+Squirrel 2.1 stable
 --------------------------------------------------------
 What is in this distribution?
 
@@ -27,7 +27,14 @@ GCC USERS
 .........................................................
 There is a very simple makefile that compiles all libraries and exes
 from the root of the project run 'make'
+
+for 32 bits systems
+
  $ make
+ 
+for 64 bits systems
+
+ $ make sq64
 
 VISUAL C++ USERS
 .........................................................
