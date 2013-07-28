@@ -284,6 +284,7 @@ SQInteger SQLexer::ReadString(SQInteger ndelim,bool verbatim)
 			case _SC('\n'): 
 				if(!verbatim) Error(_SC("newline in a constant")); 
 				APPEND_CHAR(CUR_CHAR); NEXT(); 
+				_currentline++;
 				break;
 			case _SC('\\'):
 				if(verbatim) {

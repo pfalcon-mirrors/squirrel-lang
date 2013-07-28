@@ -157,11 +157,11 @@ public:
 		_debugline = 1;
 		_debugop = 0;
 
-		SQFuncState funcstate(_ss(_vm), SQFunctionProto::Create(), NULL,ThrowError,this);
-		_funcproto(funcstate._func)->_name = SQString::Create(_ss(_vm), _SC("main"));
+		SQFuncState funcstate(_ss(_vm), NULL,ThrowError,this);
+		funcstate._name = SQString::Create(_ss(_vm), _SC("main"));
 		_fs = &funcstate;
 		_fs->AddParameter(_fs->CreateString(_SC("this")));
-		_funcproto(_fs->_func)->_sourcename = _sourcename;
+		_fs->_sourcename = _sourcename;
 		SQInteger stacksize = _fs->GetStackSize();
 		if(setjmp(_errorjmp) == 0) {
 			Lex();
@@ -172,12 +172,10 @@ public:
 			CleanStack(stacksize);
 			_fs->AddLineInfos(_lex._currentline, _lineinfo, true);
 			_fs->AddInstruction(_OP_RETURN, 0xFF);
-			_funcproto(_fs->_func)->_stacksize = _fs->_stacksize;
 			_fs->SetStackSize(0);
-			_fs->Finalize();
-			o = _fs->_func;
+			o =_fs->BuildProto();
 #ifdef _DEBUG_DUMP
-			_fs->Dump();
+			_fs->Dump(_funcproto(o));
 #endif
 		}
 		else {
@@ -218,7 +216,7 @@ public:
 			}
 			else {
 				op = _OP_YIELD;
-				_funcproto(_fs->_func)->_bgenerator = true;
+				_fs->_bgenerator = true;
 			}
 			Lex();
 			if(!IsEndOfStatement()) {
@@ -1104,11 +1102,11 @@ public:
 	void CreateFunction(SQObject &name)
 	{
 		
-		SQFuncState *funcstate = _fs->PushChildState(_ss(_vm), SQFunctionProto::Create());
-		_funcproto(funcstate->_func)->_name = name;
+		SQFuncState *funcstate = _fs->PushChildState(_ss(_vm));
+		funcstate->_name = name;
 		SQObject paramname;
 		funcstate->AddParameter(_fs->CreateString(_SC("this")));
-		_funcproto(funcstate->_func)->_sourcename = _sourcename;
+		funcstate->_sourcename = _sourcename;
 		while(_token!=_SC(')')) {
 			if(_token == TK_VARPARAMS) {
 				funcstate->_varparams = true;
@@ -1143,13 +1141,13 @@ public:
 		funcstate->AddLineInfos(_lex._prevtoken == _SC('\n')?_lex._lasttokenline:_lex._currentline, _lineinfo, true);
         funcstate->AddInstruction(_OP_RETURN, -1);
 		funcstate->SetStackSize(0);
-		_funcproto(_fs->_func)->_stacksize = _fs->_stacksize;
-		funcstate->Finalize();
+		//_fs->->_stacksize = _fs->_stacksize;
+		SQFunctionProto *func = funcstate->BuildProto();
 #ifdef _DEBUG_DUMP
-		funcstate->Dump();
+		funcstate->Dump(func);
 #endif
 		_fs = currchunk;
-		_fs->_functions.push_back(funcstate->_func);
+		_fs->_functions.push_back(func);
 		_fs->PopChildState();
 	}
 	void CleanStack(SQInteger stacksize)

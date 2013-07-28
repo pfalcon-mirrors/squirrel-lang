@@ -13,6 +13,7 @@
 SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_LINE")},
 	{_SC("_OP_LOAD")},
+	{_SC("_OP_DLOAD")},
 	{_SC("_OP_TAILCALL")},
 	{_SC("_OP_CALL")},
 	{_SC("_OP_PREPCALL")},
@@ -30,6 +31,7 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_RETURN")},
 	{_SC("_OP_LOADNULLS")},
 	{_SC("_OP_LOADROOTTABLE")},
+	{_SC("_OP_LOADBOOL")},
 	{_SC("_OP_DMOVE")},
 	{_SC("_OP_JMP")},
 	{_SC("_OP_JNZ")},
@@ -66,8 +68,7 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_POPTRAP")},
 	{_SC("_OP_THROW")},
 	{_SC("_OP_CLASS")},
-	{_SC("_OP_NEWSLOTA")},
-	{_SC("_OP_LOADBOOL")}
+	{_SC("_OP_NEWSLOTA")}
 };
 #endif
 void DumpLiteral(SQObjectPtr &o)
@@ -79,7 +80,7 @@ void DumpLiteral(SQObjectPtr &o)
 	}
 }
 
-SQFuncState::SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *parent,CompilerErrorFunc efunc,void *ed)
+SQFuncState::SQFuncState(SQSharedState *ss,SQFuncState *parent,CompilerErrorFunc efunc,void *ed)
 {
 		_nliterals = 0;
 		_literals = SQTable::Create(ss,0);
@@ -87,7 +88,6 @@ SQFuncState::SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *pa
 		_sharedstate = ss;
 		_lastline = 0;
 		_optimization = true;
-		_func = func;
 		_parent = parent;
 		_stacksize = 0;
 		_traps = 0;
@@ -95,6 +95,7 @@ SQFuncState::SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *pa
 		_varparams = false;
 		_errfunc = efunc;
 		_errtarget = ed;
+		_bgenerator = false;
 
 }
 
@@ -104,10 +105,9 @@ void SQFuncState::Error(const SQChar *err)
 }
 
 #ifdef _DEBUG_DUMP
-void SQFuncState::Dump()
+void SQFuncState::Dump(SQFunctionProto *func)
 {
 	SQUnsignedInteger n=0,i;
-	SQFunctionProto *func=_funcproto(_func);
 	scprintf(_SC("SQInstruction sizeof %d\n"),sizeof(SQInstruction));
 	scprintf(_SC("SQObject sizeof %d\n"),sizeof(SQObject));
 	scprintf(_SC("--------------------------------------------------------------------\n"));
@@ -153,7 +153,7 @@ void SQFuncState::Dump()
 	n=0;
 	for(i=0;i<_instructions.size();i++){
 		SQInstruction &inst=_instructions[i];
-		if(inst.op==_OP_LOAD || inst.op==_OP_PREPCALLK || inst.op==_OP_GETK ){
+		if(inst.op==_OP_LOAD || inst.op==_OP_DLOAD || inst.op==_OP_PREPCALLK || inst.op==_OP_GETK ){
 			
 			SQInteger lidx = inst._arg1;
 			scprintf(_SC("[%03d] %15s %d "),n,g_InstrDesc[inst.op].name,inst._arg0);
@@ -167,7 +167,24 @@ void SQFuncState::Dump()
 				}
 				DumpLiteral(key);
 			}
-			scprintf(_SC(" %d %d \n"),inst._arg2,inst._arg3);
+			if(inst.op != _OP_DLOAD) {
+				scprintf(_SC(" %d %d \n"),inst._arg2,inst._arg3);
+			}
+			else {
+				scprintf(_SC(" %d "),inst._arg2);
+				lidx = inst._arg3;
+				if(lidx >= 0xFFFFFFFF)
+					scprintf(_SC("null"));
+				else {
+					SQInteger refidx;
+					SQObjectPtr val,key,refo;
+					while(((refidx=_table(_literals)->Next(false,refo,key,val))!= -1) && (_integer(val) != lidx)) {
+						refo = refidx;	
+				}
+				DumpLiteral(key);
+				scprintf(_SC("\n"));
+			}
+			}
 		}
 		else if(inst.op==_OP_ARITH){
 			scprintf(_SC("[%03d] %15s %d %d %d %c\n"),n,g_InstrDesc[inst.op].name,inst._arg0,inst._arg1,inst._arg2,inst._arg3);
@@ -181,10 +198,6 @@ void SQFuncState::Dump()
 	scprintf(_SC("--------------------------------------------------------------------\n\n"));
 }
 #endif
-/*SQInteger SQFuncState::GetStringConstant(SQObjectPtr &cons)
-{
-	return GetConstant(cons);
-}*/
 
 SQInteger SQFuncState::GetNumericConstant(const SQInteger cons)
 {
@@ -335,7 +348,6 @@ SQInteger SQFuncState::GetOuterVariable(const SQObject &name)
 
 void SQFuncState::AddOuterValue(const SQObject &name)
 {
-	//AddParameter(name);
 	SQInteger pos=-1;
 	if(_parent) { 
 		pos = _parent->GetLocalVariable(name);
@@ -428,7 +440,14 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 				return;
 			}
 			break;
-
+		case _OP_LOAD:
+			if(pi.op == _OP_LOAD && i._arg1 < 256) {
+				pi.op = _OP_DLOAD;
+				pi._arg2 = i._arg0;
+				pi._arg3 = (unsigned char)i._arg1;
+				return;
+			}
+			break;
 		case _OP_EQ:case _OP_NE:
 			if(pi.op == _OP_LOAD && pi._arg0 == i._arg1 && (!IsLocal(pi._arg0) ))
 			{
@@ -441,7 +460,6 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 			}
 			break;
 		case _OP_LOADNULLS:
-		//case _OP_LOADNULL:
 			if((pi.op == _OP_LOADNULLS && pi._arg0+pi._arg1 == i._arg0)) {
 				
 				pi._arg1 = pi._arg1 + 1;
@@ -468,16 +486,23 @@ SQObject SQFuncState::CreateString(const SQChar *s,SQInteger len)
 	return ns;
 }
 
-void SQFuncState::Finalize()
+SQFunctionProto *SQFuncState::BuildProto()
 {
-	SQFunctionProto *f=_funcproto(_func);
+	SQFunctionProto *f=SQFunctionProto::Create();
 	f->_literals.resize(_nliterals);
 	SQObjectPtr refidx,key,val;
 	SQInteger idx;
+
+	f->_stacksize = _stacksize;
+	f->_sourcename = _sourcename;
+	f->_bgenerator = _bgenerator;
+	f->_name = _name;
+
 	while((idx=_table(_literals)->Next(false,refidx,key,val))!=-1) {
 		f->_literals[_integer(val)]=key;
 		refidx=idx;
 	}
+
 	f->_functions.resize(_functions.size());
 	f->_functions.copy(_functions);
 	f->_parameters.resize(_parameters.size());
@@ -491,12 +516,14 @@ void SQFuncState::Finalize()
 	f->_lineinfos.resize(_lineinfos.size());
 	f->_lineinfos.copy(_lineinfos);
 	f->_varparams = _varparams;
+
+	return f;
 }
 
-SQFuncState *SQFuncState::PushChildState(SQSharedState *ss,SQFunctionProto *func)
+SQFuncState *SQFuncState::PushChildState(SQSharedState *ss)
 {
 	SQFuncState *child = (SQFuncState *)sq_malloc(sizeof(SQFuncState));
-	new (child) SQFuncState(ss,func,this,_errfunc,_errtarget);
+	new (child) SQFuncState(ss,this,_errfunc,_errtarget);
 	_childstates.push_back(child);
 	return child;
 }

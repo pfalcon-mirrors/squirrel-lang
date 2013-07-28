@@ -71,7 +71,7 @@ struct SQDelegable;
 #endif
 
 #ifdef SQUNICODE
-typedef wchar_t SQChar;
+typedef unsigned short SQChar;
 #define _SC(a) L##a
 #define	scstrcmp	wcscmp
 #define scsprintf	swprintf
@@ -110,7 +110,7 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 2.0.4 stable")
+#define SQUIRREL_VERSION	_SC("Squirrel 2.0.5 stable")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2005 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
@@ -247,6 +247,7 @@ SQUIRREL_API void sq_setcompilererrorhandler(HSQUIRRELVM v,SQCOMPILERERROR f);
 /*stack operations*/
 SQUIRREL_API void sq_push(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API void sq_pop(HSQUIRRELVM v,SQInteger nelemstopop);
+SQUIRREL_API void sq_poptop(HSQUIRRELVM v);
 SQUIRREL_API void sq_remove(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQInteger sq_gettop(HSQUIRRELVM v);
 SQUIRREL_API void sq_settop(HSQUIRRELVM v,SQInteger newtop);
@@ -268,6 +269,7 @@ SQUIRREL_API void sq_pushuserpointer(HSQUIRRELVM v,SQUserPointer p);
 SQUIRREL_API void sq_pushnull(HSQUIRRELVM v);
 SQUIRREL_API SQObjectType sq_gettype(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQInteger sq_getsize(HSQUIRRELVM v,SQInteger idx);
+SQUIRREL_API void sq_tostring(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQRESULT sq_getstring(HSQUIRRELVM v,SQInteger idx,const SQChar **c);
 SQUIRREL_API SQRESULT sq_getinteger(HSQUIRRELVM v,SQInteger idx,SQInteger *i);
 SQUIRREL_API SQRESULT sq_getfloat(HSQUIRRELVM v,SQInteger idx,SQFloat *f);
@@ -316,6 +318,7 @@ SQUIRREL_API SQRESULT sq_getweakrefval(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQRESULT sq_call(HSQUIRRELVM v,SQInteger params,SQBool retval);
 SQUIRREL_API SQRESULT sq_resume(HSQUIRRELVM v,SQBool retval);
 SQUIRREL_API const SQChar *sq_getlocal(HSQUIRRELVM v,SQUnsignedInteger level,SQUnsignedInteger idx);
+SQUIRREL_API const SQChar *sq_getfreevariable(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger nval);
 SQUIRREL_API SQRESULT sq_throwerror(HSQUIRRELVM v,const SQChar *err);
 SQUIRREL_API void sq_reseterror(HSQUIRRELVM v);
 SQUIRREL_API void sq_getlasterror(HSQUIRRELVM v);

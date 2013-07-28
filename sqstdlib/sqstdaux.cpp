@@ -104,7 +104,7 @@ void _sqstd_compiler_error(HSQUIRRELVM v,const SQChar *sErr,const SQChar *sSourc
 {
 	SQPRINTFUNCTION pf = sq_getprintfunc(v);
 	if(pf) {
-		pf(v,_SC("ERROR %s line=(%d) column=(%d) [%s]\n"),sErr,line,column,sSource);
+		pf(v,_SC("%s line = (%d) column = (%d) : error %s\n"),sSource,line,column,sErr);
 	}
 }
 

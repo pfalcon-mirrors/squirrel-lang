@@ -79,7 +79,7 @@ public:
 	bool ObjCmp(const SQObjectPtr &o1, const SQObjectPtr &o2,SQInteger &res);
 	bool StringCat(const SQObjectPtr &str, const SQObjectPtr &obj, SQObjectPtr &dest);
 	bool IsEqual(SQObjectPtr &o1,SQObjectPtr &o2,bool &res);
-	bool IsFalse(SQObjectPtr &o);
+	void ToString(const SQObjectPtr &o,SQObjectPtr &res);
 	SQString *PrintObjVal(const SQObject &o);
 
  
@@ -122,6 +122,14 @@ public:
 	//stack functions for the api
 	void Remove(SQInteger n);
 
+	inline bool IsFalse(SQObjectPtr &o)
+	{
+		if((type(o) & SQOBJECT_CANBEFALSE) && ( (type(o) == OT_FLOAT) && (_float(o) == SQFloat(0.0)) )
+			|| (_integer(o) == 0) ) { //OT_NULL|OT_INTEGER|OT_BOOL
+			return true;
+		}
+		return false;
+	}
 	inline void Pop() {
 		_stack[--_top] = _null_;
 	}
@@ -169,7 +177,7 @@ struct AutoDec{
 	SQInteger *_n;
 };
 
-SQObjectPtr &stack_get(HSQUIRRELVM v, SQInteger idx);
+inline SQObjectPtr &stack_get(HSQUIRRELVM v,SQInteger idx){return ((idx>=0)?(v->GetAt(idx+v->_stackbase-1)):(v->GetUp(idx)));}
 const SQChar *GetTypeName(const SQObjectPtr &obj1);
 const SQChar *IdType2Name(SQObjectType type);
 

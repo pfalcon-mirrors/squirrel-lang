@@ -1,3 +1,11 @@
+***version 2.0.5 stable***
+-fixed some 64bits incompatibilities (thx sarge)
+-fixed minor bug in the stdlib format() function (thx Rick)
+-fixed a bug in dofile() that was preventing to compile empty files
+-added new API sq_poptop() & sq_getfreevariable()
+-some performance improvements
+
+***2005-08-14	       ***
 ***version 2.0.4 stable***
 -weak references and related API calls
 -added sq_objtobool()

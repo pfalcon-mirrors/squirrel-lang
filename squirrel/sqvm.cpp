@@ -70,8 +70,6 @@ bool SQVM::ARITH_OP(SQUnsignedInteger op,SQObjectPtr &trg,const SQObjectPtr &o1,
 		return true;
 }
 
-SQObjectPtr &stack_get(HSQUIRRELVM v,SQInteger idx){return ((idx>=0)?(v->GetAt(idx+v->_stackbase-1)):(v->GetUp(idx)));}
-
 SQVM::SQVM(SQSharedState *ss)
 {
 	_sharedstate=ss;
@@ -210,6 +208,40 @@ bool SQVM::CMP_OP(CmpOP op, const SQObjectPtr &o1,const SQObjectPtr &o2,SQObject
 	return false;
 }
 
+void SQVM::ToString(const SQObjectPtr &o,SQObjectPtr &res)
+{
+	switch(type(o)) {
+	case OT_STRING:
+		res = o;
+		return;
+	case OT_FLOAT:
+		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+1)),_SC("%g"),_float(o));
+		break;
+	case OT_INTEGER:
+		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+1)),_SC("%d"),_integer(o));
+		break;
+	case OT_BOOL:
+		scsprintf(_sp(rsl(6)),_integer(o)?_SC("true"):_SC("false"));
+		break;
+	case OT_TABLE:
+	case OT_USERDATA:
+	case OT_INSTANCE:
+		if(_delegable(o)->_delegate) {
+			Push(o);
+			if(CallMetaMethod(_delegable(o),MT_TOSTRING,1,res)) {
+				if(type(res) == OT_STRING)
+					return;
+				//else keeps going to the default
+			}
+		}
+	default:
+		scsprintf(_sp(rsl(sizeof(void*)+20)),_SC("(%s : 0x%p)"),GetTypeName(o),_rawval(o));
+	}
+	res = SQString::Create(_ss(this),_spval);
+	return;
+}
+
+
 bool SQVM::StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObjectPtr &dest)
 {
 	switch(type(obj))
@@ -322,23 +354,22 @@ bool SQVM::StartCall(SQClosure *closure,SQInteger target,SQInteger nargs,SQInteg
 	const SQInteger newtop = stackbase + func->_stacksize;
 	
 	
-	if(func->_varparams)
-	{
-		if (nargs < paramssize) {
+	if (paramssize != nargs) {
+		if(func->_varparams)
+		{
+			if (nargs < paramssize) {
+				Raise_Error(_SC("wrong number of parameters"));
+				return false;
+			}
+			for(SQInteger n = 0; n < nargs - paramssize; n++) {
+				_vargsstack.push_back(_stack[stackbase+paramssize+n]);
+				_stack[stackbase+paramssize+n] = _null_;
+			}
+		}
+		else {
 			Raise_Error(_SC("wrong number of parameters"));
 			return false;
 		}
-		for(SQInteger n = 0; n < nargs - paramssize; n++) {
-			_vargsstack.push_back(_stack[stackbase+paramssize+n]);
-			_stack[stackbase+paramssize+n] = _null_;
-		}
-	}
-	else {
-		if (paramssize != nargs) {
-			Raise_Error(_SC("wrong number of parameters"));
-			return false;
-		}
-		
 	}
 	
 	if (!tailcall) {
@@ -591,16 +622,7 @@ bool SQVM::CLASS_OP(SQObjectPtr &target,SQInteger baseclass,SQInteger attributes
 	return true;
 }
 
-bool SQVM::IsFalse(SQObjectPtr &o)
-{
-	SQObjectType t = type(o);
-	if((t & SQOBJECT_CANBEFALSE)
-		&& ((t == OT_NULL) || ((t == OT_INTEGER || t == OT_BOOL) && _integer(o) == 0)
-		|| (t == OT_FLOAT && _float(o) == SQFloat(0.0)))) {
-			return true;
-		}
-	return false;
-}
+
 
 bool SQVM::IsEqual(SQObjectPtr &o1,SQObjectPtr &o2,bool &res)
 {
@@ -662,6 +684,7 @@ exception_restore:
 					CallDebugHook(_SC('l'),arg1);
 				continue;
 			case _OP_LOAD: TARGET = (*ci->_literals)[arg1]; continue;
+			case _OP_DLOAD: TARGET = (*ci->_literals)[arg1]; STK(arg2) = (*ci->_literals)[arg3];continue;
 			case _OP_TAILCALL:
 				temp_reg = STK(arg1);
 				if (type(temp_reg) == OT_CLOSURE){ 

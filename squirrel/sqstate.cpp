@@ -138,6 +138,7 @@ void SQSharedState::Init()
 	newmetamethod(MM_CLONED);
 	newmetamethod(MM_NEWSLOT);
 	newmetamethod(MM_DELSLOT);
+	newmetamethod(MM_TOSTRING);
 
 	_constructoridx = SQString::Create(this,_SC("constructor"));
 	_refs_table = SQTable::Create(this,0);

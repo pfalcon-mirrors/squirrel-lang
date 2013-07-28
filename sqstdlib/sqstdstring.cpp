@@ -78,10 +78,12 @@ static SQInteger _string_format(HSQUIRRELVM v)
 			dest[i++] = format[n];
 			n++;
 		}
-		else if(format[++n] == '%') {
-			dest[i++] = '%';
+		else if(format[n+1] == '%') { //handles %%
+				dest[i++] = '%';
+				n += 2; 
 		}
 		else {
+			n++;
 			if( nparam > sq_gettop(v) )
 				return sq_throwerror(v,_SC("not enough paramters for the given format string"));
 			n = validate_format(v,fmt,format,n,w);

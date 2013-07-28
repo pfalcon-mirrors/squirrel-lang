@@ -418,6 +418,14 @@ SQObjectType sq_gettype(HSQUIRRELVM v,SQInteger idx)
 	return type(stack_get(v, idx));
 }
 
+void sq_tostring(HSQUIRRELVM v,SQInteger idx)
+{
+	SQObjectPtr &o = stack_get(v, idx);
+	SQObjectPtr res;
+	v->ToString(o,res);
+	v->Push(res);
+}
+
 SQRESULT sq_getinteger(HSQUIRRELVM v,SQInteger idx,SQInteger *i)
 {
 	SQObjectPtr &o = stack_get(v, idx);
@@ -509,14 +517,22 @@ SQRESULT sq_settypetag(HSQUIRRELVM v,SQInteger idx,SQUserPointer typetag)
 	return SQ_OK;
 }
 
+SQRESULT sq_getobjtypetag(HSQOBJECT *o,SQUserPointer * typetag)
+{
+  switch(type(*o)) {
+    case OT_INSTANCE: *typetag = _instance(*o)->_class->_typetag; break;
+    case OT_USERDATA: *typetag = _userdata(*o)->_typetag; break;
+    case OT_CLASS:    *typetag = _class(*o)->_typetag; break;
+    default: return SQ_ERROR;
+  }
+  return SQ_OK;
+}
+
 SQRESULT sq_gettypetag(HSQUIRRELVM v,SQInteger idx,SQUserPointer *typetag)
 {
 	SQObjectPtr &o = stack_get(v,idx);
-	switch(type(o)) {
-		case OT_USERDATA:	*typetag = _userdata(o)->_typetag;	break;
-		case OT_CLASS:		*typetag = _class(o)->_typetag;		break;
-		default:			return sq_throwerror(v,_SC("invalid object type"));
-	}
+	if(SQ_FAILED(sq_getobjtypetag(&o,typetag)))
+		return sq_throwerror(v,_SC("invalid object type"));
 	return SQ_OK;
 }
 
@@ -572,6 +588,13 @@ void sq_pop(HSQUIRRELVM v, SQInteger nelemstopop)
 	assert(v->_top >= nelemstopop);
 	v->Pop(nelemstopop);
 }
+
+void sq_poptop(HSQUIRRELVM v)
+{
+	assert(v->_top >= 1);
+    v->Pop();
+}
+
 
 void sq_remove(HSQUIRRELVM v, SQInteger idx)
 {
@@ -932,6 +955,21 @@ SQInteger sq_collectgarbage(HSQUIRRELVM v)
 #else
 	return -1;
 #endif
+}
+
+const SQChar *sq_getfreevariable(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger nval)
+{
+	SQObjectPtr &self = stack_get(v,idx);
+	const SQChar *name = NULL;
+	if(type(self) == OT_CLOSURE) {
+		if(_closure(self)->_outervalues.size()>nval) {
+			v->Push(_closure(self)->_outervalues[nval]);
+			SQFunctionProto *fp = _funcproto(_closure(self)->_function);
+			SQOuterVar &ov = fp->_outervalues[nval];
+			name = _stringval(ov._name);
+		}
+	}
+	return name;
 }
 
 SQRESULT sq_setfreevariable(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger nval)

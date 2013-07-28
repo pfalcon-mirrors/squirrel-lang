@@ -143,24 +143,10 @@ static SQInteger get_slice_params(HSQUIRRELVM v,SQInteger &sidx,SQInteger &eidx,
 
 static SQInteger base_print(HSQUIRRELVM v)
 {
-	SQObjectPtr &o=stack_get(v,2);
-	switch(type(o)){
-	case OT_STRING:
-		if(_ss(v)->_printfunc) _ss(v)->_printfunc(v,_SC("%s"),_stringval(o));
-		break;
-	case OT_INTEGER:
-		if(_ss(v)->_printfunc) _ss(v)->_printfunc(v,_SC("%d"),_integer(o));
-		break;
-	case OT_FLOAT:
-		if(_ss(v)->_printfunc) _ss(v)->_printfunc(v,_SC("%.14g"),_float(o));
-		break;
-	default:{
-		SQObjectPtr tname;
-		v->TypeOf(o,tname);
-		if(_ss(v)->_printfunc) _ss(v)->_printfunc(v,_SC("(%s)"),_stringval(tname));
-		}
-		break;
-	}
+	const SQChar *str;
+	sq_tostring(v,2);
+	sq_getstring(v,-1,&str);
+	if(_ss(v)->_printfunc) _ss(v)->_printfunc(v,_SC("%s"),str);
 	return 0;
 }
 
@@ -313,26 +299,7 @@ static SQInteger default_delegate_tointeger(HSQUIRRELVM v)
 
 static SQInteger default_delegate_tostring(HSQUIRRELVM v)
 {
-	SQObjectPtr &o=stack_get(v,1);
-	switch(type(o)){
-	case OT_STRING:
-		v->Push(o);
-		break;
-	case OT_INTEGER:
-		scsprintf(_ss(v)->GetScratchPad(rsl(NUMBER_MAX_CHAR+1)),_SC("%d"),_integer(o));
-		v->Push(SQString::Create(_ss(v),_ss(v)->GetScratchPad(-1)));
-		break;
-	case OT_FLOAT:
-		scsprintf(_ss(v)->GetScratchPad(rsl(NUMBER_MAX_CHAR+1)),_SC("%.14g"),_float(o));
-		v->Push(SQString::Create(_ss(v),_ss(v)->GetScratchPad(-1)));
-		break;
-	case OT_BOOL:
-		v->Push(SQObjectPtr(SQString::Create(_ss(v),_integer(o)?_SC("true"):_SC("false"))));
-		break;
-	default:
-		v->Push(_null_);
-		break;
-	}
+	sq_tostring(v,1);
 	return 1;
 }
 

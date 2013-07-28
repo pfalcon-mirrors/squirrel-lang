@@ -26,7 +26,8 @@ enum SQMetaMethod{
 	MT_CLONED=12,
 	MT_NEWSLOT=13,
 	MT_DELSLOT=14,
-	MT_LAST = 15,
+	MT_TOSTRING=15,
+	MT_LAST = 16,
 };
 
 #define MM_ADD		_SC("_add")
@@ -44,6 +45,7 @@ enum SQMetaMethod{
 #define MM_CLONED	_SC("_cloned")
 #define MM_NEWSLOT	_SC("_newslot")
 #define MM_DELSLOT	_SC("_delslot")
+#define MM_TOSTRING	_SC("_tostring")
 
 #define MINPOWER2 4
 
@@ -225,16 +227,19 @@ struct SQObjectPtr : public SQObject
 	}
 	SQObjectPtr(SQInteger nInteger)
 	{
+		_unVal.pUserPointer=NULL;
 		_type=OT_INTEGER;
 		_unVal.nInteger=nInteger;
 	}
 	SQObjectPtr(SQFloat fFloat)
 	{
+		_unVal.pUserPointer=NULL;
 		_type=OT_FLOAT;
 		_unVal.fFloat=fFloat;
 	}
 	SQObjectPtr(bool bBool)
 	{
+		_unVal.pUserPointer=NULL;
 		_type = OT_BOOL;
 		_unVal.nInteger = bBool?1:0;
 	}

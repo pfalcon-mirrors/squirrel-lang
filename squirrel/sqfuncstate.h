@@ -6,13 +6,13 @@
 
 struct SQFuncState
 {
-	SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *parent,CompilerErrorFunc efunc,void *ed);
+	SQFuncState(SQSharedState *ss,SQFuncState *parent,CompilerErrorFunc efunc,void *ed);
 	~SQFuncState();
 #ifdef _DEBUG_DUMP
-	void Dump();
+	void Dump(SQFunctionProto *func);
 #endif
 	void Error(const SQChar *err);
-	SQFuncState *PushChildState(SQSharedState *ss,SQFunctionProto *func);
+	SQFuncState *PushChildState(SQSharedState *ss);
 	void PopChildState();
 	void AddInstruction(SQOpcode _op,SQInteger arg0=0,SQInteger arg1=0,SQInteger arg2=0,SQInteger arg3=0){SQInstruction i(_op,arg0,arg1,arg2,arg3);AddInstruction(i);}
 	void AddInstruction(SQInstruction &i);
@@ -35,7 +35,7 @@ struct SQFuncState
 	SQInteger GetStackSize();
 	SQInteger CalcStackFrameSize();
 	void AddLineInfos(SQInteger line,bool lineop,bool force=false);
-	void Finalize();
+	SQFunctionProto *BuildProto();
 	SQInteger AllocStackPos();
 	SQInteger PushTarget(SQInteger n=-1);
 	SQInteger PopTarget();
@@ -48,6 +48,7 @@ struct SQFuncState
 	SQIntVec _targetstack;
 	SQInteger _stacksize;
 	bool _varparams;
+	bool _bgenerator;
 	SQIntVec _unresolvedbreaks;
 	SQIntVec _unresolvedcontinues;
 	SQObjectPtrVec _functions;
@@ -57,9 +58,10 @@ struct SQFuncState
 	SQLocalVarInfoVec _localvarinfos;
 	SQObjectPtr _literals;
 	SQObjectPtr _strings;
+	SQObjectPtr _name;
+	SQObjectPtr _sourcename;
 	SQInteger _nliterals;
 	SQLineInfoVec _lineinfos;
-	SQObjectPtr _func;
 	SQFuncState *_parent;
 	SQIntVec _breaktargets; //contains number of nested exception traps
 	SQIntVec _continuetargets;

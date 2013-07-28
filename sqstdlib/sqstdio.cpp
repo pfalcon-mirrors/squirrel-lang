@@ -278,10 +278,11 @@ SQRESULT sqstd_loadfile(HSQUIRRELVM v,const SQChar *filename,SQBool printerror)
 	unsigned short us;
 	unsigned char uc;
 	SQLEXREADFUNC func = _io_file_lexfeed_ASCII;
-	if(file && (ret = sqstd_fread(&us,1,2,file))){
+	if(file){
+		ret = sqstd_fread(&us,1,2,file);
 		if(ret != 2) {
-			sqstd_fclose(file);
-			return sq_throwerror(v,_SC("io error"));
+			//probably an empty file
+			us = 0;
 		}
 		if(us == SQ_BYTECODE_STREAM_TAG) { //BYTECODE
 			sqstd_fseek(file,0,SQ_SEEK_SET);
