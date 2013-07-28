@@ -71,7 +71,7 @@ SQString *SQVM::PrintObjVal(const SQObject &o)
 void SQVM::IdxError(SQObject &o)
 {
 	SQObjectPtr oval = PrintObjVal(o);
-	RT_Error(_SC("the index '%.50s' does not exists"), _stringval(oval));
+	RT_Error(_SC("the index '%.50s' does not exist"), _stringval(oval));
 }
 
 void SQVM::CompareError(const SQObject &o1, const SQObject &o2)

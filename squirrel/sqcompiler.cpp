@@ -974,7 +974,7 @@ public:
 			EmitDerefOp(_OP_NEWSLOT);
 			_fs->PopTarget();
 		}
-		else Error(_SC("cannot create a class in a localwith the syntax(class <local>)"));
+		else Error(_SC("cannot create a class in a local with the syntax(class <local>)"));
 	}
 	void TryCatchStatement()
 	{
@@ -1010,25 +1010,23 @@ public:
 	void ClassExp()
 	{
 		int base = -1;
-		//bool hasattrs = false;
+		int attrs = -1;
 		if(_token == TK_EXTENDS) {
 			Lex(); Expression();
-			base = _fs->PopTarget();
+			base = _fs->TopTarget();
 		}
-	/*	if(_token == _SC('(')) {
+		if(_token == _SC(':')) {
 			Lex();
+			Expect('(');
+			_fs->AddInstruction(_OP_NEWTABLE, _fs->PushTarget());
 			ParseTableOrClass(_SC(','),_SC(')'));
-			hasattrs = true;
-		}*/
+			attrs = _fs->TopTarget();
+		}
 		Expect(_SC('{'));
-		_fs->AddInstruction(_OP_CLASS, _fs->PushTarget(), base);
+		if(attrs != -1) _fs->PopTarget();
+		if(base != -1) _fs->PopTarget();
+		_fs->AddInstruction(_OP_CLASS, _fs->PushTarget(), base, attrs);
 		ParseTableOrClass(_SC(';'));
-		/*if(hasattrs) {
-			int nclass = _fs->PopTarget();
-			int attrs = _fs->PopTarget();
-			_fs->PushTarget(nclass); //repush the class target
-			_fs->AddInstruction(_OP_SETATTRS, nclass, 0, attrs, 0);
-		}*/
 	}
 	void DelegateExpr()
 	{

@@ -593,7 +593,7 @@ SQRESULT sq_set(HSQUIRRELVM v,int idx)
 {
 	SQObjectPtr &self = stack_get(v, idx);
 	SQ_TRY {
-		if(v->Set(self, v->GetUp(-2), v->GetUp(-1))) {
+		if(v->Set(self, v->GetUp(-2), v->GetUp(-1),false)) {
 			v->Pop(2);
 			return SQ_OK;
 		}
@@ -614,7 +614,7 @@ SQRESULT sq_rawset(HSQUIRRELVM v,int idx)
 			return SQ_OK;
 		break;
 		case OT_ARRAY:
-			if(v->Set(self, v->GetUp(-2), v->GetUp(-1))) {
+			if(v->Set(self, v->GetUp(-2), v->GetUp(-1),false)) {
 				v->Pop(2);
 				return SQ_OK;
 			}
@@ -695,7 +695,7 @@ SQRESULT sq_getdelegate(HSQUIRRELVM v,int idx)
 SQRESULT sq_get(HSQUIRRELVM v,int idx)
 {
 	SQObjectPtr &self=stack_get(v,idx);
-	if(v->Get(self,v->GetUp(-1),v->GetUp(-1),false))
+	if(v->Get(self,v->GetUp(-1),v->GetUp(-1),false,false))
 		return SQ_OK;
 	v->Pop(1);
 	return sq_throwerror(v,_SC("the index doesn't exist"));
@@ -710,7 +710,7 @@ SQRESULT sq_rawget(HSQUIRRELVM v,int idx)
 			return SQ_OK;
 		break;
 	case OT_ARRAY:
-		if(v->Get(self,v->GetUp(-1),v->GetUp(-1),false))
+		if(v->Get(self,v->GetUp(-1),v->GetUp(-1),false,false))
 			return SQ_OK;
 		break;
 	default:
@@ -930,7 +930,13 @@ SQRESULT sq_setattributes(HSQUIRRELVM v,int idx)
 		SQObjectPtr &key = stack_get(v,-2);
 		SQObjectPtr &val = stack_get(v,-1);
 		SQObjectPtr attrs;
-		if(_class(o)->GetAttributes(key,attrs)) {
+		if(type(key) == OT_NULL) {
+			attrs = _class(o)->_attributes;
+			_class(o)->_attributes = val;
+			v->Pop(2);
+			v->Push(attrs);
+			return SQ_OK;
+		}else if(_class(o)->GetAttributes(key,attrs)) {
 			_class(o)->SetAttributes(key,val);
 			v->Pop(2);
 			v->Push(attrs);
@@ -947,7 +953,13 @@ SQRESULT sq_getattributes(HSQUIRRELVM v,int idx)
 		SQObjectPtr o = sq_aux_gettypedarg(v,idx,OT_CLASS);
 		SQObjectPtr &key = stack_get(v,-1);
 		SQObjectPtr attrs;
-		if(_class(o)->GetAttributes(key,attrs)) {
+		if(type(key) == OT_NULL) {
+			attrs = _class(o)->_attributes;
+			v->Pop();
+			v->Push(attrs);
+			return SQ_OK;
+		}
+		else if(_class(o)->GetAttributes(key,attrs)) {
 			v->Pop();
 			v->Push(attrs);
 			return SQ_OK;

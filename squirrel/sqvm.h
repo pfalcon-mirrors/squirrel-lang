@@ -66,9 +66,9 @@ public:
 
 	void CallDebugHook(int type,int forcedline=0);
 	void CallErrorHandler(SQException &e);
-	bool Get(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &dest, bool raw);
+	bool Get(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &dest, bool raw, bool fetchroot);
 	bool FallBackGet(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,bool raw);
-	bool Set(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val);
+	bool Set(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val, bool fetchroot);
 	void NewSlot(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val);
 	void DeleteSlot(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &res);
 	bool Clone(const SQObjectPtr &self, SQObjectPtr &target);

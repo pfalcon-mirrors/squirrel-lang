@@ -405,9 +405,9 @@ void SQVM::PLOCAL_INC(int op,SQObjectPtr &target, SQObjectPtr &a, SQObjectPtr &i
 void SQVM::DerefInc(int op,SQObjectPtr &target, SQObjectPtr &self, SQObjectPtr &key, SQObjectPtr &incr, bool postfix)
 {
 	SQObjectPtr tmp, tself = self, tkey = key;
-	if (!Get(tself, tkey, tmp, false)) IdxError(tkey);
+	if (!Get(tself, tkey, tmp, false, true)) IdxError(tkey);
 	ARITH_OP( op , target, tmp, incr);
-	Set(tself, tkey, target);
+	Set(tself, tkey, target,true);
 	if (postfix) target = tmp;
 }
 
@@ -458,7 +458,7 @@ bool SQVM::FOREACH_OP(SQObjectPtr &o1,SQObjectPtr &o2,SQObjectPtr &o3,SQObjectPt
 			if(CallMetaMethod(_delegable(o1), MT_NEXTI, 2, itr)){
 				o4 = o2 = itr;
 				if(type(itr) == OT_NULL) return true;
-				if(!Get(o1, itr, o3, false))
+				if(!Get(o1, itr, o3, false,false))
 					RT_Error(_SC("_nexti returned an invalid idx"));
 				return false;
 			}
@@ -606,11 +606,11 @@ common_call:
 				}
 				  continue;
 			case _OP_PREPCALL:
-					if (!Get(STK(arg2), STK(arg1), temp_reg, false))
+					if (!Get(STK(arg2), STK(arg1), temp_reg, false,true))
 						IdxError(STK(arg1));
 					goto common_prepcall;
 			case _OP_PREPCALLK:
-					if (!Get(STK(arg2), (*ci->_literals)[arg1], temp_reg,false)) {
+					if (!Get(STK(arg2), (*ci->_literals)[arg1], temp_reg,false,true)) {
 						if(type(STK(arg2)) == OT_CLASS) { //hack?
 							if(_class_ddel->Get((*ci->_literals)[arg1],temp_reg)) {
 								STK(arg3) = STK(arg2);
@@ -630,7 +630,7 @@ common_prepcall:
 					TARGET = temp_reg;
 				continue;
 			case _OP_GETK:
-				if (!Get(STK(arg2), (*ci->_literals)[arg1], temp_reg, false)) IdxError((*ci->_literals)[arg1]);
+				if (!Get(STK(arg2), (*ci->_literals)[arg1], temp_reg, false,true)) IdxError((*ci->_literals)[arg1]);
 				TARGET = temp_reg;
 				continue;
 			case _OP_MOVE: TARGET = STK(arg1); continue;
@@ -640,11 +640,11 @@ common_prepcall:
 				continue;
 			case _OP_DELETE: DeleteSlot(STK(arg1), STK(arg2), TARGET); continue;
 			case _OP_SET:
-				if (!Set(STK(arg1), STK(arg2), STK(arg3))) IdxError(STK(arg2));
+				if (!Set(STK(arg1), STK(arg2), STK(arg3),true)) IdxError(STK(arg2));
 				if (arg0 != arg3) TARGET = STK(arg3);
 				continue;
 			case _OP_GET:
-				if (!Get(STK(arg1), STK(arg2), temp_reg, false)) IdxError(STK(arg2));
+				if (!Get(STK(arg1), STK(arg2), temp_reg, false,true)) IdxError(STK(arg2));
 				TARGET = temp_reg;
 				continue;
 			case _OP_EQ:{
@@ -747,7 +747,7 @@ common_prepcall:
 			case _OP_GE:	 TARGET = ((ObjCmp(STK(arg2), COND_LITERAL) >= 0)?_notnull_:_null_);	continue;
 			case _OP_L:		 TARGET = ((ObjCmp(STK(arg2), COND_LITERAL) < 0)?_notnull_:_null_);	continue;
 			case _OP_LE:	 TARGET = ((ObjCmp(STK(arg2), COND_LITERAL) <= 0)?_notnull_:_null_);	continue;
-			case _OP_EXISTS: TARGET = Get(STK(arg1), STK(arg2), temp_reg, true)?_notnull_:_null_;continue;
+			case _OP_EXISTS: TARGET = Get(STK(arg1), STK(arg2), temp_reg, true,false)?_notnull_:_null_;continue;
 			case _OP_INSTANCEOF: 
 				if(type(STK(arg1)) != OT_CLASS || type(STK(arg2)) != OT_INSTANCE)
 					RT_Error(_SC("cannot apply instanceof between a %s and a %s"),GetTypeName(STK(arg1)),GetTypeName(STK(arg2)));
@@ -783,7 +783,7 @@ common_prepcall:
 							SQOuterVar &v = func->_outervalues[i];
 							if(!v._blocal) {//environment object
 								closure->_outervalues.push_back(_null_);
-								if(!Get(STK(0), v._src, closure->_outervalues.top(), false))
+								if(!Get(STK(0), v._src, closure->_outervalues.top(), false,true))
 									IdxError(v._src);
 							}
 							else {//local
@@ -836,11 +836,17 @@ common_prepcall:
 			case _OP_THROW:	throw SQException(TARGET); continue;
 			case _OP_CLASS: {
 				SQClass *base = NULL;
+				SQObjectPtr attrs;
 				if(arg1 != 0xFFFF) {
 					if(type(STK(arg1)) != OT_CLASS) RT_Error(_SC("trying to inherit from a %s"),GetTypeName(STK(arg1)));
 					base = _class(STK(arg1));
 				}
+				if(arg2 != 0xFF) {
+					attrs = STK(arg2);
+				}
 				TARGET = SQClass::Create(_ss(this),base);
+				_class(TARGET)->_attributes = attrs;
+				
 							}
 				continue;
 			case _OP_NEWSLOTA:
@@ -894,13 +900,14 @@ common_prepcall:
 			//call the hook
 			CallErrorHandler(e);
 			//remove call stack until a C function is found or the cstack is empty
-			if(ci && !ci->_root) do{
+			if(ci) do{
+				bool exitafterthisone = ci->_root;
 				if(type(ci->_generator) == OT_GENERATOR) _generator(ci->_generator)->Kill();
 				_stackbase -= ci->_prevstkbase;
 				_top = _stackbase + ci->_prevtop;
 				PopVarArgs(ci->_vargs);
 				POP_CALLINFO(this);
-				if( ci && type(ci->_closure) != OT_CLOSURE) break;
+				if( (ci && type(ci->_closure) != OT_CLOSURE) || exitafterthisone) break;
 			}while(_callsstack.size());
 
 			while(last_top >= _top) _stack[last_top--] = _null_;
@@ -980,7 +987,12 @@ bool SQVM::CallNative(SQNativeClosure *nclosure,int nargs,int stackbase,bool tai
 	_nnativecalls--;
 	bool suspend = false;
 	if( ret == SQ_SUSPEND_FLAG) suspend = true;
-	else if (ret < 0) RT_Error(_lasterror);
+	else if (ret < 0) { 
+		_stackbase = oldstackbase;
+		_top = oldtop;
+		POP_CALLINFO(this);
+		RT_Error(_lasterror);
+	}
 	
 	if (ret != 0){ retval = TOP(); }
 	else { retval = _null_; }
@@ -990,7 +1002,7 @@ bool SQVM::CallNative(SQNativeClosure *nclosure,int nargs,int stackbase,bool tai
 	return suspend;
 }
 
-bool SQVM::Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,bool raw)
+bool SQVM::Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,bool raw, bool fetchroot)
 {
 	switch(type(self)){
 	case OT_TABLE:
@@ -1005,7 +1017,15 @@ bool SQVM::Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,
 		if(_instance(self)->Get(key,dest)) return true;
 		break;
 	}
-	return FallBackGet(self,key,dest,raw);
+	if(FallBackGet(self,key,dest,raw)) return true;
+
+	if(fetchroot) {
+		if(_rawval(STK(0)) == _rawval(self) &&
+			type(STK(0)) == type(self)) {
+				return _table(_roottable)->Get(key,dest);
+		}
+	}
+	return false;
 }
 
 bool SQVM::FallBackGet(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,bool raw)
@@ -1018,7 +1038,7 @@ bool SQVM::FallBackGet(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPt
 	case OT_USERDATA:
         //delegation
 		if(_delegable(self)->_delegate) {
-			if(Get(SQObjectPtr(_delegable(self)->_delegate),key,dest,raw))
+			if(Get(SQObjectPtr(_delegable(self)->_delegate),key,dest,raw,false))
 				return true;	
 			if(raw)return false;
 			Push(self);Push(key);
@@ -1073,14 +1093,14 @@ bool SQVM::FallBackGet(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPt
 	return false;
 }
 
-bool SQVM::Set(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr &val)
+bool SQVM::Set(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr &val,bool fetchroot)
 {
 	switch(type(self)){
 	case OT_TABLE:
 		if(_table(self)->Set(key,val))
 			return true;
 		if(_table(self)->_delegate) {
-			if(Set(_table(self)->_delegate,key,val)) {
+			if(Set(_table(self)->_delegate,key,val,false)) {
 				return true;
 			}
 		}
@@ -1089,21 +1109,28 @@ bool SQVM::Set(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr 
 		if(_delegable(self)->_delegate) {
 			SQObjectPtr t;
 			Push(self);Push(key);Push(val);
-			return CallMetaMethod(_delegable(self),MT_SET,3,t);
+			if(CallMetaMethod(_delegable(self),MT_SET,3,t)) return true;
 		}
-		return false;
-	case OT_INSTANCE:
-		if(!_instance(self)->Set(key,val)) {
-			SQObjectPtr t;
-			Push(self);Push(key);Push(val);
-			return CallMetaMethod(_delegable(self),MT_SET,3,t);
+		break;
+	case OT_INSTANCE:{
+		if(_instance(self)->Set(key,val))
+			return true;
+		SQObjectPtr t;
+		Push(self);Push(key);Push(val);
+		if(CallMetaMethod(_delegable(self),MT_SET,3,t)) return true;
 		}
-		return true;
+		break;
 	case OT_ARRAY:
 		if(!sq_isnumeric(key)) RT_Error(_SC("indexing %s with %s"),GetTypeName(self),GetTypeName(key));
 		return _array(self)->Set(tointeger(key),val);
 	default:
 		RT_Error(_SC("trying to set '%s'"),GetTypeName(self));
+	}
+	if(fetchroot) {
+		if(_rawval(STK(0)) == _rawval(self) &&
+			type(STK(0)) == type(self)) {
+				return _table(_roottable)->Set(key,val);
+			}
 	}
 	return false;
 }
@@ -1145,7 +1172,7 @@ void SQVM::NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObject
 	case OT_CLASS: 
 		if(!_class(self)->NewSlot(key,val)) {
 			if(_class(self)->_locked)
-				RT_Error(_SC("trying to modify a class that has alredy been instantiated"));
+				RT_Error(_SC("trying to modify a class that has already been instantiated"));
 			else {
 				SQObjectPtr oval = PrintObjVal(key);
 				RT_Error(_SC("the property '%s' already exists"),_stringval(oval));
@@ -1192,20 +1219,28 @@ void SQVM::DeleteSlot(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr
 
 bool SQVM::Call(SQObjectPtr &closure,int nparams,int stackbase,SQObjectPtr &outres)
 {
+#ifdef _DEBUG
+int prevstackbase = _stackbase;
+#endif
 	switch(type(closure)) {
 	case OT_CLOSURE:
 		outres=Execute(closure, _top - nparams, nparams, stackbase);
-		return true;
-	case OT_NATIVECLOSURE: {
-		CallNative(_nativeclosure(closure), nparams, stackbase, false, outres); }
-		return true;
-	case OT_CLASS: {
+		break;
+	case OT_NATIVECLOSURE:
+		CallNative(_nativeclosure(closure), nparams, stackbase, false, outres);
+		break;
+	case OT_CLASS:
 		CreateClassInstance(_class(closure),nparams,stackbase,outres);
-		return true;
-				   }
+		break;
 	default:
 		return false;
 	}
+#ifdef _DEBUG
+	if(!_suspended) {
+		assert(_stackbase == prevstackbase);
+	}
+#endif
+	return true;
 }
 
 bool SQVM::CallMetaMethod(SQDelegable *del,SQMetaMethod mm,int nparams,SQObjectPtr &outres)

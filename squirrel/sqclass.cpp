@@ -27,6 +27,7 @@ SQClass::SQClass(SQSharedState *ss,SQClass *base)
 }
 
 void SQClass::Finalize() { 
+	_attributes = _null_;
 	_defaultvalues.resize(0);
 	_methods.resize(0);
 	_metamethods.resize(0);

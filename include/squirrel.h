@@ -100,7 +100,7 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 2.0 alpha 1")
+#define SQUIRREL_VERSION	_SC("Squirrel 2.0 alpha 2")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2004 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 

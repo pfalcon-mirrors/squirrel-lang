@@ -70,8 +70,7 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_POPTRAP")},
 	{_SC("_OP_THROW")},
 	{_SC("_OP_CLASS")},
-	{_SC("_OP_NEWSLOTA")}
-	
+	{_SC("_OP_NEWSLOTA")},
 };
 #endif
 void DumpLiteral(SQObjectPtr &o)

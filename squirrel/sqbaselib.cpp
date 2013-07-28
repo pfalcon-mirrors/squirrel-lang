@@ -213,18 +213,18 @@ static int base_array(HSQUIRRELVM v)
 
 static SQRegFunction base_funcs[]={
 	//generic
-	{_SC("seterrorhandler"),base_seterrorhandler,2, _SC("tc")},
-	{_SC("setdebughook"),base_setdebughook,2, _SC("tc")},
-	{_SC("enabledebuginfo"),base_enabledebuginfo,2, _SC("t.")},
-	{_SC("getstackinfos"),base_getstackinfos,2, _SC("tn")},
-	{_SC("getroottable"),base_getroottable,1, _SC("t")},
-	{_SC("setroottable"),base_setroottable,2, _SC("t")},
-	{_SC("assert"),base_assert,2, _SC("t")},
-	{_SC("print"),base_print,2, _SC("t")},
-	{_SC("compilestring"),base_compilestring,-2, _SC("tss")},
-	{_SC("newthread"),base_newthread,2, _SC("tc")},
-	{_SC("suspend"),base_suspend,-1, _SC("t")},
-	{_SC("array"),base_array,-1, _SC("n")},
+	{_SC("seterrorhandler"),base_seterrorhandler,2, NULL},
+	{_SC("setdebughook"),base_setdebughook,2, NULL},
+	{_SC("enabledebuginfo"),base_enabledebuginfo,2, NULL},
+	{_SC("getstackinfos"),base_getstackinfos,2, _SC(".n")},
+	{_SC("getroottable"),base_getroottable,1, NULL},
+	{_SC("setroottable"),base_setroottable,2, NULL},
+	{_SC("assert"),base_assert,2, NULL},
+	{_SC("print"),base_print,2, NULL},
+	{_SC("compilestring"),base_compilestring,-2, _SC(".ss")},
+	{_SC("newthread"),base_newthread,2, _SC(".c")},
+	{_SC("suspend"),base_suspend,-1, NULL},
+	{_SC("array"),base_array,-2, _SC(".n")},
 #ifndef NO_GARBAGE_COLLECTOR
 	{_SC("collectgarbage"),base_collectgarbage,1, _SC("t")},
 #endif
