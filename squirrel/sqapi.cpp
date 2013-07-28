@@ -126,11 +126,15 @@ void sq_close(HSQUIRRELVM v)
 SQRESULT sq_compile(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQChar *sourcename,SQBool raiseerror)
 {
 	SQObjectPtr o;
+#ifndef NO_COMPILER
 	if(Compile(v, read, p, sourcename, o, raiseerror?true:false, _ss(v)->_debuginfo)) {
 		v->Push(SQClosure::Create(_ss(v), _funcproto(o)));
 		return SQ_OK;
 	}
 	return SQ_ERROR;
+#else
+	return sq_throwerror(v,_SC("this is a no compiler build"));
+#endif
 }
 
 void sq_enabledebuginfo(HSQUIRRELVM v, SQBool enable)
@@ -381,11 +385,18 @@ void sq_newclosure(HSQUIRRELVM v,SQFUNCTION func,SQUnsignedInteger nfreevars)
 SQRESULT sq_getclosureinfo(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger *nparams,SQUnsignedInteger *nfreevars)
 {
 	SQObject o = stack_get(v, idx);
-	if(sq_isclosure(o)) {
+	if(type(o) == OT_CLOSURE) {
 		SQClosure *c = _closure(o);
 		SQFunctionProto *proto = c->_function;
 		*nparams = (SQUnsignedInteger)proto->_nparameters;
 		*nfreevars = (SQUnsignedInteger)proto->_noutervalues;
+		return SQ_OK;
+	}
+	else if(type(o) == OT_NATIVECLOSURE)
+	{
+		SQNativeClosure *c = _nativeclosure(o);
+		*nparams = (SQUnsignedInteger)c->_nparamscheck;
+		*nfreevars = c->_outervalues.size();
 		return SQ_OK;
 	}
 	return sq_throwerror(v,_SC("the object is not a closure"));
@@ -442,6 +453,10 @@ SQRESULT sq_bindenv(HSQUIRRELVM v,SQInteger idx)
 		__ObjRelease(c->_env);
 		c->_env = w;
 		__ObjAddRef(c->_env);
+		if(_closure(o)->_base) {
+			c->_base = _closure(o)->_base;
+			__ObjAddRef(c->_base);
+		}
 		ret = c;
 	}
 	else { //then must be a native closure
@@ -1005,6 +1020,7 @@ SQRESULT sq_call(HSQUIRRELVM v,SQInteger params,SQBool retval,SQBool raiseerror)
 {
 	SQObjectPtr res;
 	if(v->Call(v->GetUp(-(params+1)),params,v->_top-params,res,raiseerror?true:false)){
+
 		if(!v->_suspended) {
 			v->Pop(params);//pop closure and args
 		}
@@ -1116,11 +1132,23 @@ SQInteger sq_collectgarbage(HSQUIRRELVM v)
 #endif
 }
 
+SQRESULT sq_getcallee(HSQUIRRELVM v)
+{
+	if(v->_callsstacksize > 1)
+	{
+		v->Push(v->_callsstack[v->_callsstacksize - 2]._closure);
+		return SQ_OK;
+	}
+	return sq_throwerror(v,_SC("no closure in the calls stack"));
+}
+
 const SQChar *sq_getfreevariable(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger nval)
 {
-	SQObjectPtr &self = stack_get(v,idx);
+	SQObjectPtr &self=stack_get(v,idx);
 	const SQChar *name = NULL;
-	if(type(self) == OT_CLOSURE) {
+	switch(type(self))
+	{
+	case OT_CLOSURE:{
 		SQClosure *clo = _closure(self);
 		SQFunctionProto *fp = clo->_function;
 		if(((SQUnsignedInteger)fp->_noutervalues) > nval) {
@@ -1128,6 +1156,17 @@ const SQChar *sq_getfreevariable(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger n
 			SQOuterVar &ov = fp->_outervalues[nval];
 			name = _stringval(ov._name);
 		}
+					}
+		break;
+	case OT_NATIVECLOSURE:{
+		SQNativeClosure *clo = _nativeclosure(self);
+		if(clo->_outervalues.size() > nval) {
+			v->Push(clo->_outervalues[nval]);
+			name = _SC("@NATIVE");
+		}
+						  }
+		break;
+	default: break; //shutup compiler
 	}
 	return name;
 }

@@ -2,6 +2,7 @@
 	see copyright notice in squirrel.h
 */
 #include "sqpcheader.h"
+#ifndef NO_COMPILER
 #include "sqcompiler.h"
 #include "sqstring.h"
 #include "sqfuncproto.h"
@@ -423,7 +424,9 @@ void SQFuncState::AddLineInfos(SQInteger line,bool lineop,bool force)
 		SQLineInfo li;
 		li._line=line;li._op=(GetCurrentPos()+1);
 		if(lineop)AddInstruction(_OP_LINE,0,line);
-		_lineinfos.push_back(li);
+		if(_lastline!=line) {
+			_lineinfos.push_back(li);
+		}
 		_lastline=line;
 	}
 }
@@ -645,3 +648,5 @@ SQFuncState::~SQFuncState()
 		PopChildState();
 	}
 }
+
+#endif

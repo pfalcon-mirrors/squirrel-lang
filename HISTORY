@@ -1,3 +1,13 @@
+***version 3.0 stable***
+-added sq_getcallee()
+-sq_getfreevariable() also works for native closures
+-minior optimizations
+-removed several warning when compiling with GCC 4.x
+-fixed some errors in the documentation
+-fixed bug when using SQUSEDOUBLE and 32bits intengers
+-fixed bug when invoking fenerators with closure.call() (thx huntercool)
+
+***2010-12-19					        ***
 ***version 3.0 release candidate 1(RC 1)***
 -improved metamethods error handling
 -added parameter 'isstatic' to _newmember metamethod(thx G.Meyer)

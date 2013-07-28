@@ -2,6 +2,7 @@
 	see copyright notice in squirrel.h
 */
 #include "sqpcheader.h"
+#ifndef NO_COMPILER
 #include <stdarg.h>
 #include <setjmp.h>
 #include "sqopcodes.h"
@@ -177,7 +178,7 @@ public:
 			Lex();
 			while(_token > 0){
 				Statement();
-				if(_lex._prevtoken != _SC('}')) OptionalSemicolon();
+				if(_lex._prevtoken != _SC('}') && _lex._prevtoken != _SC(';')) OptionalSemicolon();
 			}
 			_fs->SetStackSize(stacksize);
 			_fs->AddLineInfos(_lex._currentline, _lineinfo, true);
@@ -956,7 +957,7 @@ public:
 			SQInteger val = _fs->PopTarget();
 			SQInteger key = _fs->PopTarget();
 			SQInteger attrs = hasattrs ? _fs->PopTarget():-1;
-			assert(hasattrs && attrs == key-1 || !hasattrs);
+			assert((hasattrs && (attrs == key-1)) || !hasattrs);
 			unsigned char flags = (hasattrs?NEW_SLOT_ATTRIBUTES_FLAG:0)|(isstatic?NEW_SLOT_STATIC_FLAG:0);
 			SQInteger table = _fs->TopTarget(); //<<BECAUSE OF THIS NO COMMON EMIT FUNC IS POSSIBLE
 			if(separator == _SC(',')) { //hack recognizes a table from the separator
@@ -1236,6 +1237,7 @@ public:
 	SQObject ExpectScalar()
 	{
 		SQObject val;
+		val._type = OT_NULL; val._unVal.nInteger = 0; //shut up GCC 4.x
 		switch(_token) {
 			case TK_INTEGER:
 				val._type = OT_INTEGER;
@@ -1265,7 +1267,7 @@ public:
 				}
 				break;
 			default:
-			Error(_SC("scalar expected : integer,float or string"));
+				Error(_SC("scalar expected : integer,float or string"));
 		}
 		Lex();
 		return val;
@@ -1497,3 +1499,5 @@ bool Compile(SQVM *vm,SQLEXREADFUNC rg, SQUserPointer up, const SQChar *sourcena
 	SQCompiler p(vm, rg, up, sourcename, raiseerror, lineinfo);
 	return p.Compile(out);
 }
+
+#endif

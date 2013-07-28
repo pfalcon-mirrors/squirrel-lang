@@ -688,7 +688,7 @@ static SQInteger array_sort(HSQUIRRELVM v)
 {
 	SQInteger func = -1;
 	SQObjectPtr &o = stack_get(v,1);
-	SQObject &funcobj = stack_get(v,2);
+	//SQObject &funcobj = stack_get(v,2);
 	if(_array(o)->Size() > 1) {
 		if(sq_gettop(v) == 2 /*&& type(funcobj) == OT_CLOSURE || type(funcobj) == OT_NATIVECLOSURE*/) func = 2;
 		if(!_qsort(v, o, 0, _array(o)->Size()-1, func))

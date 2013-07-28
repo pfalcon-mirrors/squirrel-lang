@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2010 Alberto Demichelis
+Copyright (c) 2003-2011 Alberto Demichelis
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -44,9 +44,9 @@ typedef __int64 SQInteger;
 typedef unsigned __int64 SQUnsignedInteger;
 typedef unsigned __int64 SQHash; /*should be the same size of a pointer*/
 #else
-typedef long SQInteger;
-typedef unsigned long SQUnsignedInteger;
-typedef unsigned long SQHash; /*should be the same size of a pointer*/
+typedef long long SQInteger;
+typedef unsigned long long SQUnsignedInteger;
+typedef unsigned long long SQHash; /*should be the same size of a pointer*/
 #endif
 typedef int SQInt32; 
 typedef unsigned int SQUnsignedInteger32;
@@ -174,8 +174,8 @@ typedef char SQChar;
 #define _PRINT_INT_FMT _SC("%d")
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 3.0 release candidate 1(RC1)")
-#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2010 Alberto Demichelis")
+#define SQUIRREL_VERSION	_SC("Squirrel 3.0 stable")
+#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2011 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
 #define SQ_VMSTATE_IDLE			0
@@ -416,6 +416,7 @@ SQUIRREL_API SQRESULT sq_clear(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQRESULT sq_call(HSQUIRRELVM v,SQInteger params,SQBool retval,SQBool raiseerror);
 SQUIRREL_API SQRESULT sq_resume(HSQUIRRELVM v,SQBool retval,SQBool raiseerror);
 SQUIRREL_API const SQChar *sq_getlocal(HSQUIRRELVM v,SQUnsignedInteger level,SQUnsignedInteger idx);
+SQUIRREL_API SQRESULT sq_getcallee(HSQUIRRELVM v);
 SQUIRREL_API const SQChar *sq_getfreevariable(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger nval);
 SQUIRREL_API SQRESULT sq_throwerror(HSQUIRRELVM v,const SQChar *err);
 SQUIRREL_API void sq_reseterror(HSQUIRRELVM v);
@@ -472,7 +473,6 @@ SQUIRREL_API void sq_setnativedebughook(HSQUIRRELVM v,SQDEBUGHOOK hook);
 #define sq_isinstance(o) ((o)._type==OT_INSTANCE)
 #define sq_isbool(o) ((o)._type==OT_BOOL)
 #define sq_isweakref(o) ((o)._type==OT_WEAKREF)
-//#define sq_isouter(o) ((o)._type==OT_OUTER)
 #define sq_type(o) ((o)._type)
 
 /* deprecated */

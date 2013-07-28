@@ -108,7 +108,7 @@ SQRESULT sqstd_format(HSQUIRRELVM v,SQInteger nformatstringidx,SQInteger *outlen
 				size_t flen = scstrlen(fmt);
 				SQInteger fpos = flen - 1;
 				SQChar f = fmt[fpos];
-				SQChar *prec = _PRINT_INT_PREC;
+				SQChar *prec = (SQChar *)_PRINT_INT_PREC;
 				while(*prec != _SC('\0')) {
 					fmt[fpos++] = *prec++;
 				}
@@ -206,6 +206,55 @@ static SQInteger _string_rstrip(HSQUIRRELVM v)
 	return 1;
 }
 
+SQChar *
+__strtok(SQChar *s, const SQChar *delim)
+{
+	register SQChar *spanp;
+	register int c, sc;
+	SQChar *tok;
+	static SQChar *last;
+
+
+	if (s == NULL && (s = last) == NULL)
+		return (NULL);
+
+	/*
+	 * Skip (span) leading delimiters (s += strspn(s, delim), sort of).
+	 */
+cont:
+	c = *s++;
+	for (spanp = (SQChar *)delim; (sc = *spanp++) != 0;) {
+		if (c == sc)
+			goto cont;
+	}
+
+	if (c == 0) {		/* no non-delimiter characters */
+		last = NULL;
+		return (NULL);
+	}
+	tok = s - 1;
+
+	/*
+	 * Scan token (scan for delimiters: s += strcspn(s, delim), sort of).
+	 * Note that delim must have one NUL; we stop if we see that, too.
+	 */
+	for (;;) {
+		c = *s++;
+		spanp = (SQChar *)delim;
+		do {
+			if ((sc = *spanp++) == c) {
+				if (c == 0)
+					s = NULL;
+				else
+					s[-1] = 0;
+				last = s;
+				return (tok);
+			}
+		} while (sc != 0);
+	}
+	/* NOTREACHED */
+}
+
 static SQInteger _string_split(HSQUIRRELVM v)
 {
 	const SQChar *str,*seps;
@@ -216,13 +265,38 @@ static SQInteger _string_split(HSQUIRRELVM v)
 	SQInteger memsize = (sq_getsize(v,2)+1)*sizeof(SQChar);
 	stemp = sq_getscratchpad(v,memsize);
 	memcpy(stemp,str,memsize);
-	tok = scstrtok(stemp,seps);
+	tok = __strtok(stemp,seps);
 	sq_newarray(v,0);
 	while( tok != NULL ) {
 		sq_pushstring(v,tok,-1);
 		sq_arrayappend(v,-2);
-		tok = scstrtok( NULL, seps );
+		tok = __strtok( NULL, seps );
 	}
+	/*sq_newarray(v,0);
+	const SQChar *curr = str;
+	const SQChar *start = str;
+	SQChar c;
+	SQInteger cnt = 0;
+	bool found = false;
+	while((c = *curr) != NULL) {
+		const SQChar *s = seps;
+		while(*s != NULL) {
+			if(*s == c) {
+				found = true;
+				sq_pushstring(v,start,cnt);
+				sq_arrayappend(v,-2);
+				cnt = -1;
+				start = curr + 1;
+			}
+			s++;
+		}
+		cnt++;
+		curr++;
+	}
+	if(*start != NULL) {
+		sq_pushstring(v,start,cnt);
+		sq_arrayappend(v,-2);
+	}*/
 	return 1;
 }
 

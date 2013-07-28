@@ -631,12 +631,12 @@ bool SQVM::IsEqual(const SQObjectPtr &o1,const SQObjectPtr &o2,bool &res)
 
 bool SQVM::IsFalse(SQObjectPtr &o)
 {
-	if((type(o) & SQOBJECT_CANBEFALSE) 
-		&& ( (type(o) == OT_FLOAT) && (_float(o) == SQFloat(0.0)) )
-#if !defined(SQUSEDOUBLE) || defined(SQUSEDOUBLE) && defined(_SQ64)
+	if(((type(o) & SQOBJECT_CANBEFALSE) 
+		&& ( ((type(o) == OT_FLOAT) && (_float(o) == SQFloat(0.0))) ))
+#if !defined(SQUSEDOUBLE) || (defined(SQUSEDOUBLE) && defined(_SQ64))
 		|| (_integer(o) == 0) )  //OT_NULL|OT_INTEGER|OT_BOOL
 #else
-		|| ((type(o) != OT_FLOAT) && _integer(o) == 0) )  //OT_NULL|OT_INTEGER|OT_BOOL
+		|| (((type(o) != OT_FLOAT) && (_integer(o) == 0))) )  //OT_NULL|OT_INTEGER|OT_BOOL
 #endif
 	{
 		return true;
@@ -697,14 +697,17 @@ exception_restore:
 #endif
 			case _OP_LOADFLOAT: TARGET = *((SQFloat *)&arg1); continue;
 			case _OP_DLOAD: TARGET = ci->_literals[arg1]; STK(arg2) = ci->_literals[arg3];continue;
-			case _OP_TAILCALL:
-				if (type(STK(arg1)) == OT_CLOSURE){
-					SQObjectPtr clo = STK(arg1);
+			case _OP_TAILCALL:{
+				SQObjectPtr &t = STK(arg1);
+				if (type(t) == OT_CLOSURE 
+					&& (!_closure(t)->_function->_bgenerator)){
+					SQObjectPtr clo = t;
 					if(_openouters) CloseOuters(&(_stack._vals[_stackbase]));
 					for (SQInteger i = 0; i < arg3; i++) STK(i) = STK(arg2 + i);
 					_GUARD(StartCall(_closure(clo), ci->_target, arg3, _stackbase, true));
 					continue;
 				}
+							  }
 			case _OP_CALL: {
 					SQObjectPtr clo = STK(arg1);
 					switch (type(clo)) {
@@ -746,6 +749,7 @@ exception_restore:
 								_stack._vals[stkbase] = inst;
 								_GUARD(CallNative(_nativeclosure(clo), arg3, stkbase, clo,suspend));
 								break;
+							default: break; //shutup GCC 4.x
 						}
 						}
 						break;
@@ -1273,6 +1277,7 @@ SQInteger SQVM::FallBackGet(const SQObjectPtr &self,const SQObjectPtr &key,SQObj
 		}
 					  }
 		break;
+	default: break;//shutup GCC 4.x
 	}
 	// no metamethod or no fallback type
 	return FALLBACK_NO_MATCH;
@@ -1342,6 +1347,7 @@ SQInteger SQVM::FallBackSet(const SQObjectPtr &self,const SQObjectPtr &key,const
 		}
 					 }
 		break;
+		default: break;//shutup GCC 4.x
 	}
 	// no metamethod or no fallback type
 	return FALLBACK_NO_MATCH;
@@ -1445,7 +1451,7 @@ bool SQVM::DeleteSlot(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr
 	case OT_INSTANCE:
 	case OT_USERDATA: {
 		SQObjectPtr t;
-		bool handled = false;
+		//bool handled = false;
 		SQObjectPtr closure;
 		if(_delegable(self)->_delegate && _delegable(self)->GetMetaMethod(this,MT_DELSLOT,closure)) {
 			Push(self);Push(key);

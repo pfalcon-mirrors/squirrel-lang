@@ -227,6 +227,7 @@ struct SQObjectPtr : public SQObject
 	inline SQObjectPtr& operator=(bool b)
 	{ 
 		__Release(_type,_unVal);
+		SQ_OBJECT_RAWINIT()
 		_type = OT_BOOL;
 		_unVal.nInteger = b?1:0;
 		return *this;
@@ -265,7 +266,7 @@ struct SQObjectPtr : public SQObject
 	{
 		__Release(_type ,_unVal);
 		_type = OT_NULL;
-		_unVal.pUserPointer = NULL;
+		_unVal.raw = NULL;
 	}
 	private:
 		SQObjectPtr(const SQChar *){} //safety

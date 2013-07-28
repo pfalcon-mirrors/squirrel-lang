@@ -277,7 +277,7 @@ SQInteger SQSharedState::ResurrectUnreachable(SQVM *vm)
 
 	SQCollectable *resurrected = _gc_chain;
 	SQCollectable *t = resurrected;
-	SQCollectable *nx = NULL;
+	//SQCollectable *nx = NULL;
 
 	_gc_chain = tchain;
 
