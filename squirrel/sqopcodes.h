@@ -87,14 +87,14 @@ struct SQInstructionDesc {
 struct SQInstruction 
 {
 	SQInstruction(){};
-	SQInstruction(SQOpcode _op,int a0=0,int a1=0,int a2=0,int a3=0)
+	SQInstruction(SQOpcode _op,SQInteger a0=0,SQInteger a1=0,SQInteger a2=0,SQInteger a3=0)
 	{	op = _op;
 		_arg0 = a0;_arg1 = a1;
 		_arg2 = a2;_arg3 = a3;
 	}
     
 	
-	unsigned int _arg1;
+	SQInt32 _arg1;
 	unsigned char op;
 	unsigned char _arg0;
 	unsigned char _arg2;

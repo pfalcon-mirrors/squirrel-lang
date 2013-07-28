@@ -106,7 +106,7 @@ void SQFuncState::Error(const SQChar *err)
 #ifdef _DEBUG_DUMP
 void SQFuncState::Dump()
 {
-	unsigned int n=0,i;
+	SQUnsignedInteger n=0,i;
 	SQFunctionProto *func=_funcproto(_func);
 	scprintf(_SC("SQInstruction sizeof %d\n"),sizeof(SQInstruction));
 	scprintf(_SC("SQObject sizeof %d\n"),sizeof(SQObject));
@@ -117,7 +117,7 @@ void SQFuncState::Dump()
 	SQInteger idx;
 	SQObjectPtrVec templiterals;
 	templiterals.resize(_nliterals);
-	while((idx=_table(_literals)->Next(refidx,key,val))!=-1) {
+	while((idx=_table(_literals)->Next(false,refidx,key,val))!=-1) {
 		refidx=idx;
 		templiterals[_integer(val)]=key;
 	}
@@ -155,14 +155,14 @@ void SQFuncState::Dump()
 		SQInstruction &inst=_instructions[i];
 		if(inst.op==_OP_LOAD || inst.op==_OP_PREPCALLK || inst.op==_OP_GETK ){
 			
-			int lidx = inst._arg1;
+			SQInteger lidx = inst._arg1;
 			scprintf(_SC("[%03d] %15s %d "),n,g_InstrDesc[inst.op].name,inst._arg0);
 			if(lidx >= 0xFFFFFFFF)
 				scprintf(_SC("null"));
 			else {
-				int refidx;
+				SQInteger refidx;
 				SQObjectPtr val,key,refo;
-				while(((refidx=_table(_literals)->Next(refo,key,val))!= -1) && (_integer(val) != lidx)) {
+				while(((refidx=_table(_literals)->Next(false,refo,key,val))!= -1) && (_integer(val) != lidx)) {
 					refo = refidx;	
 				}
 				DumpLiteral(key);
@@ -181,24 +181,24 @@ void SQFuncState::Dump()
 	scprintf(_SC("--------------------------------------------------------------------\n\n"));
 }
 #endif
-/*int SQFuncState::GetStringConstant(SQObjectPtr &cons)
+/*SQInteger SQFuncState::GetStringConstant(SQObjectPtr &cons)
 {
 	return GetConstant(cons);
 }*/
 
-int SQFuncState::GetNumericConstant(const SQInteger cons)
+SQInteger SQFuncState::GetNumericConstant(const SQInteger cons)
 {
 	return GetConstant(SQObjectPtr(cons));
 }
 
-int SQFuncState::GetNumericConstant(const SQFloat cons)
+SQInteger SQFuncState::GetNumericConstant(const SQFloat cons)
 {
 	return GetConstant(SQObjectPtr(cons));
 }
 
-int SQFuncState::GetConstant(const SQObject &cons)
+SQInteger SQFuncState::GetConstant(const SQObject &cons)
 {
-	int n=0;
+	SQInteger n=0;
 	SQObjectPtr val;
 	if(!_table(_literals)->Get(cons,val))
 	{
@@ -213,37 +213,37 @@ int SQFuncState::GetConstant(const SQObject &cons)
 	return _integer(val);
 }
 
-void SQFuncState::SetIntructionParams(int pos,int arg0,int arg1,int arg2,int arg3)
+void SQFuncState::SetIntructionParams(SQInteger pos,SQInteger arg0,SQInteger arg1,SQInteger arg2,SQInteger arg3)
 {
-	_instructions[pos]._arg0=*((unsigned int *)&arg0);
-	_instructions[pos]._arg1=*((unsigned int *)&arg1);
-	_instructions[pos]._arg2=*((unsigned int *)&arg2);
-	_instructions[pos]._arg3=*((unsigned int *)&arg3);
+	_instructions[pos]._arg0=*((SQUnsignedInteger *)&arg0);
+	_instructions[pos]._arg1=*((SQUnsignedInteger *)&arg1);
+	_instructions[pos]._arg2=*((SQUnsignedInteger *)&arg2);
+	_instructions[pos]._arg3=*((SQUnsignedInteger *)&arg3);
 }
 
-void SQFuncState::SetIntructionParam(int pos,int arg,int val)
+void SQFuncState::SetIntructionParam(SQInteger pos,SQInteger arg,SQInteger val)
 {
 	switch(arg){
-		case 0:_instructions[pos]._arg0=*((unsigned int *)&val);break;
-		case 1:_instructions[pos]._arg1=*((unsigned int *)&val);break;
-		case 2:_instructions[pos]._arg2=*((unsigned int *)&val);break;
-		case 3:_instructions[pos]._arg3=*((unsigned int *)&val);break;
-		case 4:_instructions[pos]._arg1=*((unsigned int *)&val);break;
+		case 0:_instructions[pos]._arg0=*((SQUnsignedInteger *)&val);break;
+		case 1:_instructions[pos]._arg1=*((SQUnsignedInteger *)&val);break;
+		case 2:_instructions[pos]._arg2=*((SQUnsignedInteger *)&val);break;
+		case 3:_instructions[pos]._arg3=*((SQUnsignedInteger *)&val);break;
+		case 4:_instructions[pos]._arg1=*((SQUnsignedInteger *)&val);break;
 	};
 }
 
-int SQFuncState::AllocStackPos()
+SQInteger SQFuncState::AllocStackPos()
 {
-	int npos=_vlocals.size();
+	SQInteger npos=_vlocals.size();
 	_vlocals.push_back(SQLocalVarInfo());
-	if(_vlocals.size()>((unsigned int)_stacksize)) {
+	if(_vlocals.size()>((SQUnsignedInteger)_stacksize)) {
 		if(_stacksize>MAX_FUNC_STACKSIZE) Error(_SC("internal compiler error: too many locals"));
 		_stacksize=_vlocals.size();
 	}
 	return npos;
 }
 
-int SQFuncState::PushTarget(int n)
+SQInteger SQFuncState::PushTarget(SQInteger n)
 {
 	if(n!=-1){
 		_targetstack.push_back(n);
@@ -254,16 +254,16 @@ int SQFuncState::PushTarget(int n)
 	return n;
 }
 
-int SQFuncState::GetUpTarget(int n){
+SQInteger SQFuncState::GetUpTarget(SQInteger n){
 	return _targetstack[((_targetstack.size()-1)-n)];
 }
 
-int SQFuncState::TopTarget(){
+SQInteger SQFuncState::TopTarget(){
 	return _targetstack.back();
 }
-int SQFuncState::PopTarget()
+SQInteger SQFuncState::PopTarget()
 {
-	int npos=_targetstack.back();
+	SQInteger npos=_targetstack.back();
 	SQLocalVarInfo t=_vlocals[_targetstack.back()];
 	if(type(t._name)==OT_NULL){
 		_vlocals.pop_back();
@@ -272,14 +272,14 @@ int SQFuncState::PopTarget()
 	return npos;
 }
 
-int SQFuncState::GetStackSize()
+SQInteger SQFuncState::GetStackSize()
 {
 	return _vlocals.size();
 }
 
-void SQFuncState::SetStackSize(int n)
+void SQFuncState::SetStackSize(SQInteger n)
 {
-	int size=_vlocals.size();
+	SQInteger size=_vlocals.size();
 	while(size>n){
 		size--;
 		SQLocalVarInfo lvi=_vlocals.back();
@@ -291,29 +291,29 @@ void SQFuncState::SetStackSize(int n)
 	}
 }
 
-bool SQFuncState::IsLocal(unsigned int stkpos)
+bool SQFuncState::IsLocal(SQUnsignedInteger stkpos)
 {
 	if(stkpos>=_vlocals.size())return false;
 	else if(type(_vlocals[stkpos]._name)!=OT_NULL)return true;
 	return false;
 }
 
-int SQFuncState::PushLocalVariable(const SQObject &name)
+SQInteger SQFuncState::PushLocalVariable(const SQObject &name)
 {
-	int pos=_vlocals.size();
+	SQInteger pos=_vlocals.size();
 	SQLocalVarInfo lvi;
 	lvi._name=name;
 	lvi._start_op=GetCurrentPos()+1;
 	lvi._pos=_vlocals.size();
 	_vlocals.push_back(lvi);
-	if(_vlocals.size()>((unsigned int)_stacksize))_stacksize=_vlocals.size();
+	if(_vlocals.size()>((SQUnsignedInteger)_stacksize))_stacksize=_vlocals.size();
 	
 	return pos;
 }
 
-int SQFuncState::GetLocalVariable(const SQObject &name)
+SQInteger SQFuncState::GetLocalVariable(const SQObject &name)
 {
-	int locals=_vlocals.size();
+	SQInteger locals=_vlocals.size();
 	while(locals>=1){
 		if(type(_vlocals[locals-1]._name)==OT_STRING && _string(_vlocals[locals-1]._name)==_string(name)){
 			return locals-1;
@@ -323,10 +323,10 @@ int SQFuncState::GetLocalVariable(const SQObject &name)
 	return -1;
 }
 
-int SQFuncState::GetOuterVariable(const SQObject &name)
+SQInteger SQFuncState::GetOuterVariable(const SQObject &name)
 {
-	int outers = _outervalues.size();
-	for(int i = 0; i<outers; i++) {
+	SQInteger outers = _outervalues.size();
+	for(SQInteger i = 0; i<outers; i++) {
 		if(_string(_outervalues[i]._name) == _string(name))
 			return i;
 	}
@@ -336,7 +336,7 @@ int SQFuncState::GetOuterVariable(const SQObject &name)
 void SQFuncState::AddOuterValue(const SQObject &name)
 {
 	//AddParameter(name);
-	int pos=-1;
+	SQInteger pos=-1;
 	if(_parent) { 
 		pos = _parent->GetLocalVariable(name);
 		if(pos == -1) {
@@ -360,7 +360,7 @@ void SQFuncState::AddParameter(const SQObject &name)
 	_parameters.push_back(name);
 }
 
-void SQFuncState::AddLineInfos(int line,bool lineop,bool force)
+void SQFuncState::AddLineInfos(SQInteger line,bool lineop,bool force)
 {
 	if(_lastline!=line || force){
 		SQLineInfo li;
@@ -373,7 +373,7 @@ void SQFuncState::AddLineInfos(int line,bool lineop,bool force)
 
 void SQFuncState::AddInstruction(SQInstruction &i)
 {
-	int size = _instructions.size();
+	SQInteger size = _instructions.size();
 	if(size > 0 && _optimization){ //simple optimizer
 		SQInstruction &pi = _instructions[size-1];//previous instruction
 		switch(i.op) {
@@ -461,7 +461,7 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 	_instructions.push_back(i);
 }
 
-SQObject SQFuncState::CreateString(const SQChar *s,int len)
+SQObject SQFuncState::CreateString(const SQChar *s,SQInteger len)
 {
 	SQObjectPtr ns(SQString::Create(_sharedstate,s,len));
 	_table(_strings)->NewSlot(ns,1);
@@ -474,7 +474,7 @@ void SQFuncState::Finalize()
 	f->_literals.resize(_nliterals);
 	SQObjectPtr refidx,key,val;
 	SQInteger idx;
-	while((idx=_table(_literals)->Next(refidx,key,val))!=-1) {
+	while((idx=_table(_literals)->Next(false,refidx,key,val))!=-1) {
 		f->_literals[_integer(val)]=key;
 		refidx=idx;
 	}

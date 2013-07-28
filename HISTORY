@@ -1,9 +1,21 @@
+***version 2.0.4 stable***
+-weak references and related API calls
+-added sq_objtobool()
+-class instances memory policies improved(1 mem allocation for the whole instance)
+-typetags are now declared as SQUserPointer instead of unsigned int
+-first pass for 64bits compatibility
+-fixed minor bug in the stdio stream
+-fixed a bug in format()
+-fixed bug in string.tointeger() and string.tofloat()
+
+***2005-06-24	       ***
 ***version 2.0.3 stable***
--dofile() and compilefile() in the iolib now can decode ASCII, UTF8 files UCS2 big-endian and little-endian
+-dofile() and loadfile() in the iolib now can decode ASCII, UTF8 files UCS2 big-endian and little-endian
 -sq_setparamscheck() : now typemesk can check for null
 -added string escape sequence \xhhhh
 -fixed some C++ standard incompatibilities
 
+***2005-05-15	       ***
 ***version 2.0.2 stable***
 -performances improvements (expecially for GCC users)
 -removed all dependencies from C++ exception handling
@@ -171,7 +183,7 @@
 
 ***2003-11-17       ***
 ***version 0.7 alpha***
--fixed critical bug int the tail call system
+-fixed critical bug SQInteger the tail call system
 -fixed bug in the continue statement code generation
 -fixed func call param issue(thanks to Rewoonenco Andrew)
 -added _delslot metamethod(thanks to Rewoonenco Andrew)

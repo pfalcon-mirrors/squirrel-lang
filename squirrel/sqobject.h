@@ -49,9 +49,21 @@ enum SQMetaMethod{
 
 struct SQRefCounted
 {
-	unsigned int _uiRef;
+	SQRefCounted() { _uiRef = 0; _weakref = NULL; }
+	~SQRefCounted();
+	SQWeakRef *GetWeakRef(SQObjectType type);
+	SQUnsignedInteger _uiRef;
+	struct SQWeakRef *_weakref;
 	virtual void Release()=0;
 };
+
+struct SQWeakRef : SQRefCounted
+{
+	void Release();
+	SQObject _obj;
+};
+
+#define _realval(o) (type((o)) != OT_WEAKREF?(SQObject)o:_weakref(o)->_obj)
 
 struct SQObjectPtr;
 
@@ -97,6 +109,8 @@ struct SQObjectPtr;
 #define _class(obj) ((obj)._unVal.pClass)
 #define _instance(obj) ((obj)._unVal.pInstance)
 #define _delegable(obj) ((SQDelegable *)(obj)._unVal.pDelegable)
+#define _weakref(obj) ((obj)._unVal.pWeakRef)
+#define _refcounted(obj) ((obj)._unVal.pRefCounted)
 #define _rawval(obj) ((obj)._unVal.pRefCounted)
 
 #define _stringval(obj) (obj)._unVal.pString->_val
@@ -195,6 +209,13 @@ struct SQObjectPtr : public SQObject
 		assert(_unVal.pThread);
 		__AddRef(_type,_unVal);
 	}
+	SQObjectPtr(SQWeakRef *pWeakRef)
+	{
+		_type=OT_WEAKREF;
+		_unVal.pWeakRef=pWeakRef;
+		assert(_unVal.pWeakRef);
+		__AddRef(_type,_unVal);
+	}
 	SQObjectPtr(SQFunctionProto *pFunctionProto)
 	{
 		_type=OT_FUNCPROTO;
@@ -288,12 +309,13 @@ struct SQCollectable : public SQRefCounted {
 #endif
 
 struct SQDelegable : public CHAINABLE_OBJ {
+	bool SetDelegate(SQTable *m);
 	virtual bool GetMetaMethod(SQMetaMethod mm,SQObjectPtr &res);
 	SQTable *_delegate;
 };
 
-unsigned int TranslateIndex(const SQObjectPtr &idx);
+SQUnsignedInteger TranslateIndex(const SQObjectPtr &idx);
 typedef sqvector<SQObjectPtr> SQObjectPtrVec;
-typedef sqvector<int> SQIntVec;
+typedef sqvector<SQInteger> SQIntVec;
 
 #endif //_SQOBJECT_H_
