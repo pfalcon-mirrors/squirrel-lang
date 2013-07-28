@@ -14,8 +14,11 @@ SQClass::SQClass(SQSharedState *ss,SQClass *base)
 	_typetag = 0;
 	_hook = NULL;
 	_udsize = 0;
+	_locked = false;
+	_constructoridx = -1;
 	_metamethods.resize(MT_LAST); //size it to max size
 	if(_base) {
+		_constructoridx = _base->_constructoridx;
 		_defaultvalues.copy(base->_defaultvalues);
 		_methods.copy(base->_methods);
 		_metamethods.copy(base->_metamethods);
@@ -23,8 +26,7 @@ SQClass::SQClass(SQSharedState *ss,SQClass *base)
 	}
 	_members = base?base->_members->Clone() : SQTable::Create(ss,0);
 	__ObjAddRef(_members);
-	_locked = false;
-	_constructoridx = -1;
+	
 	INIT_CHAIN();
 	ADD_TO_CHAIN(&_sharedstate->_gc_chain, this);
 }

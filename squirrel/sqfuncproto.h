@@ -32,7 +32,7 @@ struct SQOuterVar
 
 struct SQLocalVarInfo
 {
-	SQLocalVarInfo():_start_op(0),_end_op(0){}
+	SQLocalVarInfo():_start_op(0),_end_op(0),_pos(0){}
 	SQLocalVarInfo(const SQLocalVarInfo &lvi)
 	{
 		_name=lvi._name;

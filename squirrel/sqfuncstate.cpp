@@ -287,7 +287,7 @@ SQInteger SQFuncState::TopTarget(){
 SQInteger SQFuncState::PopTarget()
 {
 	SQInteger npos=_targetstack.back();
-	SQLocalVarInfo t=_vlocals[_targetstack.back()];
+	SQLocalVarInfo &t=_vlocals[_targetstack.back()];
 	if(type(t._name)==OT_NULL){
 		_vlocals.pop_back();
 	}
@@ -357,9 +357,10 @@ SQInteger SQFuncState::PushLocalVariable(const SQObject &name)
 	lvi._pos=_vlocals.size();
 	_vlocals.push_back(lvi);
 	if(_vlocals.size()>((SQUnsignedInteger)_stacksize))_stacksize=_vlocals.size();
-	
 	return pos;
 }
+
+
 
 SQInteger SQFuncState::GetLocalVariable(const SQObject &name)
 {
@@ -473,6 +474,7 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 		case _OP_MOVE:
 			switch(pi.op) {
 			case _OP_GET: case _OP_ADD: case _OP_SUB: case _OP_MUL: case _OP_DIV: case _OP_MOD: case _OP_BITW:
+			case _OP_LOADINT: case _OP_LOADFLOAT: case _OP_LOADBOOL: case _OP_LOAD:
 				if(pi._arg0 == i._arg1)
 				{
 					pi._arg0 = i._arg0;

@@ -356,8 +356,8 @@ public:
 				//EmitCompArithLocal(tok,tmp,val, tmp);
 				_fs->AddInstruction(ChooseArithOpByToken(tok), tmp, val, tmp, 0);
 				_fs->AddInstruction(_OP_SETOUTER, tmp, pos, tmp);
-				_fs->PopTarget();
-				_fs->PushTarget(tmp);
+				//_fs->PopTarget();
+				//_fs->PushTarget(tmp);
 			}
 			break;
 		}
