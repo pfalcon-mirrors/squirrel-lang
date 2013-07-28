@@ -4,8 +4,6 @@
 ///////////////////////////////////
 #include "squtils.h"
 
-#define MAX_STRING 2024
-
 typedef sqvector<int> IntVec;
 
 struct SQFuncState

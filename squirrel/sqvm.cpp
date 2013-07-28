@@ -56,7 +56,7 @@ SQVM::SQVM(SQSharedState *ss)
 
 SQVM::~SQVM()
 {
-	_table(_roottable)->Clear();
+	_table(_roottable)->Finalize();
 	int size=_stack.size();
 	for(int i=0;i<size;i++)
 		_stack[i]=_null_;
@@ -298,9 +298,11 @@ void SQVM::StartCall(SQObjectPtr &closure,int target,int nargs,int stackbase,boo
 		ci->_prevstkbase = stackbase - _stackbase;
 		ci->_target = target;
 		ci->_prevtop = _top - _stackbase;
+		ci->_ncalls=1;
 	}
 	else {
 		ci->_prevtop = func->_stacksize + 1;
+		ci->_ncalls++;
 	}
 
 	ci->_closure = closure;
@@ -351,7 +353,8 @@ void SQVM::StartCall(SQObjectPtr &closure,int target,int nargs,int stackbase,boo
 bool SQVM::Return(int _arg0, int _arg1, SQObjectPtr &retval)
 {
 	if (type(_debughook) != OT_NULL && _rawval(_debughook) != _rawval(ci->_closure))
-		CallDebugHook(_SC('r'));
+		for(int i=0;i<ci->_ncalls;i++)
+			CallDebugHook(_SC('r'));
 						
 	bool broot = ci->_root;
 	int last_top = _top;
@@ -429,7 +432,11 @@ SQObjectPtr SQVM::Execute(SQObjectPtr &closure, int target, int nargs, int stack
 	bool ct_tailcall;
 
 	switch(et){
-		case ET_CALL: StartCall(closure, _top - nargs, nargs, stackbase, false); ci->_root = true; break;
+		case ET_CALL: 
+			StartCall(closure, _top - nargs, nargs, stackbase, false); ci->_root = true;
+			if (type(_debughook) != OT_NULL && _rawval(_debughook) != _rawval(ci->_closure))
+				CallDebugHook(_SC('c'));
+			break;
 		case ET_RESUME_GENERATOR: _generator(closure)->Resume(this, target); ci->_root = true; break;
 		case ET_RESUME_VM:
 			traps = _suspended_traps;
@@ -571,12 +578,15 @@ common_call:
 						}
 						RT_Error(_SC("attempt to call '%s'"), GetTypeName(temp));
 								  }
-					case OT_USERDATA:
-						if (_userdata(temp)->_delegate && CallMetaMethod(_userdata(temp)->_delegate, MT_CALL, arg3, temp)){
+					case OT_USERDATA:{
+						Push(temp);
+						for (int i = 0; i < arg3; i++) Push(STK(arg2 + i));
+						if (_userdata(temp)->_delegate && CallMetaMethod(_userdata(temp)->_delegate, MT_CALL, arg3+1, temp)){
 							STK(ct_target) = temp;
 							break;
 						}
 						RT_Error(_SC("attempt to call '%s'"), GetTypeName(temp));
+									 }
 					default:
 						RT_Error(_SC("attempt to call '%s'"), GetTypeName(temp));
 					}
@@ -605,8 +615,10 @@ common_call:
 				SQObjectPtr &o1 = STK(arg2);
 				SQObjectPtr &o2 = COND_LITERAL;
 				TARGET= type(o1) == type(o2)?
-					((_userpointer(o1) == _userpointer(o2)?_notnull_:_null_)):
-					(!ObjCmp(STK(arg2), COND_LITERAL)?_notnull_:_null_);
+							((_userpointer(o1) == _userpointer(o2)?_notnull_:_null_)):
+								(sq_isnumeric(o1) && sq_isnumeric(o2)?
+									((!ObjCmp(STK(arg2), COND_LITERAL)?_notnull_:_null_))
+							:_null_);
 					}continue;
 			case _OP_NE:{
 				SQObjectPtr &o1 = STK(arg2);
@@ -772,7 +784,7 @@ common_call:
 			case _OP_TYPEOF: TypeOf(STK(arg1), TARGET); continue;
 			case _OP_LINE:
 				if(type(_debughook) != OT_NULL && _rawval(_debughook) != _rawval(ci->_closure))
-					CallDebugHook(_SC('l'));
+					CallDebugHook(_SC('l'),arg1);
 				continue;
 			case _OP_PUSHTRAP:
 				ci->_etraps.push_back(SQExceptionTrap(_top,_stackbase, &ci->_iv->_vals[(ci->_ip-ci->_iv->_vals)+arg1], arg0)); traps++;
@@ -835,13 +847,14 @@ common_call:
 	return true;
 }
 
-void SQVM::CallDebugHook(int type)
+void SQVM::CallDebugHook(int type,int forcedline)
 {
 	SQObjectPtr temp;
+	int nparams=5;
 	SQFunctionProto *func=_funcproto(_closure(ci->_closure)->_function);
-	Push(_roottable); Push(type); Push(func->_sourcename); Push(func->GetLine(ci->_ip)); Push(func->_name);
-	Call(_debughook,5,_top-5,temp);
-	Pop(5);
+	Push(_roottable); Push(type); Push(func->_sourcename); Push(forcedline?forcedline:func->GetLine(ci->_ip)); Push(func->_name);
+	Call(_debughook,nparams,_top-nparams,temp);
+	Pop(nparams);
 }
 
 bool SQVM::CallNative(SQObjectPtr &nclosure,int nargs,int stackbase,bool tailcall,SQObjectPtr &retval)
@@ -857,6 +870,7 @@ bool SQVM::CallNative(SQObjectPtr &nclosure,int nargs,int stackbase,bool tailcal
 	PUSH_CALLINFO(this, CallInfo());
 	ci->_closure = nclosure;
 	ci->_prevstkbase = stackbase - _stackbase;
+	ci->_ncalls = 1;
 	_stackbase = stackbase;
 	//push outers
 	int outers = _nativeclosure(nclosure)->_outervalues.size();

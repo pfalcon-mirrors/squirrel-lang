@@ -37,9 +37,10 @@ public:
 		newtable->_delegate = NULL;
 		return newtable;
 	}
-	void Clear()
+	void Finalize()
 	{
 		for(int i = 0;i < _numofnodes; i++) { _nodes[i].key = _null_; _nodes[i].val = _null_; }
+		SetDelegate(NULL);
 	}
 	SQTable *Clone();
 	~SQTable()

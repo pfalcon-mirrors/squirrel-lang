@@ -91,7 +91,7 @@ void SQSharedState::Init()
 
 SQSharedState::~SQSharedState()
 {
-	_table(_refs_table)->Clear();
+	_table(_refs_table)->Finalize();
 	_refs_table=_null_;
 	while(!_systemstrings->empty()){
 		_systemstrings->back()=_null_;
@@ -103,7 +103,7 @@ SQSharedState::~SQSharedState()
 	_number_default_delegate=_null_;
 	_closure_default_delegate=_null_;
 	_generator_default_delegate=_null_;
-		
+	
 	SQVM *v=_vms_chain;
 	while(_vms_chain){
 		sq_delete(v,SQVM);
@@ -111,15 +111,16 @@ SQSharedState::~SQSharedState()
 	}
 #if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
 	
+	
 	SQCollectable *t=_gc_chain;
+	SQCollectable *nx=NULL;
 	while(t){
 		t->_uiRef++;
-		t->Clear();
-		if(--t->_uiRef==0)t->Release();
-		if(t!=_gc_chain)
-			t=_gc_chain;
-		else
-			t=t->_next;
+		t->Finalize();
+		nx=t->_next;
+		if(--t->_uiRef==0)
+			t->Release();
+		t=nx;
 	}
 	assert(_gc_chain==NULL); //just to proove a theory
 	while(_gc_chain){
@@ -177,14 +178,14 @@ int SQSharedState::CollectGarbage(SQVM *vm)
 	MarkObject(_closure_default_delegate,&tchain);
 
 	SQCollectable *t=_gc_chain;
+	SQCollectable *nx=NULL;
 	while(t){
 		t->_uiRef++;
-		t->Clear();
-		if(--t->_uiRef==0)t->Release();
-		if(t!=_gc_chain)
-			t=_gc_chain;
-		else
-			t=t->_next;
+		t->Finalize();
+		nx=t->_next;
+		if(--t->_uiRef==0)
+			t->Release();
+		t=nx;
 		n++;
 	}
 

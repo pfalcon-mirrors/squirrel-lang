@@ -1,6 +1,6 @@
 
 local base_vec={
-	_add=function (n)
+	function _add(n)
 	{
 		return {
 			x=x+n.x,
@@ -8,7 +8,7 @@ local base_vec={
 			z=z+n.z,
 		}
 	}
-	_sub=function (n)
+	function _sub(n)
 	{
 		return {
 			x=x-n.x,
@@ -16,7 +16,7 @@ local base_vec={
 			z=z-n.z,
 		}
 	}
-	_div=function (n)
+	function _div(n)
 	{
 		return {
 			x=x/n.x,
@@ -24,7 +24,7 @@ local base_vec={
 			z=z/n.z,
 		}
 	}
-	_mul=function (n)
+	function _mul(n)
 	{
 		return {
 			x=x*n.x,
@@ -32,7 +32,7 @@ local base_vec={
 			z=z*n.z,
 		}
 	}
-	_modulo=function (n)
+	function _modulo(n)
 	{
 		return {
 			x=x%n,
@@ -40,15 +40,15 @@ local base_vec={
 			z=z%n,
 		}
 	}
-	_typeof=function () {return "vector";}
-	_get=function(key)
+	function _typeof() {return "vector";}
+	function _get(key)
 	{
 		if(key==100)
 		{
 			return test_field;
 		}
 	},
-	_set=function(key,val)
+	function _set(key,val)
 	{
 		::print("key = "+key+"\n");
 		::print("val = "+val+"\n")

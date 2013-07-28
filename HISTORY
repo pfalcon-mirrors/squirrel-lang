@@ -1,3 +1,14 @@
+***varsion 0.8 alpha***
+-fixed a bug that was preventing to have callable userdata throught the metamethod _call
+-fixed a garbage collection bug
+-fixed == operator now can compare different types
+-new built in method getstackinfos(level)
+-improoved line informations precision for the debug hook
+-new api call sq_compilebuffer()
+-new built-in api function compilestring()
+-new syntactic sugar for function declarations inside tables
+-the debug API has been finalized
+
 ***varsion 0.7 alpha***
 -fixed critical bug int the tail call system
 -fixed bug in the continue statement code generation

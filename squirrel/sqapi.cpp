@@ -712,6 +712,28 @@ SQRESULT sq_next(HSQUIRRELVM v,int idx)
 	return SQ_OK;
 }
 
+struct BufState{
+	const SQChar *buf;
+	int ptr;
+	int size;
+};
+
+SQChar buf_lexfeed(SQUserPointer file)
+{
+	BufState *buf=(BufState*)file;
+	if(buf->size<(buf->ptr+1))
+		return 0;
+	return (SQChar)buf->buf[buf->ptr++];
+}
+
+SQRESULT sq_compilebuffer(HSQUIRRELVM v,const SQChar *s,int size,const SQChar *sourcename,int raiseerror,int lineinfo) {
+	BufState buf;
+	buf.buf = s;
+	buf.size = size;
+	buf.ptr = 0;
+	return sq_compile(v, buf_lexfeed, &buf, sourcename, raiseerror, lineinfo);
+}
+
 void *sq_malloc(unsigned int size)
 {
 	return SQ_MALLOC(size);

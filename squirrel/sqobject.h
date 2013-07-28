@@ -224,7 +224,7 @@ struct SQCollectable : public SQRefCounted {
 	virtual void Mark(SQCollectable **chain)=0;
 	void UnMark();
 #endif
-	virtual void Clear()=0;
+	virtual void Finalize()=0;
 	static void AddToChain(SQCollectable **chain,SQCollectable *c);
 	static void RemoveFromChain(SQCollectable **chain,SQCollectable *c);
 };

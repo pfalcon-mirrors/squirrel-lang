@@ -19,7 +19,9 @@ public:
 #ifdef GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
 #endif
-	void Clear(){_values.resize(0);}
+	void Finalize(){
+		_values.resize(0);
+	}
 	bool Get(const int nidx,SQObjectPtr &val)
 	{
 		if(nidx>=0 && nidx<(int)_values.size()){

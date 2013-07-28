@@ -157,10 +157,10 @@ public:
 		catch(ParserException &ex){
 			if(_raiseerror && _vm->_compilererrorhandler){
 				SQObjectPtr ret;
-				_vm->_lasterror=_null_;
 				_vm->_compilererrorhandler(_vm,ex.desc,type(_sourcename)==OT_STRING?_stringval(_sourcename):_SC("unknown"),
 					_lex._currentline,_lex._currentcolumn);
 			}
+			_vm->_lasterror=SQString::Create(_ss(_vm),ex.desc,-1);
 			return false;
 		}
 		return true;
@@ -220,7 +220,7 @@ public:
 			Lex();
 			break;
 		case FUNCTION:
-			FunctionStatement(_token);
+			FunctionStatement();
 			break;
 		case _SC('{'):{
 				int stacksize=_fs->GetStackSize();
@@ -503,7 +503,7 @@ public:
 			}
 			break;
 		case IDENTIFIER:
-		case THIS:{
+		case _THIS:{
 			SQObjectPtr id(_token==IDENTIFIER?SQString::Create(_ss(_vm),_lex._svalue):SQString::Create(_ss(_vm),_SC("this")));
 				int pos=-1;
 				Lex();
@@ -563,13 +563,24 @@ public:
 			int tpos=_fs->GetCurrentPos(),nkeys=0;
 			Lex();
 			while(_token!=_SC('}')){
-				if(_token==_SC('[')){
+				switch(_token){
+				case FUNCTION:{
+					Lex();
+					SQObjectPtr id=Expect(IDENTIFIER);Expect(_SC('('));
+					_fs->AddInstruction(_OP_LOAD,_fs->PushTarget(),_fs->GetStringConstant(_stringval(id)));
+					CreateFunction(id);
+					_fs->AddInstruction(_OP_CLOSURE,_fs->PushTarget(),_fs->_functions.size()-1,0);
+				  }
+				break;
+				case _SC('['):
 					Lex();CommaExpr();Expect(_SC(']'));
-				}
-				else{
+					Expect(_SC('='));Expression();
+				break;
+				default :
 					_fs->AddInstruction(_OP_LOAD,_fs->PushTarget(),_fs->GetStringConstant(_stringval(Expect(IDENTIFIER))));
+					Expect(_SC('='));Expression();
 				}
-				Expect(_SC('='));Expression();
+				
 				if(_token==_SC(','))Lex();//optional comma
 				nkeys++;
 				int val=_fs->PopTarget();
@@ -788,83 +799,48 @@ public:
 	}
 	void SwitchStatement()
 	{
-		IntVec casesj,stats_sizes,breaks,continues;
 		Lex();Expect(_SC('('));CommaExpr();Expect(_SC(')'));
 		Expect(_SC('{'));
 		int expr=_fs->TopTarget();
+		bool bfirst=true;
+		int tonextcondjmp=-1;
+		int skipcondjmp=-1;
+		int __nbreaks__=_fs->_unresolvedbreaks.size();
 		_fs->_breaktargets.push_back(0);
-		int nbreaks=_fs->_unresolvedbreaks.size();
-		int ncontinues=_fs->_unresolvedcontinues.size();
-		int jzpos=-1;
-		int stats_total=0;
-		SQInstructionVec stats;
 		while(_token==CASE)
 		{
+			if(!bfirst){
+				_fs->AddInstruction(_OP_JMP,0,0);
+				skipcondjmp=_fs->GetCurrentPos();
+				_fs->SetIntructionParam(tonextcondjmp,1,_fs->GetCurrentPos()-tonextcondjmp);
+			}
+			//condition
 			Lex();Expression();Expect(_SC(':'));
 			int trg=_fs->PopTarget();
 			_fs->AddInstruction(_OP_EQ,trg,trg,expr);
-			_fs->AddInstruction(_OP_JNZ,trg,0);
-			casesj.push_back(_fs->GetCurrentPos());
-			int statstart=_fs->GetCurrentPos()+1;
-			int nbreaks=_fs->_unresolvedbreaks.size();
-			int ncontinues=_fs->_unresolvedcontinues.size();
-			int stacksize=_fs->GetStackSize();
+			_fs->AddInstruction(_OP_JZ,trg,0);
+			//end condition
+			if(skipcondjmp!=-1) {
+				_fs->SetIntructionParam(skipcondjmp,1,(_fs->GetCurrentPos()-skipcondjmp));
+			}
+			tonextcondjmp=_fs->GetCurrentPos();
 			Statements();
-			_fs->SetStackSize(stacksize);
-			breaks.push_back(_fs->_unresolvedbreaks.size()-nbreaks);
-			continues.push_back(_fs->_unresolvedcontinues.size()-ncontinues);
-			int statend=_fs->GetCurrentPos();
-			int statsize=statend-statstart+1;
-			stats_sizes.push_back(statsize);
-			//pops move the statements in the temp array
-			if(statsize>0){
-				for(int i=0;i<statsize;i++)
-					stats.push_back(_fs->GetInstruction(statstart+i));
-				_fs->PopInstructions(statsize);
-			}
-			stats_total+=statsize;
+			bfirst=false;
 		}
-		_fs->AddInstruction(_OP_JMP,0,0);
-		casesj.push_back(_fs->GetCurrentPos());
-		stats_sizes.push_back(0);
-		breaks.push_back(0);
-		continues.push_back(0);
-		//copys the statements back in the funcstate
-		int stat_base=_fs->GetCurrentPos();
-		if(stats_total>0){
-			for(int i=0;i<stats_total;i++)
-				_fs->AddInstruction(stats[i]);
-		}
-		//relocates breaks and continues
-		int breaksidx=_fs->_unresolvedbreaks.size()-(_fs->_unresolvedbreaks.size()-nbreaks);
-		int continuesidx=_fs->_unresolvedcontinues.size()-(_fs->_unresolvedcontinues.size()-ncontinues);
-		for(unsigned int i=0;i<casesj.size();i++){
-			int offs=stat_base-casesj[i],k;
-			_fs->SetIntructionParam(casesj[i],1,stat_base-casesj[i]);
-			for(k=0;k<breaks[i];k++){
-				_fs->_unresolvedbreaks[breaksidx]+=offs;
-				breaksidx++;
-			}
-			for(k=0;k<continues[i];k++){
-				_fs->_unresolvedcontinues[continuesidx]+=offs;
-				continuesidx++;
-			}
-			stat_base+=stats_sizes[i];
-		}
-		//nbreaks=_fs->_unresolvedbreaks.size()-nbreaks;
-		//if(nbreaks>0)ResolveBreaks(_fs,nbreaks);
-		//nbreaks=_fs->_unresolvedbreaks.size();
+		if(tonextcondjmp!=-1)
+			_fs->SetIntructionParam(tonextcondjmp,1,_fs->GetCurrentPos()-tonextcondjmp);
 		if(_token==DEFAULT){
 			Lex();Expect(_SC(':'));
 			Statements();
 		}
-		_fs->_breaktargets.pop_back();
 		Expect(_SC('}'));
-		nbreaks=_fs->_unresolvedbreaks.size()-nbreaks;
-		if(nbreaks>0)ResolveBreaks(_fs,nbreaks);
-		_fs->PopTarget(); //pops expr
+		_fs->PopTarget();
+		__nbreaks__=_fs->_unresolvedbreaks.size()-__nbreaks__;
+		if(__nbreaks__>0)ResolveBreaks(_fs,__nbreaks__);
+		_fs->_breaktargets.pop_back();
+		
 	}
-	void FunctionStatement(int ftype)
+	void FunctionStatement()
 	{
 		SQObjectPtr id;
 		Lex();id=Expect(IDENTIFIER);
@@ -880,7 +856,7 @@ public:
 		}
 		Expect(_SC('('));
 		CreateFunction(id);
-		_fs->AddInstruction(_OP_CLOSURE,_fs->PushTarget(),_fs->_functions.size()-1,ftype==FUNCTION?0:1);
+		_fs->AddInstruction(_OP_CLOSURE,_fs->PushTarget(),_fs->_functions.size()-1,0);
 		EmitDerefOp(_OP_NEWSLOT);
 		_fs->PopTarget();
 	}
@@ -978,7 +954,7 @@ public:
 		SQFuncState *currchunk=_fs;
 		_fs=&funcstate;
 		Statement();
-		funcstate.AddLineInfos(_lex._currentline,_lineinfo,true);
+		funcstate.AddLineInfos(_lex._prevtoken==_SC('\n')?_lex._currentline-1:_lex._currentline,_lineinfo,true);
         funcstate.AddInstruction(_OP_RETURN,-1);
 		funcstate.SetStackSize(0);
 		_funcproto(_fs->_func)->_stacksize=_fs->_stacksize;

@@ -48,7 +48,7 @@ struct SQVM;
 #define DOUBLE_COLON 299
 #define CASE 300
 #define DEFAULT 301
-#define THIS 302
+#define _THIS 302
 #define PLUSPLUS 303
 #define MINUSMINUS 304
 

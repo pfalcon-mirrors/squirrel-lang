@@ -298,8 +298,8 @@ void SQFuncState::AddLineInfos(int line,bool lineop,bool force)
 	if(_lastline!=line || force){
 		SQLineInfo li;
 		li._line=line;li._op=(GetCurrentPos()+1);
-		_lineinfos.push_back(li);
 		if(lineop)AddInstruction(_OP_LINE,0,line);
+		_lineinfos.push_back(li);
 		_lastline=line;
 	}
 }
@@ -310,11 +310,11 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 	if(size>0 && (_optimization || i.op==_OP_RETURN)){ //simple optimizer
 		SQInstruction &pi=_instructions[size-1];//previous intruction
 		switch(i.op){
-		case _OP_RETURN:
-			if( _parent && i._arg0!=0xFF && pi.op==_OP_CALL){
-				pi.op=_OP_TAILCALL;
-			}
-		break;
+		//case _OP_RETURN:
+		//	if( _parent && i._arg0!=0xFF && pi.op==_OP_CALL){
+		//		pi.op=_OP_TAILCALL;
+		//	}
+		//break;
 		case _OP_GET:
 			if( pi.op==_OP_LOAD	&& pi._arg0==i._arg2 && (!IsLocal(pi._arg0))){
 				pi._arg2=(unsigned char)i._arg1;
@@ -363,7 +363,10 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 			}
 			break;
 		case _OP_LINE:
-			if(pi.op==_OP_LINE)_instructions.pop_back();
+			if(pi.op==_OP_LINE) {
+				_instructions.pop_back();
+				_lineinfos.pop_back();
+			}
 			break;
 		}
 	}

@@ -82,6 +82,48 @@ static int base_setdebughook(HSQUIRRELVM v)
 	return 0;
 }
 
+static int base_getstackinfos(HSQUIRRELVM v)
+{
+	SQInteger level;
+	SQStackInfos si;
+	int seq = 0;
+	const SQChar *name = NULL;
+	if (SQ_FAILED(sq_aux_checkargs(v, 2, 0))) return -1;
+	if (SQ_FAILED(sq_getinteger(v, -1, &level)))
+		return sq_throwerror(v, _SC("integer argument expected"));
+	if (SQ_SUCCEEDED(sq_stackinfos(v, level, &si)))
+	{
+		const SQChar *fn = _SC("unknown");
+		const SQChar *src = _SC("unknown");
+		if(si.funcname)fn = si.funcname;
+		if(si.source)src = si.source;
+		sq_newtable(v);
+		sq_pushstring(v, _SC("func"), -1);
+		sq_pushstring(v, fn, -1);
+		sq_createslot(v, -3);
+		sq_pushstring(v, _SC("src"), -1);
+		sq_pushstring(v, src, -1);
+		sq_createslot(v, -3);
+		sq_pushstring(v, _SC("line"), -1);
+		sq_pushinteger(v, si.line);
+		sq_createslot(v, -3);
+		sq_pushstring(v, _SC("locals"), -1);
+		sq_newtable(v);
+		seq=0;
+		while (name = sq_getlocal(v, level, seq)) {
+			sq_pushstring(v, name, -1);
+			sq_push(v, -2);
+			sq_createslot(v, -4);
+			sq_pop(v, 1);
+			seq++;
+		}
+		sq_createslot(v, -3);
+		return 1;
+	}
+
+	return 0;
+}
+
 static int base_assert(HSQUIRRELVM v)
 {
 	if(sq_gettop(v)==2){
@@ -153,15 +195,34 @@ static int base_chcode2string(HSQUIRRELVM v)
 	return sq_throwerror(v,_SC("wrong number of params"));
 }
 
+static int base_compilestring(HSQUIRRELVM v)
+{
+	int nargs=sq_gettop(v);
+	if(nargs>=2){
+		const SQChar *src=NULL,*name=_SC("unnamedbuffer");
+		SQInteger size;
+		sq_getstring(v,2,&src);
+		size=sq_getsize(v,2);
+		if(nargs>2){
+			sq_getstring(v,3,&name);
+		}
+		if(SQ_SUCCEEDED(sq_compilebuffer(v,src,size,name,0,0)))
+			return 1;
+		else
+			return -1;
+	}return sq_throwerror(v,_SC("wrong number of params"));
+}
 
 static SQRegFunction base_funcs[]={
 	//generic
 	{_SC("seterrorhandler"),base_seterrorhandler},
 	{_SC("setdebughook"),base_setdebughook},
+	{_SC("getstackinfos"),base_getstackinfos},
 	{_SC("getroottable"),base_getroottable},
 	{_SC("setroottable"),base_setroottable},
 	{_SC("assert"),base_assert},
 	{_SC("print"),base_print},
+	{_SC("compilestring"),base_compilestring},
 	//string stuff
 	{_SC("chcode2string"),base_chcode2string},
 #ifdef GARBAGE_COLLECTOR
@@ -504,6 +565,7 @@ SQRegFunction SQSharedState::_string_default_delegate_funcz[]={
 	{_SC("len"),default_delegate_len},
 	{_SC("tointeger"),default_delegate_tointeger},
 	{_SC("tofloat"),default_delegate_tofloat},
+	{_SC("tostring"),default_delegate_tostring},
 	{_SC("slice"),string_slice},
 	{_SC("find"),string_find},
 	{_SC("tolower"),string_tolower},

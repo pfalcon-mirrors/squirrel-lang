@@ -36,6 +36,7 @@ struct SQVM
 		int _prevtop;
 		int _target;
 		SQInstruction *_ip;
+		int _ncalls;
 		bool _root;
 	};
 
@@ -54,7 +55,7 @@ public:
 	bool Call(SQObjectPtr &closure, int nparams, int stackbase, SQObjectPtr &outres);
 	SQRESULT Suspend();
 
-	void CallDebugHook(int type);
+	void CallDebugHook(int type,int forcedline=0);
 	bool Get(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &dest, bool raw, bool root = true);
 	bool Set(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val);
 	void NewSlot(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val);

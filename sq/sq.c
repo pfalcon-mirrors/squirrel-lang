@@ -311,19 +311,6 @@ void compiler_error(HSQUIRRELVM v,const SQChar *sErr,const SQChar *sSource,int l
 	scfprintf(stderr,_SC("ERROR %s line=(%d) column=(%d) [%s]\n"),sErr,line,column,sSource);
 }
 
-typedef struct tagBufState{
-	SQChar *buf;
-	int ptr;
-	int size;
-}BufState;
-
-SQChar buf_lexfeed(SQUserPointer file)
-{
-	BufState *buf=(BufState*)file;
-	if(buf->size<(buf->ptr+1))
-		return 0;
-	return (SQChar)buf->buf[buf->ptr++];
-}
 
 void Interactive(HSQUIRRELVM v)
 {
@@ -334,8 +321,6 @@ void Interactive(HSQUIRRELVM v)
 	int string=0;
 	int retval=0;
 	int done=0;
-	BufState bs;
-	bs.buf=buffer;
 	PrintVersionInfos();
 		
 	sq_pushroottable(v);
@@ -348,7 +333,6 @@ void Interactive(HSQUIRRELVM v)
     while (!done) 
 	{
 		int i = 0;
-		bs.ptr=0;
 		scprintf(_SC("\nsq>"));
 		for(;;) {
 			int c;
@@ -386,10 +370,10 @@ void Interactive(HSQUIRRELVM v)
 			memcpy(buffer,sq_getscratchpad(v,-1),(scstrlen(sq_getscratchpad(v,-1))+1)*sizeof(SQChar));
 			retval=1;
 		}
-		bs.size=scstrlen(buffer);
-		if(bs.size>0){
+		i=scstrlen(buffer);
+		if(i>0){
 			int oldtop=sq_gettop(v);
-			if(CompileScript(v,buf_lexfeed,&bs,_SC("interactive console"),1,0)>0){
+			if(SQ_SUCCEEDED(sq_compilebuffer(v,buffer,i,_SC("interactive console"),1,0))){
 				sq_pushroottable(v);
 				if(SQ_SUCCEEDED(sq_call(v,1,retval)) &&	retval){
 					scprintf(_SC("\n"));

@@ -9,8 +9,6 @@
 #include "sqcompiler.h"
 #include "sqlexer.h"
 
-#define MAX_STRING 2024
-
 #define CUR_CHAR (_currdata)
 #define RETURN_TOKEN(t) {_prevtoken=_curtoken;_curtoken=t;return t;}
 #define IS_EOB() (CUR_CHAR<=SQUIRREL_EOB)
@@ -53,7 +51,7 @@ void SQLexer::Init(SQSharedState *ss,SQLEXREADFUNC rg,SQUserPointer up)
 	ADD_KEYWORD(switch,SWITCH);
 	ADD_KEYWORD(case,CASE);
 	ADD_KEYWORD(default,DEFAULT);
-	ADD_KEYWORD(this,THIS);
+	ADD_KEYWORD(this,_THIS);
 
 	_readf=rg;
 	_up=up;

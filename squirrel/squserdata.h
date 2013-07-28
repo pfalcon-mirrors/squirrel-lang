@@ -21,7 +21,7 @@ struct SQUserData : CHAINABLE_OBJ
 	void Mark(SQCollectable **chain);
 #endif
 #if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
-	void Clear(){SetDelegate(NULL);}
+	void Finalize(){SetDelegate(NULL);}
 #endif
 	void Release(){
 		if (_hook) _hook(this->_val);

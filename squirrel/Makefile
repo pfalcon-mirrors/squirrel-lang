@@ -3,6 +3,7 @@ SQUIRREL= ..
 
 OUT= $(SQUIRREL)/lib/libsquirrel.a
 INCZ= -I$(SQUIRREL)/include -I. -Iinclude
+DEFS= -DGARBAGE_COLLECTOR
 LIB=	stdc++
 
 OBJS= \
@@ -34,6 +35,6 @@ SRCS= \
 	
 	
 squirrellib:
-	gcc -O2 -c $(SRCS) $(INCZ)
+	gcc -O2 -c $(SRCS) $(INCZ) $(DEFS)
 	ar rc $(OUT) *.o
 	rm *.o

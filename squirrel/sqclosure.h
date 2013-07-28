@@ -27,7 +27,7 @@ public:
 	void Mark(SQCollectable **chain);
 #endif
 #if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
-	void Clear(){_outervalues.resize(0);}
+	void Finalize(){_outervalues.resize(0);}
 #endif
 	SQObjectPtr _function;
 	SQObjectPtrVec _outervalues;
@@ -62,7 +62,7 @@ public:
 	void Mark(SQCollectable **chain);
 #endif
 #if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
-	void Clear(){_stack.resize(0);_closure=_null_;}
+	void Finalize(){_stack.resize(0);_closure=_null_;}
 #endif
 	SQObjectPtr _closure;
 	SQObjectPtrVec _stack;
@@ -92,7 +92,7 @@ public:
 	void Mark(SQCollectable **chain);
 #endif
 #if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
-	void Clear(){_outervalues.resize(0);}
+	void Finalize(){_outervalues.resize(0);}
 #endif
 	SQFUNCTION _function;
 	SQObjectPtrVec _outervalues;
