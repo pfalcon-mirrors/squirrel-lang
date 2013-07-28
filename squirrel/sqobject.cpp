@@ -35,6 +35,7 @@ const SQChar *IdType2Name(SQObjectType type)
 	case _RT_CLASS: return _SC("class");
 	case _RT_INSTANCE: return _SC("instance");
 	case _RT_WEAKREF: return _SC("weakref");
+	case _RT_OUTER: return _SC("outer");
 	default:
 		return NULL;
 	}
@@ -116,6 +117,7 @@ bool SQDelegable::GetMetaMethod(SQVM *v,SQMetaMethod mm,SQObjectPtr &res) {
 bool SQDelegable::SetDelegate(SQTable *mt)
 {
 	SQTable *temp = mt;
+	if(temp == this) return false;
 	while (temp) {
 		if (temp->_delegate == this) return false; //cycle detected
 		temp = temp->_delegate;
@@ -131,7 +133,7 @@ bool SQGenerator::Yield(SQVM *v,SQInteger target)
 	if(_state==eSuspended) { v->Raise_Error(_SC("internal vm error, yielding dead generator"));  return false;}
 	if(_state==eDead) { v->Raise_Error(_SC("internal vm error, yielding a dead generator")); return false; }
 	SQInteger size = v->_top-v->_stackbase;
-	_ci=*v->ci;
+	
 	_stack.resize(size);
 	SQObject _this = v->_stack[v->_stackbase];
 	_stack._vals[0] = ISREFCOUNTED(type(_this)) ? SQObjectPtr(_refcounted(_this)->GetWeakRef(type(_this))) : _this;
@@ -143,6 +145,7 @@ bool SQGenerator::Yield(SQVM *v,SQInteger target)
 		v->_stack[v->_stackbase+j] = _null_;
 	}
 
+	_ci = *v->ci;
 	_ci._generator=NULL;
 	for(SQInteger i=0;i<_ci._etraps;i++) {
 		_etraps.push_back(v->_etraps.top());
@@ -152,19 +155,25 @@ bool SQGenerator::Yield(SQVM *v,SQInteger target)
 	return true;
 }
 
-bool SQGenerator::Resume(SQVM *v,SQInteger target)
+bool SQGenerator::Resume(SQVM *v,SQObjectPtr &dest)
 {
-	SQInteger size=_stack.size();
+	//SQInteger size=_stack.size();
 	if(_state==eDead){ v->Raise_Error(_SC("resuming dead generator")); return false; }
 	if(_state==eRunning){ v->Raise_Error(_SC("resuming active generator")); return false; }
-	SQInteger prevtop=v->_top-v->_stackbase;
-	PUSH_CALLINFO(v,_ci);
-	SQInteger oldstackbase=v->_stackbase;
-	v->_stackbase = v->_top;
-	v->ci->_target = (SQInt32)target;
-	v->ci->_generator = this;
+	SQInteger size = _stack.size();
+	SQInteger target = &dest - &(v->_stack._vals[v->_stackbase]);
+	assert(target>=0 && target<=255);
+	v->EnterFrame(v->_top, v->_top + size, false);
+	v->ci->_generator   = this;
+	v->ci->_target      = target;
+	v->ci->_closure     = _ci._closure;
+	v->ci->_ip          = _ci._ip;
+	v->ci->_literals    = _ci._literals;
+	v->ci->_ncalls      = _ci._ncalls;
+	v->ci->_etraps      = _ci._etraps;
+	v->ci->_root        = _ci._root;
 
-	
+
 	for(SQInteger i=0;i<_ci._etraps;i++) {
 		v->_etraps.push_back(_etraps.top());
 		_etraps.pop_back();
@@ -177,9 +186,9 @@ bool SQGenerator::Resume(SQVM *v,SQInteger target)
 		_stack._vals[n] = _null_;
 	}
 
-	v->_top=v->_stackbase+size;
+	/*v->_top=v->_stackbase+size;
 	v->ci->_prevtop = (SQInt32)prevtop;
-	v->ci->_prevstkbase = (SQInt32)(v->_stackbase - oldstackbase);
+	v->ci->_prevstkbase = (SQInt32)(v->_stackbase - oldstackbase);*/
 	_state=eRunning;
 	if (v->_debughook)
 		v->CallDebugHook(_SC('c'));
@@ -577,6 +586,19 @@ void SQNativeClosure::Mark(SQCollectable **chain)
 	START_MARK()
 		for(SQUnsignedInteger i = 0; i < _outervalues.size(); i++) SQSharedState::MarkObject(_outervalues[i], chain);
 	END_MARK()
+}
+
+void SQOuter::Mark(SQCollectable **chain)
+{
+  if(!(_uiRef & MARK_FLAG)) {
+		_uiRef |= MARK_FLAG;
+    /* If the valptr points to a closed value, that value is alive */
+    if(_valptr == &_value) {
+      SQSharedState::MarkObject(_value, chain);
+    }
+    RemoveFromChain(&_sharedstate->_gc_chain, this);
+		AddToChain(chain, this);
+  }
 }
 
 void SQUserData::Mark(SQCollectable **chain){

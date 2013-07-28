@@ -21,6 +21,13 @@ enum CmpOP {
 	CMP_LE = 4,
 	CMP_3W = 5
 };
+
+enum NewObjectType {
+	NOT_TABLE = 0,
+	NOT_ARRAY = 1,
+	NOT_CLASS = 2
+};
+
 enum SQOpcode
 {
 	_OP_LINE=				0x00,	
@@ -50,9 +57,9 @@ enum SQOpcode
 	_OP_JMP=				0x18,	
 	_OP_JNZ=				0x19,	
 	_OP_JZ=					0x1A,	
-	_OP_LOADFREEVAR=		0x1B,	
-	_OP_NEWTABLE=			0x1C,	
-	_OP_NEWARRAY=			0x1D,	
+	_OP_SETOUTER=			0x1B,	
+	_OP_GETOUTER=			0x1C,	
+	_OP_NEWOBJ=				0x1D,
 	_OP_APPENDARRAY=		0x1E,	
 	_OP_COMPARITH=			0x1F,	
 	_OP_COMPARITHL=			0x20,	
@@ -78,9 +85,9 @@ enum SQOpcode
 	_OP_PUSHTRAP=			0x34,
 	_OP_POPTRAP=			0x35,
 	_OP_THROW=				0x36,
-	_OP_CLASS=				0x37,
-	_OP_NEWSLOTA=			0x38,
-	_OP_GETBASE=			0x39,
+	_OP_NEWSLOTA=			0x37,
+	_OP_GETBASE=			0x38,
+	_OP_CLOSE=				0x39,
 };							  
 
 struct SQInstructionDesc {	  

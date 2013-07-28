@@ -238,6 +238,7 @@ void SQSharedState::MarkObject(SQObjectPtr &o,SQCollectable **chain)
 	case OT_THREAD:_thread(o)->Mark(chain);break;
 	case OT_CLASS:_class(o)->Mark(chain);break;
 	case OT_INSTANCE:_instance(o)->Mark(chain);break;
+	case OT_OUTER:_outer(o)->Mark(chain);break;
 	default: break; //shutup compiler
 	}
 }

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2008 Alberto Demichelis
+Copyright (c) 2003-2009 Alberto Demichelis
 
 This software is provided 'as-is', without any 
 express or implied warranty. In no event will the 
@@ -62,7 +62,24 @@ typedef unsigned int SQHash; /*should be the same size of a pointer*/
 #endif
 
 
+#ifdef SQUSEDOUBLE
+typedef double SQFloat;
+#else
 typedef float SQFloat;
+#endif
+
+#if defined(SQUSEDOUBLE) && !defined(_SQ64)
+#ifdef _MSC_VER
+typedef __int64 SQRawObjectVal; //must be 64bits
+#else
+typedef long SQRawObjectVal; //must be 64bits
+#endif
+#define SQ_OBJECT_RAWINIT() { _unVal.raw = 0; }
+#else
+typedef SQUnsignedInteger SQRawObjectVal; //is 32 bits on 32 bits builds and 64 bits otherwise
+#define SQ_OBJECT_RAWINIT()
+#endif
+
 typedef void* SQUserPointer;
 typedef SQUnsignedInteger SQBool;
 typedef SQInteger SQRESULT;
@@ -83,6 +100,7 @@ struct SQRefCounted;
 struct SQClass;
 struct SQInstance;
 struct SQDelegable;
+struct SQOuter;
 
 #ifdef _UNICODE
 #define SQUNICODE
@@ -140,8 +158,8 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 3.0 alpha 1")
-#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2008 Alberto Demichelis")
+#define SQUIRREL_VERSION	_SC("Squirrel 3.0 alpha 2")
+#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2009 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
 #define SQ_VMSTATE_IDLE			0
@@ -178,6 +196,7 @@ typedef char SQChar;
 #define _RT_CLASS			0x00004000
 #define _RT_INSTANCE		0x00008000
 #define _RT_WEAKREF			0x00010000
+#define _RT_OUTER			0x00020000
 
 typedef enum tagSQObjectType{
 	OT_NULL =			(_RT_NULL|SQOBJECT_CANBEFALSE),
@@ -196,7 +215,8 @@ typedef enum tagSQObjectType{
 	OT_FUNCPROTO =		(_RT_FUNCPROTO|SQOBJECT_REF_COUNTED), //internal usage only
 	OT_CLASS =			(_RT_CLASS|SQOBJECT_REF_COUNTED),
 	OT_INSTANCE =		(_RT_INSTANCE|SQOBJECT_REF_COUNTED|SQOBJECT_DELEGABLE),
-	OT_WEAKREF =		(_RT_WEAKREF|SQOBJECT_REF_COUNTED)
+	OT_WEAKREF =		(_RT_WEAKREF|SQOBJECT_REF_COUNTED),
+	OT_OUTER =			(_RT_OUTER|SQOBJECT_REF_COUNTED) //internal usage only
 }SQObjectType;
 
 #define ISREFCOUNTED(t) (t&SQOBJECT_REF_COUNTED)
@@ -207,6 +227,7 @@ typedef union tagSQObjectValue
 	struct SQTable *pTable;
 	struct SQArray *pArray;
 	struct SQClosure *pClosure;
+	struct SQOuter *pOuter;
 	struct SQGenerator *pGenerator;
 	struct SQNativeClosure *pNativeClosure;
 	struct SQString *pString;
@@ -221,6 +242,7 @@ typedef union tagSQObjectValue
 	struct SQClass *pClass;
 	struct SQInstance *pInstance;
 	struct SQWeakRef *pWeakRef;
+	SQRawObjectVal raw;
 }SQObjectValue;
 
 
@@ -255,6 +277,12 @@ typedef struct tagSQRegFunction{
 	const SQChar *typemask;
 }SQRegFunction;
 
+typedef struct tagSQFunctionInfo {
+	SQUserPointer funcid;
+	const SQChar *name;
+	const SQChar *source;
+}SQFunctionInfo;
+
 /*vm*/
 SQUIRREL_API HSQUIRRELVM sq_open(SQInteger initialstacksize);
 SQUIRREL_API HSQUIRRELVM sq_newthread(HSQUIRRELVM friendvm, SQInteger initialstacksize);
@@ -266,7 +294,7 @@ SQUIRREL_API void sq_setprintfunc(HSQUIRRELVM v, SQPRINTFUNCTION printfunc,SQPRI
 SQUIRREL_API SQPRINTFUNCTION sq_getprintfunc(HSQUIRRELVM v);
 SQUIRREL_API SQPRINTFUNCTION sq_geterrorfunc(HSQUIRRELVM v);
 SQUIRREL_API SQRESULT sq_suspendvm(HSQUIRRELVM v);
-SQUIRREL_API SQRESULT sq_wakeupvm(HSQUIRRELVM v,SQBool resumedret,SQBool retval,SQBool raiseerror);
+SQUIRREL_API SQRESULT sq_wakeupvm(HSQUIRRELVM v,SQBool resumedret,SQBool retval,SQBool raiseerror,SQBool throwerror);
 SQUIRREL_API SQInteger sq_getvmstate(HSQUIRRELVM v);
 
 /*compiler*/
@@ -317,6 +345,7 @@ SQUIRREL_API SQRESULT sq_settypetag(HSQUIRRELVM v,SQInteger idx,SQUserPointer ty
 SQUIRREL_API SQRESULT sq_gettypetag(HSQUIRRELVM v,SQInteger idx,SQUserPointer *typetag);
 SQUIRREL_API void sq_setreleasehook(HSQUIRRELVM v,SQInteger idx,SQRELEASEHOOK hook);
 SQUIRREL_API SQChar *sq_getscratchpad(HSQUIRRELVM v,SQInteger minsize);
+SQUIRREL_API SQRESULT sq_getfunctioninfo(HSQUIRRELVM v,SQInteger idx,SQFunctionInfo *fi);
 SQUIRREL_API SQRESULT sq_getclosureinfo(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger *nparams,SQUnsignedInteger *nfreevars);
 SQUIRREL_API SQRESULT sq_setnativeclosurename(HSQUIRRELVM v,SQInteger idx,const SQChar *name);
 SQUIRREL_API SQRESULT sq_setinstanceup(HSQUIRRELVM v, SQInteger idx, SQUserPointer p);
@@ -413,6 +442,7 @@ SQUIRREL_API void sq_setdebughook(HSQUIRRELVM v);
 #define sq_isinstance(o) ((o)._type==OT_INSTANCE)
 #define sq_isbool(o) ((o)._type==OT_BOOL)
 #define sq_isweakref(o) ((o)._type==OT_WEAKREF)
+#define sq_isouter(o) ((o)._type==OT_OUTER)
 #define sq_type(o) ((o)._type)
 
 /* deprecated */

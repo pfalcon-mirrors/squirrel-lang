@@ -38,9 +38,9 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_JMP")},
 	{_SC("_OP_JNZ")},
 	{_SC("_OP_JZ")},
-	{_SC("_OP_LOADFREEVAR")},
-	{_SC("_OP_NEWTABLE")},
-	{_SC("_OP_NEWARRAY")},
+	{_SC("_OP_SETOUTER")},
+	{_SC("_OP_GETOUTER")},
+	{_SC("_OP_NEWOBJ")},
 	{_SC("_OP_APPENDARRAY")},
 	{_SC("_OP_COMPARITH")},
 	{_SC("_OP_COMPARITHL")},
@@ -66,9 +66,9 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_PUSHTRAP")},
 	{_SC("_OP_POPTRAP")},
 	{_SC("_OP_THROW")},
-	{_SC("_OP_CLASS")},
 	{_SC("_OP_NEWSLOTA")},
-	{_SC("_OP_GETBASE")}
+	{_SC("_OP_GETBASE")},
+	{_SC("_OP_CLOSE")}
 };
 #endif
 void DumpLiteral(SQObjectPtr &o)
@@ -98,6 +98,7 @@ SQFuncState::SQFuncState(SQSharedState *ss,SQFuncState *parent,CompilerErrorFunc
 		_errfunc = efunc;
 		_errtarget = ed;
 		_bgenerator = false;
+		_outers = 0;
 
 }
 
@@ -294,14 +295,31 @@ SQInteger SQFuncState::GetStackSize()
 	return _vlocals.size();
 }
 
+SQInteger SQFuncState::CountOuters(SQInteger stacksize)
+{
+	SQInteger outers = 0;
+	SQInteger k = _vlocals.size() - 1;
+	while(k >= stacksize) {
+		SQLocalVarInfo &lvi = _vlocals[k];
+		k--;
+		if(lvi._end_op == -1) { //this means is an outer
+			outers++;
+		}
+	}
+	return outers;
+}
+
 void SQFuncState::SetStackSize(SQInteger n)
 {
 	SQInteger size=_vlocals.size();
 	while(size>n){
 		size--;
-		SQLocalVarInfo lvi=_vlocals.back();
+		SQLocalVarInfo lvi = _vlocals.back();
 		if(type(lvi._name)!=OT_NULL){
-			lvi._end_op=GetCurrentPos();
+			if(lvi._end_op == -1) { //this means is an outer
+				_outers--;
+			}
+			lvi._end_op = GetCurrentPos();
 			_localvarinfos.push_back(lvi);
 		}
 		_vlocals.pop_back();
@@ -342,12 +360,20 @@ SQInteger SQFuncState::GetLocalVariable(const SQObject &name)
 {
 	SQInteger locals=_vlocals.size();
 	while(locals>=1){
-		if(type(_vlocals[locals-1]._name)==OT_STRING && _string(_vlocals[locals-1]._name)==_string(name)){
+		SQLocalVarInfo &lvi = _vlocals[locals-1];
+		if(type(lvi._name)==OT_STRING && _string(lvi._name)==_string(name)){
 			return locals-1;
 		}
 		locals--;
 	}
 	return -1;
+}
+
+void SQFuncState::MarkLocalAsOuter(SQInteger pos)
+{
+	SQLocalVarInfo &lvi = _vlocals[pos];
+	lvi._end_op = -1;
+	_outers++;
 }
 
 SQInteger SQFuncState::GetOuterVariable(const SQObject &name)
@@ -368,6 +394,7 @@ SQInteger SQFuncState::GetOuterVariable(const SQObject &name)
 			}
 		}
 		else {
+			_parent->MarkLocalAsOuter(pos);
 			_outervalues.push_back(SQOuterVar(name,SQObjectPtr(SQInteger(pos)),otLOCAL)); //local
 			return _outervalues.size() - 1;
 			
@@ -403,6 +430,9 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 		case _OP_RETURN:
 			if( _parent && i._arg0 != MAX_FUNC_STACKSIZE && pi.op == _OP_CALL && _returnexp < size-1) {
 				pi.op = _OP_TAILCALL;
+			} else if(pi.op == _OP_CLOSE){
+				pi = i;
+				return;
 			}
 		break;
 		case _OP_GET:

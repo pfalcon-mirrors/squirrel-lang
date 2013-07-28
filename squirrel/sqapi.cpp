@@ -102,7 +102,7 @@ void sq_setnativedebughook(HSQUIRRELVM v,SQDEBUGHOOK hook)
 {
 	v->_debughook_native = hook;
 	v->_debughook_closure = _null_;
-	v->_debughook = hook?false:true;
+	v->_debughook = hook?true:false;
 }
 
 void sq_setdebughook(HSQUIRRELVM v)
@@ -111,9 +111,7 @@ void sq_setdebughook(HSQUIRRELVM v)
 	if(sq_isclosure(o) || sq_isnativeclosure(o) || sq_isnull(o)) {
 		v->_debughook_closure = o;
 		v->_debughook_native = NULL;
-		if(sq_isnull(o)) {
-			v->_debughook = false;
-		}
+		v->_debughook = !sq_isnull(o);
 		v->Pop();
 	}
 }
@@ -819,7 +817,7 @@ SQRESULT sq_rawdeleteslot(HSQUIRRELVM v,SQInteger idx,SQBool pushval)
 		_table(*self)->Remove(key);
 	}
 	if(pushval != 0)
-		if(pushval)	v->GetUp(-1) = t;
+		v->GetUp(-1) = t;
 	else
 		v->Pop(1);
 	return SQ_OK;
@@ -902,7 +900,7 @@ const SQChar *sq_getlocal(HSQUIRRELVM v,SQUnsignedInteger level,SQUnsignedIntege
 		SQClosure *c=_closure(ci._closure);
 		SQFunctionProto *func=_funcproto(c->_function);
 		if(func->_noutervalues > (SQInteger)idx) {
-			v->Push(c->_outervalues[idx]);
+			v->Push(*_outer(c->_outervalues[idx])->_valptr);
 			return _stringval(func->_outervalues[idx]._name);
 		}
 		idx -= func->_noutervalues;
@@ -948,7 +946,7 @@ SQRESULT sq_resume(HSQUIRRELVM v,SQBool retval,SQBool raiseerror)
 {
 	if(type(v->GetUp(-1))==OT_GENERATOR){
 		v->Push(_null_); //retval
-		if(!v->Execute(v->GetUp(-2),v->_top,0,v->_top,v->GetUp(-1),raiseerror,SQVM::ET_RESUME_GENERATOR))
+		if(!v->Execute(v->GetUp(-2),0,v->_top,v->GetUp(-1),raiseerror,SQVM::ET_RESUME_GENERATOR))
 		{v->Raise_Error(v->_lasterror); return SQ_ERROR;}
 		if(!retval)
 			v->Pop();
@@ -983,7 +981,7 @@ SQRESULT sq_suspendvm(HSQUIRRELVM v)
 	return v->Suspend();
 }
 
-SQRESULT sq_wakeupvm(HSQUIRRELVM v,SQBool wakeupret,SQBool retval,SQBool raiseerror)
+SQRESULT sq_wakeupvm(HSQUIRRELVM v,SQBool wakeupret,SQBool retval,SQBool raiseerror,SQBool throwerror)
 {
 	SQObjectPtr ret;
 	if(!v->_suspended)
@@ -992,10 +990,8 @@ SQRESULT sq_wakeupvm(HSQUIRRELVM v,SQBool wakeupret,SQBool retval,SQBool raiseer
 		v->GetAt(v->_stackbase+v->_suspended_target)=v->GetUp(-1); //retval
 		v->Pop();
 	} else v->GetAt(v->_stackbase+v->_suspended_target)=_null_;
-	if(!v->Execute(_null_,v->_top,-1,-1,ret,raiseerror,SQVM::ET_RESUME_VM))
+	if(!v->Execute(_null_,-1,-1,ret,raiseerror,throwerror?SQVM::ET_RESUME_THROW_VM : SQVM::ET_RESUME_VM)) {
 		return SQ_ERROR;
-	if(sq_getvmstate(v) == SQ_VMSTATE_IDLE) {
-		while (v->_top > 1) v->_stack[--v->_top] = _null_;
 	}
 	if(retval)
 		v->Push(ret);
@@ -1066,9 +1062,10 @@ const SQChar *sq_getfreevariable(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger n
 	SQObjectPtr &self = stack_get(v,idx);
 	const SQChar *name = NULL;
 	if(type(self) == OT_CLOSURE) {
-		SQFunctionProto *fp = _funcproto(_closure(self)->_function);
+		SQClosure *clo = _closure(self);
+		SQFunctionProto *fp = _funcproto(clo->_function);
 		if(((SQUnsignedInteger)fp->_noutervalues) > nval) {
-			v->Push(_closure(self)->_outervalues[nval]);
+			v->Push(*(_outer(clo->_outervalues[nval])->_valptr));
 			SQOuterVar &ov = fp->_outervalues[nval];
 			name = _stringval(ov._name);
 		}
@@ -1084,7 +1081,7 @@ SQRESULT sq_setfreevariable(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger nval)
 	case OT_CLOSURE:{
 		SQFunctionProto *fp = _funcproto(_closure(self)->_function);
 		if(((SQUnsignedInteger)fp->_noutervalues) > nval){
-			_closure(self)->_outervalues[nval]=stack_get(v,-1);
+			*(_outer(_closure(self)->_outervalues[nval])->_valptr) = stack_get(v,-1);
 		}
 		else return sq_throwerror(v,_SC("invalid free var index"));
 					}

@@ -71,7 +71,7 @@ public:
 		if(_values.size() <= _values.capacity()>>2) //shrink the array
 			_values.shrinktofit();
 	}
-	bool Remove(SQUnsignedInteger idx){
+	bool Remove(SQInteger idx){
 		if(idx < 0 || idx >= (SQInteger)_values.size())
 			return false;
 		_values.remove(idx);
