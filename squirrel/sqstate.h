@@ -13,7 +13,7 @@ struct SQStringTable
 {
 	SQStringTable(SQSharedState*ss);
 	~SQStringTable();
-	SQString *Add(const SQChar *,SQInteger len);
+	SQString *Add(const SQChar *,SQInteger len,SQBool isconst);
 	void Remove(SQString *);
 private:
 	void Resize(SQInteger size);
@@ -51,7 +51,7 @@ private:
 	RefNode **_buckets;
 };
 
-#define ADD_STRING(ss,str,len) ss->_stringtable->Add(str,len)
+#define ADD_STRING(ss,str,len,isconst) ss->_stringtable->Add(str,len,isconst)
 #define REMOVE_STRING(ss,bstr) ss->_stringtable->Remove(bstr)
 
 struct SQObjectPtr;
