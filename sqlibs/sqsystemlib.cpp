@@ -3,11 +3,20 @@
 #include <stdlib.h>
 #include "sqsystemlib.h"
 
+#ifdef SQUNICODE
+#define scgetenv _wgetenv
+#define scsystem _wsystem
+#define scasctime _wasctime
+#else
+#define scgetenv getenv
+#define scsystem system
+#define scasctime asctime
+#endif
 int system_getenv(HSQUIRRELVM v)
 {
 	const SQChar *s;
 	if(SQ_SUCCEEDED(sq_getstring(v,2,&s))){
-		sq_pushstring(v,getenv(s),-1);
+        sq_pushstring(v,scgetenv(s),-1);
 		return 1;
 	}
 	return 0;
@@ -17,10 +26,10 @@ int system_system(HSQUIRRELVM v)
 {
 	const SQChar *s;
 	if(SQ_SUCCEEDED(sq_getstring(v,2,&s))){
-		sq_pushinteger(v,system(s));
+		sq_pushinteger(v,scsystem(s));
 		return 1;
 	}
-	return sq_throwerror(v,"wrong param");
+	return sq_throwerror(v,_SC("wrong param"));
 }
 
 
@@ -36,7 +45,7 @@ int system_gmtime(HSQUIRRELVM v)
 	tm *newtime;
 	time(&t);
 	newtime=gmtime(&t);
-	sq_pushstring(v,asctime(newtime),-1);
+	sq_pushstring(v,scasctime(newtime),-1);
 	return 1;
 }
 
@@ -46,13 +55,13 @@ int system_localtime(HSQUIRRELVM v)
 	tm *newtime;
 	time(&t);
 	newtime=localtime(&t);
-	sq_pushstring(v,asctime(newtime),-1);
+	sq_pushstring(v,scasctime(newtime),-1);
 	return 1;
 }
 
 
 
-#define _DECL_FUNC(name) {#name,system_##name}
+#define _DECL_FUNC(name) {_SC(#name),system_##name}
 static SQRegFunction systemlib_funcs[]={
 	_DECL_FUNC(getenv),
 	_DECL_FUNC(system),

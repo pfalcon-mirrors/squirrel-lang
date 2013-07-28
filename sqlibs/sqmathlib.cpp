@@ -6,14 +6,14 @@
 
 #define SINGLE_ARG_FUNC(_funcname) static int math_##_funcname(HSQUIRRELVM v){ \
 	SQFloat f; \
-	if(sq_gettop(v)!=2 || SQ_FAILED(sq_getfloat(v,2,&f)))return sq_throwerror(v,"invalid param"); \
+	if(sq_gettop(v)!=2 || SQ_FAILED(sq_getfloat(v,2,&f)))return sq_throwerror(v,_SC("invalid param")); \
 	sq_pushfloat(v,(SQFloat)_funcname(f)); \
 	return 1; \
 }
 
 #define TWO_ARGS_FUNC(_funcname) static int math_##_funcname(HSQUIRRELVM v){ \
 	SQFloat p1,p2; \
-	if(sq_gettop(v)!=3 || SQ_FAILED(sq_getfloat(v,2,&p1)) || SQ_FAILED(sq_getfloat(v,3,&p2)))return sq_throwerror(v,"invalid param"); \
+	if(sq_gettop(v)!=3 || SQ_FAILED(sq_getfloat(v,2,&p1)) || SQ_FAILED(sq_getfloat(v,3,&p2)))return sq_throwerror(v,_SC("invalid param")); \
 	sq_pushfloat(v,(SQFloat)_funcname(p1,p2)); \
 	return 1; \
 }
@@ -21,7 +21,7 @@
 static int math_srand(HSQUIRRELVM v)
 {
 	SQInteger i;
-	if(!sq_getinteger(v,1,&i))return sq_throwerror(v,"invalid param");
+	if(!sq_getinteger(v,1,&i))return sq_throwerror(v,_SC("invalid param"));
 	srand(i);
 	return 0;
 }
@@ -48,7 +48,7 @@ SINGLE_ARG_FUNC(floor)
 SINGLE_ARG_FUNC(ceil)
 SINGLE_ARG_FUNC(exp)
 
-#define _DECL_FUNC(name) {#name,math_##name}
+#define _DECL_FUNC(name) {_SC(#name),math_##name}
 static SQRegFunction mathlib_funcs[]={
 	_DECL_FUNC(sqrt),
 	_DECL_FUNC(sin),
@@ -83,10 +83,10 @@ int sq_mathlib_register(HSQUIRRELVM v)
 		sq_createslot(v,-3);
 		i++;
 	}
-	sq_pushstring(v,"RAND_MAX",-1);
+	sq_pushstring(v,_SC("RAND_MAX"),-1);
 	sq_pushinteger(v,RAND_MAX);
 	sq_createslot(v,-3);
-	sq_pushstring(v,"PI",-1);
+	sq_pushstring(v,_SC("PI"),-1);
 	sq_pushfloat(v,(SQFloat)M_PI);
 	sq_createslot(v,-3);
 	return 1;

@@ -25,7 +25,7 @@
 			}	\
 		} else { \
 		if(!ArithMetaMethod(#op[0],o1,o2,TARGET)) \
-			sqraise_str_error(_ss(this),"arith op on wrong type"); \
+			sqraise_str_error(_ss(this),_SC("arith op on wrong type")); \
 		} \
 	}
 
@@ -33,7 +33,7 @@
 		const SQObjectPtr &o1=STK(arg2),&o2=STK(arg1); \
 		if((type(o1)==OT_INTEGER) && (type(o2)==OT_INTEGER)) { \
 			TARGET=(SQInteger)(_integer(o1) op _integer(o2)); \
-		} else sqraise_str_error(_ss(this),"applying bitwise op on non integer values"); \
+		} else sqraise_str_error(_ss(this),_SC("applying bitwise op on non integer values")); \
 	}
 
 
@@ -45,7 +45,6 @@ SQVM::~SQVM()
 	int size=_stack.size();
 	for(int i=0;i<size;i++)
 		_stack[i]=_null_;
-
 	
 	if(_prev) _prev->_next=_next;
 	else _sharedstate->_vms_chain=_next;
@@ -59,10 +58,10 @@ bool SQVM::ArithMetaMethod(int op,const SQObjectPtr &o1,const SQObjectPtr &o2,SQ
 {
 	SQMetaMethod mm;
 	switch(op){
-		case '+': mm=MT_ADD; break;
-		case '-': mm=MT_SUB; break;
-		case '/': mm=MT_DIV; break;
-		case '*': mm=MT_MUL; break;
+		case _SC('+'): mm=MT_ADD; break;
+		case _SC('-'): mm=MT_SUB; break;
+		case _SC('/'): mm=MT_DIV; break;
+		case _SC('*'): mm=MT_MUL; break;
 	}
 	switch(type(o1)){
 		case OT_TABLE:
@@ -106,7 +105,7 @@ void SQVM::Modulo(const SQObjectPtr &o1,const SQObjectPtr &o2,SQObjectPtr &dest)
 			}
 			break;
 		}
-		sqraise_str_error(_ss(this),"arith op on wrong type");
+		sqraise_str_error(_ss(this),_SC("arith op on wrong type"));
 	}
 }
 
@@ -117,7 +116,7 @@ int SQVM::ObjCmp(const SQObjectPtr &o1,const SQObjectPtr &o2)
 		SQObjectPtr res;
 		switch(type(o1)){
 		case OT_STRING:
-			return strcmp(_stringval(o1),_stringval(o2));
+			return scstrcmp(_stringval(o1),_stringval(o2));
 		case OT_INTEGER:
 			return _integer(o1)-_integer(o2);
 		case OT_FLOAT:
@@ -131,7 +130,7 @@ int SQVM::ObjCmp(const SQObjectPtr &o1,const SQObjectPtr &o2)
 			if(_userdata(o1)->_delegate)CallMetaMethod(_userdata(o1)->_delegate,MT_CMP,2,res);
 			break;
 		}
-		if(type(res)!=OT_INTEGER)sqraise_str_error(_ss(this),"comparing uncompatible types");
+		if(type(res)!=OT_INTEGER)sqraise_str_error(_ss(this),_SC("comparing uncompatible types"));
 		return _integer(res);
 	}
 	else{
@@ -149,7 +148,7 @@ int SQVM::ObjCmp(const SQObjectPtr &o1,const SQObjectPtr &o2)
 		}
 		else if(type(o1)==OT_NULL)return -1;
 		else if(type(o2)==OT_NULL)return 1;
-		else sqraise_str_error(_ss(this),"comparing uncompatible types"); 
+		else sqraise_str_error(_ss(this),_SC("comparing uncompatible types")); 
 		
 	}
 }
@@ -162,32 +161,32 @@ void SQVM::StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObjectPtr &
 		switch(type(str)){
 		case OT_STRING:	{
 			int l=_string(str)->_len,ol=_string(obj)->_len;
-			SQChar *s=_sp(_string(str)->_len+_string(obj)->_len+1);
-			memcpy(s,_stringval(str),l);memcpy(s+l,_stringval(obj),ol);s[l+ol]='\0';
+			SQChar *s=_sp(rsl(l+ol+1));
+			memcpy(s,_stringval(str),rsl(l));memcpy(s+l,_stringval(obj),rsl(ol));s[l+ol]=_SC('\0');
 			break;
 		}
 		case OT_FLOAT:
-			sprintf(_sp(NUMBER_MAX_CHAR+_string(obj)->_len+1),"%.14g%s",_float(str),_stringval(obj));
+			scsprintf(_sp(rsl(NUMBER_MAX_CHAR+_string(obj)->_len+1)),_SC("%.14g%s"),_float(str),_stringval(obj));
 			break;
 		case OT_INTEGER:
-			sprintf(_sp(NUMBER_MAX_CHAR+_string(obj)->_len+1),"%d%s",_integer(str),_stringval(obj));
+			scsprintf(_sp(rsl(NUMBER_MAX_CHAR+_string(obj)->_len+1)),_SC("%d%s"),_integer(str),_stringval(obj));
 			break;
 		default:
-			sqraise_str_error(_ss(this),"_tostring reflex not implemented");
+			sqraise_str_error(_ss(this),_SC("_tostring reflex not implemented"));
 			break;
 		}
 		dest=SQString::Create(_ss(this),_spval);
 		break;
 	case OT_FLOAT:
-		sprintf(_sp(NUMBER_MAX_CHAR+_string(str)->_len+1),"%s%.14g",_stringval(str),_float(obj));
+		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+_string(str)->_len+1)),_SC("%s%.14g"),_stringval(str),_float(obj));
 		dest=SQString::Create(_ss(this),_spval);
 		break;
 	case OT_INTEGER:
-		sprintf(_sp(NUMBER_MAX_CHAR+_string(str)->_len+1),"%s%d",_stringval(str),_integer(obj));
+		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+_string(str)->_len+1)),_SC("%s%d"),_stringval(str),_integer(obj));
 		dest=SQString::Create(_ss(this),_spval);
 		break;
 	default:
-		assert(0);
+		sqraise_str_error(_ss(this),_SC("invalid type string concat"));
 		break;
 	}
 }
@@ -211,21 +210,21 @@ const SQChar *GetTypeName(SQObjectType type)
 {
 	switch(type)
 	{
-	case OT_NULL:return "null";
-	case OT_INTEGER:return "integer";
-	case OT_FLOAT:return "float";
-	case OT_STRING:return "string";
-	case OT_TABLE:return "table";
-	case OT_ARRAY:return "array";
-	case OT_GENERATOR:return "generator";
+	case OT_NULL:return _SC("null");
+	case OT_INTEGER:return _SC("integer");
+	case OT_FLOAT:return _SC("float");
+	case OT_STRING:return _SC("string");
+	case OT_TABLE:return _SC("table");
+	case OT_ARRAY:return _SC("array");
+	case OT_GENERATOR:return _SC("generator");
 	case OT_CLOSURE:
 	case OT_NATIVECLOSURE:
-		return "function";
+		return _SC("function");
 	case OT_USERDATA:
 	case OT_USERPOINTER:
-		return "userdata";
+		return _SC("userdata");
 	case OT_FUNCPROTO:
-		return "function";
+		return _SC("function");
 	default:
 		return NULL;
 	}
@@ -318,8 +317,7 @@ void SQVM::StartCall(SQObjectPtr &closure,int target,int nargs,int stackbase,boo
 		if(paramssize<nargs)
 			Pop(paramssize-nargs);
 		else
-			while(paramssize>nargs)
-			{
+			while(paramssize>nargs){
 				Push(_null_);
 				nargs++;
 			}
@@ -337,25 +335,25 @@ void SQVM::StartCall(SQObjectPtr &closure,int target,int nargs,int stackbase,boo
 
 void SQVM::IdxError(SQObject &o)
 {
-	char sTemp[150];
-	char *s;
+	SQChar sTemp[150];
+	SQChar *s;
 	switch(type(o)){
 	case OT_STRING:
 		s=_stringval(o);
 		break;
 	case OT_INTEGER:
-		sprintf(_sp(NUMBER_MAX_CHAR+1),"%d",_integer(o));
+		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+1)),_SC("%d"),_integer(o));
 		s=_spval;
 		break;
 	case OT_FLOAT:
-		sprintf(_sp(NUMBER_MAX_CHAR+1),"%.14g",_float(o));
+		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+1)),_SC("%.14g"),_float(o));
 		s=_spval;
 		break;
 	default:
-		s="???";
+		s=_SC("???");
 		break;
 	}
-	sprintf(sTemp,"the index '%s' does not exists",s);
+	scsprintf(sTemp,_SC("the index '%s' does not exists"),s);
 	sqraise_str_error(_ss(this),sTemp);
 }
 
@@ -415,7 +413,7 @@ exception_restore:
 		{
 			const SQInstruction &_i_=*ci->_ip++;
 		//	dumpstack(_stackbase);
-		//	printf("\n[%d] %s %d %d %d %d\n",ci->_ip-ci->_iv->_vals,g_InstrDesc[_i_.op].name,arg0,arg1,arg2,arg3);
+		//	scprintf("\n[%d] %s %d %d %d %d\n",ci->_ip-ci->_iv->_vals,g_InstrDesc[_i_.op].name,arg0,arg1,arg2,arg3);
 			switch(_i_.op)
 			{
 			case _OP_LOAD:
@@ -453,7 +451,7 @@ exception_restore:
 					if(_table(STK(arg1))->Get(STK(arg2),temp))
 						_table(STK(arg1))->Remove(STK(arg2));
 					TARGET=temp;
-				}else sqraise_str_error(_ss(this),"the delete op works only on tables");
+				}else sqraise_str_error(_ss(this),_SC("the delete op works only on tables"));
 				continue;
 			case _OP_SET:
 				if(!Set(STK(arg1),STK(arg2),STK(arg3)))
@@ -527,7 +525,6 @@ exception_restore:
 					ct_target=arg0;
 					temp=STK(arg1);
 common_call:
-					
 					int last_top=_top;
 					switch(type(temp)){
 					case OT_CLOSURE:{
@@ -541,8 +538,7 @@ common_call:
 							continue;
 						}
 						if(type(_debughook)!=OT_NULL && _rawval(_debughook)!=_rawval(ci->_closure))
-							CallDebugHook('call');
-						
+							CallDebugHook(_SC('c'));
 						}
 						break;
 					case OT_NATIVECLOSURE:
@@ -556,15 +552,15 @@ common_call:
 							STK(ct_target)=temp;
 							break;
 						}
-						sqraise_str_error(_ss(this),"calling a table")}
+						sqraise_str_error(_ss(this),_SC("calling a table"))}
 					case OT_USERDATA:
 						if(_userdata(temp)->_delegate && CallMetaMethod(_userdata(temp)->_delegate,MT_CALL,arg3,temp)){
 							STK(ct_target)=temp;
 							break;
 						}
-						sqraise_str_error(_ss(this),"calling a userdata")
+						sqraise_str_error(_ss(this),_SC("calling a userdata"))
 					default:
-						sqraise_str_error(_ss(this),"calling a non closure value")
+						sqraise_str_error(_ss(this),_SC("calling a non closure value"))
 					}
 				}
 				  continue;
@@ -649,7 +645,7 @@ common_call:
 							continue;
 						break;
 					}
-					sqraise_str_error(_ss(this),"trying to negate a non number value");
+					sqraise_str_error(_ss(this),_SC("trying to negate a non number value"));
 				}
 				continue;
 				break;
@@ -661,7 +657,7 @@ common_call:
 					TARGET=SQInteger(~_integer(STK(arg1)));
 					continue;
 				}
-				sqraise_str_error(_ss(this),"trying to apply a bitwise op on a non integer value");
+				sqraise_str_error(_ss(this),_SC("trying to apply a bitwise op on a non integer value"));
 			case _OP_CLOSURE:{
 					int nouters;
 					SQFunctionProto *func=_funcproto(_funcproto(_closure(ci->_closure)->_function)->_functions[arg1]);
@@ -689,13 +685,13 @@ common_call:
 					_generator(ci->_generator)->Yield(this);
 					if(arg1!=-1)STK(arg1)=temp;
 				}
-				else sqraise_str_error(_ss(this),"only genenerator can be yielded");
+				else sqraise_str_error(_ss(this),_SC("only genenerator can be yielded"));
 				if(Return(sarg0,arg1,temp))
 					return temp;
 				}
 				continue;
 			case _OP_RESUME:
-				if(type(STK(arg1))!=OT_GENERATOR)sqraise_str_error(_ss(this),"only generators can be resumed");
+				if(type(STK(arg1))!=OT_GENERATOR)sqraise_str_error(_ss(this),_SC("only generators can be resumed"));
 				_generator(STK(arg1))->Resume(this,arg0);
                 continue;
 			case _OP_RETURN:
@@ -726,7 +722,7 @@ common_call:
 							STK(arg2+2)=STK(arg2)=itr;
 							if(type(itr)==OT_NULL)break;
                             if(!Get(STK(arg0),itr,STK(arg2+1),false))
-								sqraise_str_error(_ss(this),"_nexti returned an invalid idx");
+								sqraise_str_error(_ss(this),_SC("_nexti returned an invalid idx"));
 							continue;
 						}
 					}
@@ -743,14 +739,14 @@ common_call:
 						continue;
 					}
 					default:
-					sqraise_str_error(_ss(this),"iterating a non table/array/string value");
+					sqraise_str_error(_ss(this),_SC("iterating a non table/array/string value"));
 					break;
 				}
 				ci->_ip+=(arg1);
 				continue;
 							 }
 			case _OP_DELEGATE:
-				if(type(STK(arg1))!=OT_TABLE)sqraise_str_error(_ss(this),"delegating a non table");
+				if(type(STK(arg1))!=OT_TABLE)sqraise_str_error(_ss(this),_SC("delegating a non table"));
 				switch(type(STK(arg2))){
 				case OT_TABLE:
 					_table(STK(arg1))->SetDelegate(_table(STK(arg2)));
@@ -759,33 +755,21 @@ common_call:
 					_table(STK(arg1))->SetDelegate(NULL);
 					break;
 				default:
-					sqraise_str_error(_ss(this),"can use only tables as delegate");
+					sqraise_str_error(_ss(this),_SC("can use only tables as delegate"));
 					break;
 				}
 				TARGET=STK(arg1);
 				continue;
 			case _OP_CLONE:
-				switch(type(STK(arg1))){
-				case OT_TABLE:
-					TARGET=_table(STK(arg1))->Clone();
-					if(_table(TARGET)->_delegate){
-						Push(TARGET);
-						Push(STK(arg1));
-						CallMetaMethod(_table(TARGET)->_delegate,MT_CLONE,2,temp);
-					}
-					continue;
-				case OT_ARRAY: 
-					TARGET=_array(STK(arg1))->Clone();
-					continue;
-				default: sqraise_str_error(_ss(this),"cloning a non table");
-				}
+				if(!Clone(STK(arg1),TARGET))
+					sqraise_str_error(_ss(this),_SC("cloning a non table"));
 				continue;
 			case _OP_TYPEOF:
 				TypeOf(STK(arg1),TARGET);
 				continue;
 			case _OP_LINE:
 				if(type(_debughook)!=OT_NULL && _rawval(_debughook)!=_rawval(ci->_closure))
-					CallDebugHook('line');
+					CallDebugHook(_SC('l'));
 				continue;
 			case _OP_PUSHTRAP:
 				ci->_etraps.push_back(SQExceptionTrap(_top,_stackbase,&ci->_iv->_vals[(ci->_ip-ci->_iv->_vals)+arg1],arg0));traps++;
@@ -832,12 +816,11 @@ common_call:
 		}
 		//remove call stack until a C function is found or the cstack is empty
 		do{
-				
-				if(type(ci->_generator)==OT_GENERATOR)_generator(ci->_generator)->Kill();
-				_stackbase-=ci->_prevstkbase;
-				_top=_stackbase+ci->_prevtop;
-				POP_CALLINFO(this);
-				if(type(ci->_closure)!=OT_CLOSURE) break;
+			if(type(ci->_generator)==OT_GENERATOR)_generator(ci->_generator)->Kill();
+			_stackbase-=ci->_prevstkbase;
+			_top=_stackbase+ci->_prevtop;
+			POP_CALLINFO(this);
+			if(type(ci->_closure)!=OT_CLOSURE) break;
 		}while(_callsstack.size());
 		while(last_top>=_top)_stack[last_top--]=_null_;
 		//thow the exception to terminate the execution of the thread
@@ -936,7 +919,7 @@ bool SQVM::Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,
 	case OT_INTEGER:case OT_FLOAT:	return _number_ddel->Get(key,dest);
 	case OT_GENERATOR:	return _generator_ddel->Get(key,dest);
 	case OT_CLOSURE: case OT_NATIVECLOSURE:	return _closure_ddel->Get(key,dest);
-	default:sqraise_str_error(_ss(this),"indexing a wrong type");
+	default:sqraise_str_error(_ss(this),_SC("indexing a wrong type"));
 	}
 }
 
@@ -960,7 +943,7 @@ bool SQVM::Set(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr 
 		return true;
 		break;
 	case OT_ARRAY:
-		if(!sq_isnumeric(key)) sqraise_str_error(_ss(this),"indexing an array with a non numerical index");
+		if(!sq_isnumeric(key)) sqraise_str_error(_ss(this),_SC("indexing an array with a non numerical index"));
 		return _array(self)->Set(tointeger(key),val);
 		break;
 	case OT_USERDATA:
@@ -971,11 +954,30 @@ bool SQVM::Set(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr 
 		}
 		break;
 	default:
-		sqraise_str_error(_ss(this),"setting a wrong type");
+		sqraise_str_error(_ss(this),_SC("setting a wrong type"));
 		break;
 	}
 	return false;
 
+}
+
+bool SQVM::Clone(const SQObjectPtr &self,SQObjectPtr &target)
+{
+	SQObjectPtr temp;
+	switch(type(self)){
+	case OT_TABLE:
+		target=_table(self)->Clone();
+		if(_table(target)->_delegate){
+			Push(target);
+			Push(self);
+			CallMetaMethod(_table(target)->_delegate,MT_CLONE,2,temp);
+		}
+		return true;
+	case OT_ARRAY: 
+		target=_array(self)->Clone();
+		return true;
+	default: return false;
+	}
 }
 
 void SQVM::NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr &val)
@@ -983,7 +985,7 @@ void SQVM::NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObject
 	switch(type(self)){
 	case OT_TABLE:{
 		bool rawcall=true;
-		if(type(key)==OT_NULL)sqraise_str_error(_ss(this),"null cannot be used as index");
+		if(type(key)==OT_NULL)sqraise_str_error(_ss(this),_SC("null cannot be used as index"));
 		if(_table(self)->_delegate){
 			SQObjectPtr res;
 			Push(self);Push(key);Push(val);
@@ -993,7 +995,7 @@ void SQVM::NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObject
 		if(rawcall)_table(self)->NewSlot(key,val);
 		break;}
 	default:
-		sqraise_str_error(_ss(this),"trying to add a field to a wrong type");
+		sqraise_str_error(_ss(this),_SC("trying to add a field to a wrong type"));
 		break;
 	}
 }
@@ -1030,32 +1032,32 @@ void SQVM::dumpstack(int stackbase,bool dumpall)
 {
 	int size=dumpall?_stack.size():_top;
 	int n=0;
-	printf("\n>>>>stack dump<<<<\n");
+	scprintf(_SC("\n>>>>stack dump<<<<\n"));
 	CallInfo &ci=_callsstack.back();
-	printf("IP: %d\n",ci._ip);
-	printf("prev stack base: %d\n",ci._prevstkbase);
-	printf("prev top: %d\n",ci._prevtop);
+	scprintf(_SC("IP: %d\n"),ci._ip);
+	scprintf(_SC("prev stack base: %d\n"),ci._prevstkbase);
+	scprintf(_SC("prev top: %d\n"),ci._prevtop);
 	for(int i=0;i<size;i++){
 		SQObjectPtr &obj=_stack[i];	
-		if(stackbase==i)printf(">");else printf(" ");
-		printf("[%d]:",n);
+		if(stackbase==i)scprintf(_SC(">"));else scprintf(_SC(" "));
+		scprintf(_SC("[%d]:"),n);
 		switch(type(obj)){
-		case OT_FLOAT:			printf("FLOAT %.3f",_float(obj));break;
-		case OT_INTEGER:		printf("INTEGER %d",_integer(obj));break;
-		case OT_STRING:			printf("STRING %s",_stringval(obj));break;
-		case OT_NULL:			printf("NULL");	break;
-		case OT_TABLE:			printf("TABLE %p[%p]",_table(obj),_table(obj)->_delegate);break;
-		case OT_ARRAY:			printf("ARRAY %p",_array(obj));break;
-		case OT_CLOSURE:		printf("CLOSURE");break;
-		case OT_NATIVECLOSURE:	printf("NATIVECLOSURE");break;
-		case OT_USERDATA:		printf("USERDATA %p[%p]",_userdataval(obj),_userdata(obj)->_delegate);break;
-		case OT_GENERATOR:		printf("GENERATOR");break;
-		case OT_USERPOINTER:	printf("USERPOINTER %p",_userpointer(obj));break;
+		case OT_FLOAT:			scprintf(_SC("FLOAT %.3f"),_float(obj));break;
+		case OT_INTEGER:		scprintf(_SC("INTEGER %d"),_integer(obj));break;
+		case OT_STRING:			scprintf(_SC("STRING %s"),_stringval(obj));break;
+		case OT_NULL:			scprintf(_SC("NULL"));	break;
+		case OT_TABLE:			scprintf(_SC("TABLE %p[%p]"),_table(obj),_table(obj)->_delegate);break;
+		case OT_ARRAY:			scprintf(_SC("ARRAY %p"),_array(obj));break;
+		case OT_CLOSURE:		scprintf(_SC("CLOSURE"));break;
+		case OT_NATIVECLOSURE:	scprintf(_SC("NATIVECLOSURE"));break;
+		case OT_USERDATA:		scprintf(_SC("USERDATA %p[%p]"),_userdataval(obj),_userdata(obj)->_delegate);break;
+		case OT_GENERATOR:		scprintf(_SC("GENERATOR"));break;
+		case OT_USERPOINTER:	scprintf(_SC("USERPOINTER %p"),_userpointer(obj));break;
 		default:
 			assert(0);
 			break;
 		};
-		printf("\n");
+		scprintf(_SC("\n"));
 		++n;
 	}
 }

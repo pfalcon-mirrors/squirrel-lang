@@ -51,5 +51,5 @@ struct SQVM;
 #define THIS 302
 
 struct ParserException{SQChar *desc;ParserException(SQChar *err):desc(err){}};
-bool Compile(SQVM *vm,SQREADFUNC rg,SQUserPointer up,const SQChar *sourcename,SQObjectPtr &out,bool raiseerror,bool lineinfo);
+bool Compile(SQVM *vm,SQLEXREADFUNC rg,SQUserPointer up,const SQChar *sourcename,SQObjectPtr &out,bool raiseerror,bool lineinfo);
 #endif //_SQCOMPILER_H_

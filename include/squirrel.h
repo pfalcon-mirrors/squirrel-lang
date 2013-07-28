@@ -39,10 +39,6 @@ extern "C" {
 #define SQUIRREL_API extern
 #endif
 
-#define SQUIRREL_VERSION	"Squirrel 0.2 (pre-alpha)"
-#define SQUIRREL_COPYRIGHT	"Copyright (C) 2003 Alberto Demichelis"
-#define SQUIRREL_AUTHOR		"Alberto Demichelis"
-
 typedef float SQFloat;
 typedef int SQInteger;
 typedef void* SQUserPointer;
@@ -59,10 +55,56 @@ struct SQUserData;
 struct SQFunctionProto;
 struct SQRefCounted;
 
+#ifdef _UNICODE
+#define SQUNICODE
+#endif
+
+#ifdef SQUNICODE
+typedef unsigned short SQChar;
+#define _SC(a) L##a
+#define	scstrcmp	wcscmp
+#define scsprintf	swprintf
+#define scstrlen	wcslen
+#define scstrtod	wcstod
+#define scatoi		_wtoi
+#define scstrtoul	wcstoul
+#define scvsprintf	vswprintf
+#define scstrstr	wcsstr
+#define scisspace	iswspace
+#define scisdigit	iswdigit
+#define scisalpha	iswalpha
+#define sciscntrl	iswcntrl
+#define scisalnum	iswalnum
+#define scprintf	wprintf
+#define MAX_CHAR 0xFFFF
+#else
 typedef char SQChar;
 #define _SC(a) a
-#define SQUIRREL_EOB 0
+#define	scstrcmp	strcmp
+#define scsprintf	sprintf
+#define scstrlen	strlen
+#define scstrtod	strtod
+#define scatoi		atoi
+#define scstrtoul	strtoul
+#define scvsprintf	vsprintf
+#define scstrstr	strstr
+#define scisspace	isspace
+#define scisdigit	isdigit
+#define sciscntrl	iscntrl
+#define scisalpha	isalpha
+#define scisalnum	isalnum
+#define scprintf	printf
 #define MAX_CHAR 0xFF
+#endif
+
+#define SQUIRREL_VERSION	_SC("Squirrel 0.3 (alpha)")
+#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003 Alberto Demichelis")
+#define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
+
+
+
+#define SQUIRREL_EOB 0
+
 
 #define SQOBJECT_REF_COUNTED 0x8000
 #define SQOBJECT_NUMERIC 0x0800
@@ -137,6 +179,8 @@ typedef void (*SQCOMPILERERROR)(HSQUIRRELVM,const SQChar * /*desc*/,const SQChar
 typedef int (*SQWRITEFUNC)(SQUserPointer,SQUserPointer,int);
 typedef int (*SQREADFUNC)(SQUserPointer,SQUserPointer,int);
 
+typedef SQChar (*SQLEXREADFUNC)(SQUserPointer);
+
 typedef void *(*SQUIRREL_MALLOC)(unsigned int);
 typedef void *(*SQUIRREL_REALLOC)(void*,unsigned int,unsigned int);
 typedef void (*SQUIRREL_FREE)(void*,unsigned int);
@@ -154,7 +198,7 @@ SQUIRREL_API void sq_setforeignptr(HSQUIRRELVM v,SQUserPointer p);
 SQUIRREL_API SQUserPointer sq_getforeignptr(HSQUIRRELVM v);
 
 /*compiler*/
-SQUIRREL_API SQRESULT sq_compile(HSQUIRRELVM v,SQREADFUNC read,SQUserPointer p,const SQChar *sourcename,int raiseerror,int lineinfo);
+SQUIRREL_API SQRESULT sq_compile(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQChar *sourcename,int raiseerror,int lineinfo);
 SQUIRREL_API void sq_setcompilererrorhandler(HSQUIRRELVM v,SQCOMPILERERROR f);
 
 /*stack operations*/
@@ -199,6 +243,7 @@ SQUIRREL_API SQRESULT sq_arrayresize(HSQUIRRELVM v,int idx,int newsize);
 SQUIRREL_API SQRESULT sq_arrayreverse(HSQUIRRELVM v,int idx); 
 SQUIRREL_API SQRESULT sq_setdelegate(HSQUIRRELVM v,int idx);
 SQUIRREL_API SQRESULT sq_getdelegate(HSQUIRRELVM v,int idx);
+SQUIRREL_API SQRESULT sq_clone(HSQUIRRELVM v,int idx);
 SQUIRREL_API SQRESULT sq_setfreevariable(HSQUIRRELVM v,int idx,unsigned int nval);
 SQUIRREL_API SQRESULT sq_next(HSQUIRRELVM v,int idx);
 
@@ -207,6 +252,7 @@ SQUIRREL_API SQRESULT sq_call(HSQUIRRELVM v,int params,int retval);
 SQUIRREL_API SQRESULT sq_resume(HSQUIRRELVM v,int retval);
 SQUIRREL_API const SQChar *sq_getlocal(HSQUIRRELVM v,unsigned int level,unsigned int idx);
 SQUIRREL_API SQRESULT sq_throwerror(HSQUIRRELVM v,const SQChar *err);
+SQUIRREL_API void sq_getlasterror(HSQUIRRELVM v);
 
 /*raw object handling*/
 SQUIRREL_API SQRESULT sq_getstackobj(HSQUIRRELVM v,int idx,HSQOBJECT *po);

@@ -1,4 +1,4 @@
-The programming language SQUIRREL 0.2 pre-alpha
+The programming language SQUIRREL 0.3 alpha
 
 This is a work in progress
 --------------------------------------------------
@@ -11,6 +11,7 @@ Linux(Slackware 9.0 on Intel x86).
 Has been tested with the following compilers:
 	MS Visual C++ 6.0,7.0 and 7.1
 	MinGW gcc 3.2 (mingw special 20020817-1)
+	Cygnus gcc 3.2
 	Linux gcc 3.2.3
 	
 
@@ -24,6 +25,7 @@ Work in prograss
 -The runtime erros messages are a bit weak :)
 
 Feedback and suggestions are appreciated 
+project page - http://squirrel.sourceforge.net
 mailing list - http://groups.yahoo.com/group/squirrel_language/
 email - squirrel@ademichelis.com
 author - alberto@ademichelis.com

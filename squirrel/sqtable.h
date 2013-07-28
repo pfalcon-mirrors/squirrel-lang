@@ -26,18 +26,8 @@ private:
 	
 ///////////////////////////
 	void AllocNodes(int nSize);
-	
 	void Rehash();
-	SQTable(SQSharedState *ss,int nInitialSize)
-	{
-		int pow2size=MINPOWER2;
-		while(nInitialSize>pow2size)pow2size=pow2size<<1;
-		AllocNodes(pow2size);
-		_uiRef=0;
-		_delegate=NULL;
-		INIT_CHAIN();
-		ADD_TO_CHAIN(&_sharedstate->_gc_chain,this);
-	}
+	SQTable(SQSharedState *ss,int nInitialSize);
 public:
 	SQTable *_delegate;
 	static SQTable* Create(SQSharedState *ss,int nInitialSize)
@@ -92,34 +82,7 @@ public:
 		}
 		return false;
 	}
-	void Remove(const SQObjectPtr &key)
-	{
-		unsigned long h=HashKey(key);//_string(key)->_hash;
-		_HashNode *n=&_nodes[h&(_numofnodes-1)];
-		_HashNode *first=n;
-		_HashNode *prev=NULL;
-
-		do
-		{
-			if(type(n->key)==type(key) && _rawval(n->key)==_rawval(key)){
-				if(n==first && n->next){
-					_nodes[h&(_numofnodes-1)].key=n->next->key;
-					_nodes[h&(_numofnodes-1)].val=n->next->val;
-					n->next->val=n->next->key=_null_;
-				}
-				else{
-					if(prev)
-						prev->next=n->next;
-				}
-				if(n>_firstfree)
-					_firstfree=n;
-				n->val=n->key=_null_;
-			}
-			prev=n;
-			n=n->next;
-		}while(n);
-		
-	}
+	void Remove(const SQObjectPtr &key);
 	bool Set(const SQObjectPtr &key,const SQObjectPtr &val)
 	{
 		_HashNode *n=_Get(key,HashKey(key)&(_numofnodes-1));
@@ -178,21 +141,7 @@ public:
 	}
 	int Next(const SQObjectPtr &refpos,SQObjectPtr &outkey,SQObjectPtr &outval)
 	{
-		//first iteration
-		int idx;
-		switch(type(refpos)){
-		case OT_NULL:
-			idx=0;
-			break;
-		case OT_INTEGER:
-			idx=(int)_integer(refpos);
-			break;
-		default:
-			////sqraiseerror("critical vm error iterating a table with a non number idx");
-			assert(0);
-			break;
-		}
-		
+		int idx=(int)TranslateIndex(refpos);
 		while(idx<_numofnodes){
 			if(type(_nodes[idx].key)!=OT_NULL){
 				//first found

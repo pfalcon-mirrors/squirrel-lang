@@ -37,7 +37,7 @@ iolib:
 				type == 'i' : read a 32 bits integer and retuns it as integer
 				type == 's' : read a 16 bits integer and retuns it as integer
 				type == 'f' : read a 32 bits float and retuns it as float
-				type == 'str' , nsize: read nsize bytes and return a string
+				type == 't' , nsize: read nsize bytes and return a string
 			readblob(nbytes)
 				read n bytes from a file and retuns them as blob 
 			writeblob(blob)

@@ -1,3 +1,13 @@
+***version 0.3 alpha***
+-first alpha release
+-optional Unicode core(define SQUNICODE or _UNICODE on Win32)
+-sq_compiler uses a new reader function SQLEXREADFUNC
+-the debug hook passes 'l' instead of 'line' for line callbacks
+	and 'c' instead of 'call' for call callbacks
+-new array.extend() bulit-in function
+-new API sq_clone()
+-fixed a bug in array.insert()
+
 ***version 0.2 pre-alpha***
 -new reentrant VM (sq_open and sq_close are now obsolete)
 -sq_newvm() has a new prototype

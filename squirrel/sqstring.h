@@ -20,24 +20,8 @@ public:
 	static SQString *Create(SQSharedState *ss,const SQChar *,int len=-1 );
 	int Next(const SQObjectPtr &refpos,SQObjectPtr &outkey,SQObjectPtr &outval)
 	{
-		//first iteration
-		int idx;
-		switch(type(refpos))
-		{
-		case OT_NULL:
-			idx=0;
-			break;
-		case OT_INTEGER:
-			idx=(unsigned int)_integer(refpos);
-			break;
-		default:
-			sqraise_str_error(_sharedstate,"critical vm error iterating a string with a non number idx");
-			break;
-		}
-		
-		while(idx<_len)
-		{
-			//first found
+		int idx=(int)TranslateIndex(refpos);
+		while(idx<_len){
 			outkey=(SQInteger)idx;
 			outval=SQInteger(_val[idx]);
 			//return idx for the next iteration

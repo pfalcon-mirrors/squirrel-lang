@@ -9,70 +9,70 @@
 
 #ifdef _DEBUG
 SQInstructionDesc g_InstrDesc[]={
-	{"_OP_LINE",-1,2,0,0},
-	{"_OP_LOAD",1,2,0,0},
-	{"_OP_LOADNULL",0,0,0,0},
-	{"_OP_NEWSLOT",1,1,1,1},
-	{"_OP_SET",1,1,1,1},
-	{"_OP_GET",1,1,1,0},
-	{"_OP_LOADROOTTABLE",1,0,0,0},
-	{"_OP_PREPCALL",1,1,1,1},
-	{"_OP_CALL",1,1,1,1},
-	{"_OP_MOVE",1,1,1,0},
-	{"_OP_ADD",1,1,1,0},
-	{"_OP_SUB",1,1,1,0},
-	{"_OP_MUL",1,1,1,0},
-	{"_OP_DIV",1,1,1,0},
-	{"_OP_MODULO",1,1,1,0},
-	{"_OP_YIELD",1,2,0,0},
-	{"_OP_EQ",1,1,1,0},
-	{"_OP_NE",1,1,1,0},
-	{"_OP_G",1,1,1,0},
-	{"_OP_GE",1,1,1,0},
-	{"_OP_L",1,1,1,0},
-	{"_OP_LE",1,1,1,0},
-	{"_OP_EXISTS",1,1,1,0},
-	{"_OP_NEWTABLE",1,2,0,0},
-	{"_OP_JMP",-1,2,0,0},
-	{"_OP_JNZ",1,2,0,0},
-	{"_OP_JZ",1,2,0,0},
-	{"_OP_RETURN",1,0,0,0},
-	{"_OP_CLOSURE",1,2,1,0},
-	{"_OP_FOREACH",1,1,1,1},
-	{"_OP_DELEGATE",1,1,1,0},
-	{"_OP_TYPEOF",1,1,0,0},
-	{"_OP_PUSHTRAP",-1,2,0,0},
-	{"_OP_POPTRAP",0,0,0,0},
-	{"_OP_THROW",1,0,0,0},
-	{"_OP_NEWARRAY",1,2,0,0},
-	{"_OP_APPENDARRAY",1,1,0,0},
-	{"_OP_AND",1,2,1,0},
-	{"_OP_OR",1,2,1,0},
-	{"_OP_NEG",1,1,0,0},
-	{"_OP_NOT",1,1,0,0},
-	{"_OP_DELETE",1,1,1,0},
-	{"_OP_BWNOT",1,1,0,0},
-	{"_OP_BWAND",1,1,1,0},
-	{"_OP_BWOR",1,1,1,0},
-	{"_OP_BWXOR",1,1,1,0},
-	{"_OP_MINUSEQ",1,1,1,1},
-	{"_OP_PLUSEQ",1,1,1,1},
-	{"_OP_TAILCALL",1,1,1,1},
-	{"_OP_SHIFTL",1,1,1,0},
-	{"_OP_SHIFTR",1,1,1,0},
-	{"_OP_RESUME",1,1,0,0},
-	{"_OP_CLONE",1,1,0,0},
+	{_SC("_OP_LINE"),-1,2,0,0},
+	{_SC("_OP_LOAD"),1,2,0,0},
+	{_SC("_OP_LOADNULL"),0,0,0,0},
+	{_SC("_OP_NEWSLOT"),1,1,1,1},
+	{_SC("_OP_SET"),1,1,1,1},
+	{_SC("_OP_GET"),1,1,1,0},
+	{_SC("_OP_LOADROOTTABLE"),1,0,0,0},
+	{_SC("_OP_PREPCALL"),1,1,1,1},
+	{_SC("_OP_CALL"),1,1,1,1},
+	{_SC("_OP_MOVE"),1,1,1,0},
+	{_SC("_OP_ADD"),1,1,1,0},
+	{_SC("_OP_SUB"),1,1,1,0},
+	{_SC("_OP_MUL"),1,1,1,0},
+	{_SC("_OP_DIV"),1,1,1,0},
+	{_SC("_OP_MODULO"),1,1,1,0},
+	{_SC("_OP_YIELD"),1,2,0,0},
+	{_SC("_OP_EQ"),1,1,1,0},
+	{_SC("_OP_NE"),1,1,1,0},
+	{_SC("_OP_G"),1,1,1,0},
+	{_SC("_OP_GE"),1,1,1,0},
+	{_SC("_OP_L"),1,1,1,0},
+	{_SC("_OP_LE"),1,1,1,0},
+	{_SC("_OP_EXISTS"),1,1,1,0},
+	{_SC("_OP_NEWTABLE"),1,2,0,0},
+	{_SC("_OP_JMP"),-1,2,0,0},
+	{_SC("_OP_JNZ"),1,2,0,0},
+	{_SC("_OP_JZ"),1,2,0,0},
+	{_SC("_OP_RETURN"),1,0,0,0},
+	{_SC("_OP_CLOSURE"),1,2,1,0},
+	{_SC("_OP_FOREACH"),1,1,1,1},
+	{_SC("_OP_DELEGATE"),1,1,1,0},
+	{_SC("_OP_TYPEOF"),1,1,0,0},
+	{_SC("_OP_PUSHTRAP"),-1,2,0,0},
+	{_SC("_OP_POPTRAP"),0,0,0,0},
+	{_SC("_OP_THROW"),1,0,0,0},
+	{_SC("_OP_NEWARRAY"),1,2,0,0},
+	{_SC("_OP_APPENDARRAY"),1,1,0,0},
+	{_SC("_OP_AND"),1,2,1,0},
+	{_SC("_OP_OR"),1,2,1,0},
+	{_SC("_OP_NEG"),1,1,0,0},
+	{_SC("_OP_NOT"),1,1,0,0},
+	{_SC("_OP_DELETE"),1,1,1,0},
+	{_SC("_OP_BWNOT"),1,1,0,0},
+	{_SC("_OP_BWAND"),1,1,1,0},
+	{_SC("_OP_BWOR"),1,1,1,0},
+	{_SC("_OP_BWXOR"),1,1,1,0},
+	{_SC("_OP_MINUSEQ"),1,1,1,1},
+	{_SC("_OP_PLUSEQ"),1,1,1,1},
+	{_SC("_OP_TAILCALL"),1,1,1,1},
+	{_SC("_OP_SHIFTL"),1,1,1,0},
+	{_SC("_OP_SHIFTR"),1,1,1,0},
+	{_SC("_OP_RESUME"),1,1,0,0},
+	{_SC("_OP_CLONE"),1,1,0,0},
 	//optimiz
-	{"_OP_GETK",1,1,1,0},
-	{"_OP_PREPCALLK",1,1,1,1},
+	{_SC("_OP_GETK"),1,1,1,0},
+	{_SC("_OP_PREPCALLK"),1,1,1,1},
 };
 #endif
 void DumpLiteral(SQObjectPtr &o)
 {
 	switch(type(o)){
-		case OT_STRING:	printf("\"%s\"",_stringval(o));break;
-		case OT_FLOAT: printf("{%f}",_float(o));break;
-		case OT_INTEGER: printf("{%d}",_integer(o));break;
+		case OT_STRING:	scprintf(_SC("\"%s\""),_stringval(o));break;
+		case OT_FLOAT: scprintf(_SC("{%f}"),_float(o));break;
+		case OT_INTEGER: scprintf(_SC("{%d}"),_integer(o));break;
 	}
 }
 #ifdef _DEBUG_DUMP
@@ -80,38 +80,38 @@ void SQFuncState::Dump()
 {
 	unsigned int n=0,i;
 	SQFunctionProto *func=_funcproto(_func);
-	printf("SQInstruction sizeof %d\n",sizeof(SQInstruction));
-	printf("SQObject sizeof %d\n",sizeof(SQObject));
-	printf("--------------------------------------------------------------------\n");
-	printf("*****FUNCTION [%s]\n",type(func->_name)==OT_STRING?_stringval(func->_name):"unknown");
-	printf("-----LITERALS\n");
+	scprintf(_SC("SQInstruction sizeof %d\n"),sizeof(SQInstruction));
+	scprintf(_SC("SQObject sizeof %d\n"),sizeof(SQObject));
+	scprintf(_SC("--------------------------------------------------------------------\n"));
+	scprintf(_SC("*****FUNCTION [%s]\n"),type(func->_name)==OT_STRING?_stringval(func->_name):_SC("unknown"));
+	scprintf(_SC("-----LITERALS\n"));
 	for(i=0;i<_literals.size();i++){
-		printf("[%d] ",n);
+		scprintf(_SC("[%d] "),n);
 		DumpLiteral(_literals[i]);
-		printf("\n");
+		scprintf(_SC("\n"));
 		n++;
 	}
-	printf("-----PARAMS\n");
+	scprintf(_SC("-----PARAMS\n"));
 	n=0;
 	for(i=0;i<_parameters.size();i++){
-		printf("[%d] ",n);
+		scprintf(_SC("[%d] "),n);
 		DumpLiteral(_parameters[i]);
-		printf("\n");
+		scprintf(_SC("\n"));
 		n++;
 	}
-	printf("-----LOCALS\n");
+	scprintf(_SC("-----LOCALS\n"));
 	for(i=0;i<func->_localvarinfos.size();i++){
 		SQLocalVarInfo lvi=func->_localvarinfos[i];
-		printf("[%d] %s \t%d %d\n",lvi._pos,_stringval(lvi._name),lvi._start_op,lvi._end_op);
+		scprintf(_SC("[%d] %s \t%d %d\n"),lvi._pos,_stringval(lvi._name),lvi._start_op,lvi._end_op);
 		n++;
 	}
-	printf("-----LINE INFO\n");
+	scprintf(_SC("-----LINE INFO\n"));
 	for(i=0;i<_lineinfos.size();i++){
 		SQLineInfo li=_lineinfos[i];
-		printf("op [%d] line [%d] \n",li._op,li._line);
+		scprintf(_SC("op [%d] line [%d] \n"),li._op,li._line);
 		n++;
 	}
-	printf("-----dump\n");
+	scprintf(_SC("-----dump\n"));
 	n=0;
 	for(i=0;i<_instructions.size();i++){
 		SQInstruction &inst=_instructions[i];
@@ -119,20 +119,20 @@ void SQFuncState::Dump()
 			|| ((inst.op==_OP_ADD || inst.op==_OP_SUB || inst.op==_OP_MUL || inst.op==_OP_DIV) 
 				&& inst._arg3==0xFF)){
 			
-			printf("[%03d] %15s %d ",n,g_InstrDesc[inst.op].name,inst._arg0);
+			scprintf(_SC("[%03d] %15s %d "),n,g_InstrDesc[inst.op].name,inst._arg0);
 			if(inst._arg1==-1)
-				printf("null");
+				scprintf(_SC("null"));
 			else
 				DumpLiteral(_literals[inst._arg1]);
-			printf(" %d %d \n",inst._arg2,inst._arg3);
+			scprintf(_SC(" %d %d \n"),inst._arg2,inst._arg3);
 		}
 		else 
-			printf("[%03d] %15s %d %d %d %d\n",n,g_InstrDesc[inst.op].name,inst._arg0,inst._arg1,inst._arg2,inst._arg3);
+			scprintf(_SC("[%03d] %15s %d %d %d %d\n"),n,g_InstrDesc[inst.op].name,inst._arg0,inst._arg1,inst._arg2,inst._arg3);
 		n++;
 	}
-	printf("-----\n");
-	printf("stack size[%d]\n",func->_stacksize);
-	printf("--------------------------------------------------------------------\n\n");
+	scprintf(_SC("-----\n"));
+	scprintf(_SC("stack size[%d]\n"),func->_stacksize);
+	scprintf(_SC("--------------------------------------------------------------------\n\n"));
 }
 #endif
 int SQFuncState::GetStringConstant(const SQChar *cons)
@@ -351,8 +351,8 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 			if(pi.op==_OP_LOAD && pi._arg0==i._arg1	&& (!IsLocal(pi._arg0) ))
 			{
 				pi.op=i.op;
-				pi._arg0=i._arg0; //same target
-				pi._arg2=i._arg2; //flipped
+				pi._arg0=i._arg0;
+				pi._arg2=i._arg2;
 				pi._arg3=0xFF;
 				return;
 			}
@@ -362,7 +362,6 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 			break;
 		}
 	}
-	
 	_optimization=true;
 	_instructions.push_back(i);
 }

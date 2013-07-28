@@ -24,7 +24,7 @@ int sq_stackinfos(HSQUIRRELVM v,int level,SQStackInfos *si)
 						}
 			break;
 		case OT_NATIVECLOSURE:
-			si->source=si->funcname="NATIVE";
+			si->source=si->funcname=_SC("NATIVE");
 			si->line=-1;
 			break;
 		}

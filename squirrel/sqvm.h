@@ -27,34 +27,32 @@ struct SQExceptionTrap{
 typedef sqvector<SQExceptionTrap> ExceptionsTraps;
 struct SQVM 
 {
-
-struct CallInfo{
-	CallInfo(){}
-	CallInfo(const CallInfo& ci)
-	{
-		_iv=ci._iv;
-		_literals=ci._literals;
-		_closure=ci._closure;
-		_generator=ci._generator;
-		_prevstkbase=ci._prevstkbase;
-		_ip=ci._ip;
-		_root=ci._root;
-		_etraps.copy(ci._etraps);
-		_prevtop=ci._prevtop;
-		_target=ci._target;
-	}
-	SQInstructionVec *_iv;
-	SQObjectPtrVec *_literals;
-	SQObjectPtr _closure;
-	SQObjectPtr _generator;
-	ExceptionsTraps _etraps;
-	int _prevstkbase;
-	int _prevtop;
-	int _target;
-	SQInstruction *_ip;
-	bool _root;
-};
-
+	struct CallInfo{
+		CallInfo(){}
+		CallInfo(const CallInfo& ci)
+		{
+			_iv=ci._iv;
+			_literals=ci._literals;
+			_closure=ci._closure;
+			_generator=ci._generator;
+			_prevstkbase=ci._prevstkbase;
+			_ip=ci._ip;
+			_root=ci._root;
+			_etraps.copy(ci._etraps);
+			_prevtop=ci._prevtop;
+			_target=ci._target;
+		}
+		SQInstructionVec *_iv;
+		SQObjectPtrVec *_literals;
+		SQObjectPtr _closure;
+		SQObjectPtr _generator;
+		ExceptionsTraps _etraps;
+		int _prevstkbase;
+		int _prevtop;
+		int _target;
+		SQInstruction *_ip;
+		bool _root;
+	};
 
 typedef sqvector<CallInfo> CallInfoVec;
 public:
@@ -79,6 +77,7 @@ public:
 	bool Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,bool raw,bool root=true);
 	bool Set(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr &val);
 	void NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr &val);
+	bool Clone(const SQObjectPtr &self,SQObjectPtr &target);
 	int ObjCmp(const SQObjectPtr &o1,const SQObjectPtr &o2);
 	void StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObjectPtr &dest);
 	void IdxError(SQObject &o);
@@ -142,7 +141,6 @@ public:
 SQObjectPtr &stack_get(HSQUIRRELVM v,int idx);
 const SQChar *GetTypeName(const SQObjectPtr &obj1);
 const SQChar *GetTypeName(SQObjectType type);
-void IdxError(SQObject &o);
 
 #define _ss(_vm_) (_vm_)->_sharedstate
 

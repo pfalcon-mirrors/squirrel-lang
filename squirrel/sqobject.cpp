@@ -23,10 +23,24 @@ void SQString::Release()
 	REMOVE_STRING(_sharedstate,this);
 }
 
+unsigned int TranslateIndex(const SQObjectPtr &idx)
+{
+	switch(type(idx)){
+		case OT_NULL:
+			return 0;
+			break;
+		case OT_INTEGER:
+			return (unsigned int)_integer(idx);
+			break;
+	}
+	assert(0);
+	return 0;
+}
+
 int SQGenerator::Yield(SQVM *v)
 {
-	if(_state==eSuspended)sqraise_str_error(_ss(v),"internal vm error, yielding dead generator");
-	if(_state==eDead)sqraise_str_error(_ss(v),"internal vm error, yielding a dead generator");
+	if(_state==eSuspended)sqraise_str_error(_ss(v),_SC("internal vm error, yielding dead generator"));
+	if(_state==eDead)sqraise_str_error(_ss(v),_SC("internal vm error, yielding a dead generator"));
 	int size=v->_top-v->_stackbase;
 	_ci=*v->ci;
 	_stack.resize(size);
@@ -41,8 +55,8 @@ int SQGenerator::Yield(SQVM *v)
 void SQGenerator::Resume(SQVM *v,int target)
 {
 	int size=_stack.size();
-	if(_state==eDead)sqraise_str_error(_ss(v),"resuming dead generator");
-	if(_state==eRunning)sqraise_str_error(_ss(v),"resuming active generator");
+	if(_state==eDead)sqraise_str_error(_ss(v),_SC("resuming dead generator"));
+	if(_state==eRunning)sqraise_str_error(_ss(v),_SC("resuming active generator"));
 	int prevtop=v->_top-v->_stackbase;
 	PUSH_CALLINFO(v,_ci);
 	int oldstackbase=v->_stackbase;
@@ -56,6 +70,13 @@ void SQGenerator::Resume(SQVM *v,int target)
 	v->ci->_prevtop=prevtop;
 	v->ci->_prevstkbase=v->_stackbase-oldstackbase;
 	_state=eRunning;
+}
+
+void SQArray::Extend(const SQArray *a){
+	int xlen;
+	if((xlen=a->Size()))
+		for(int i=0;i<xlen;i++)
+			Append(a->_values[i]);
 }
 
 const SQChar* SQFunctionProto::GetLocal(SQVM *vm,unsigned int stackbase,unsigned int nseq,unsigned int nop)
@@ -95,8 +116,8 @@ int WriteObject(HSQUIRRELVM v,SQUserPointer up,SQWRITEFUNC write,SQObjectPtr &o)
 	int nwritten=write(up,&type(o),sizeof(SQObjectType));
 	switch(type(o)){
 	case OT_STRING:
-		nwritten+=write(up,&_string(o)->_len,4);
-		nwritten+=write(up,_stringval(o),_string(o)->_len);
+		nwritten+=write(up,&_string(o)->_len,sizeof(SQInteger));
+		nwritten+=write(up,_stringval(o),rsl(_string(o)->_len));
 		break;
 	case OT_INTEGER:
 		nwritten+=write(up,&_integer(o),sizeof(SQInteger));break;
@@ -117,8 +138,8 @@ int ReadObject(HSQUIRRELVM v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &o)
 	switch(t){
 	case OT_STRING:{
 		int len;
-		nreaded+=read(up,&len,sizeof(int));
-		nreaded+=read(up,_ss(v)->GetScratchPad(len),len);
+		nreaded+=read(up,&len,sizeof(SQInteger));
+		nreaded+=read(up,_ss(v)->GetScratchPad(rsl(len)),rsl(len));
 		o=SQString::Create(_ss(v),_ss(v)->GetScratchPad(-1),len);
 				   }
 		break;

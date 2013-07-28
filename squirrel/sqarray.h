@@ -38,20 +38,7 @@ public:
 	}
 	int Next(const SQObjectPtr &refpos,SQObjectPtr &outkey,SQObjectPtr &outval)
 	{
-		//first iteration
-		unsigned int idx;
-		switch(type(refpos)){
-		case OT_NULL:
-			idx=0;
-			break;
-		case OT_INTEGER:
-			idx=(unsigned int)_integer(refpos);
-			break;
-		default:
-			assert(0);
-			break;
-		}
-		
+		unsigned int idx=TranslateIndex(refpos);
 		while(idx<_values.size()){
 			//first found
 			outkey=(SQInteger)idx;
@@ -63,10 +50,11 @@ public:
 		return -1;
 	}
 	SQArray *Clone(){SQArray *anew=Create(_opt_ss(this),Size()); anew->_values.copy(_values); return anew; }
-	int Size(){return _values.size();}
+	int Size() const {return _values.size();}
 	void Resize(int size) { _values.resize(size); }
 	void Reserve(int size) { _values.reserve(size); }
 	void Append(const SQObject &o){_values.push_back(o);}
+	void Extend(const SQArray *a);
 	SQObjectPtr &Top(){return _values.top();}
 	void Pop(){_values.pop_back();}
 	inline void Insert(const SQObject& idx,const SQObject &val){_values.insert((unsigned int)tointeger(idx),val);}

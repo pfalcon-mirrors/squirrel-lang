@@ -8,10 +8,10 @@ static SQUIRREL_FREE g_default_free=NULL;
 
 
 #define chk_params(_v,_n) \
-	if(sq_gettop(_v)!=_n) return sq_throwerror(v,"invalid number of args");
+	if(sq_gettop(_v)!=_n) return sq_throwerror(v,_SC("invalid number of args"));
 
 #define chk_params_at_least(n) \
-	if(sq_gettop(_v)<_n) return sq_throwerror(v,"invalid number of args");
+	if(sq_gettop(_v)<_n) return sq_throwerror(v,_SC("invalid number of args"));
 
 #define SQ_SEEK_SET 0
 #define SQ_SEEK_CUR 1
@@ -148,7 +148,7 @@ int _blob_read_void(HSQUIRRELVM v,int size,void *dest)
 	if(!sq_getuserdata(v,1,(SQUserPointer*)&bu) || bu->_magic_number!=BLOB_MAGIC_NUMBER)return 0; \
 	_Blob *b=&bu->_blob; \
 	type t=func(v,2); \
-	if(!b->Write(&t,sizeof(t)))return sq_throwerror(v,"end of blob");
+	if(!b->Write(&t,sizeof(t)))return sq_throwerror(v,_SC("end of blob"));
 
 
 #define GET_BLOB(idx) Blob_Userdata *bu; \
@@ -263,7 +263,7 @@ int blob_readblob(HSQUIRRELVM v)
 		b->Read(newblob,size);
 		return 1;
 	}
-	return sq_throwerror(v,"cannot read");
+	return sq_throwerror(v,_SC("cannot read"));
 }
 
 void __swap_dword(unsigned int *n)
@@ -319,9 +319,9 @@ int blob_tell(HSQUIRRELVM v)
 int blob_resize(HSQUIRRELVM v)
 {
 	GET_BLOB(1)
-	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,"size must be anumber");
+	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,_SC("size must be anumber"));
 	int newsize=sq_aux_getinteger(v,2);
-	if(newsize<=0)return sq_throwerror(v,"size must >= 0");
+	if(newsize<=0)return sq_throwerror(v,_SC("size must >= 0"));
 	b->Resize(newsize);
 	return 0;
 }
@@ -329,11 +329,11 @@ int blob_resize(HSQUIRRELVM v)
 int blob__set(HSQUIRRELVM v)
 {
 	GET_BLOB(1)
-	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,"the index is not a number");
-	if(!(sq_gettype(v,3)&SQOBJECT_NUMERIC))return sq_throwerror(v,"the value is not a number");
+	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,_SC("the index is not a number"));
+	if(!(sq_gettype(v,3)&SQOBJECT_NUMERIC))return sq_throwerror(v,_SC("the value is not a number"));
 	SQInteger idx=sq_aux_getinteger(v,2);
 	SQInteger val=sq_aux_getinteger(v,3);
-	if(idx<0 || idx>=b->_size)return sq_throwerror(v,"index out of range");
+	if(idx<0 || idx>=b->_size)return sq_throwerror(v,_SC("index out of range"));
 	b->_buf[idx]=val;
 	sq_pushinteger(v,val);
 	return 1;
@@ -342,16 +342,16 @@ int blob__set(HSQUIRRELVM v)
 int blob__get(HSQUIRRELVM v)
 {
 	GET_BLOB(1)
-	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,"the index is not a number");
+	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,_SC("the index is not a number"));
 	SQInteger idx=sq_aux_getinteger(v,2);
-	if(idx<0 || idx>=b->_size)return sq_throwerror(v,"index out of range");
+	if(idx<0 || idx>=b->_size)return sq_throwerror(v,_SC("index out of range"));
 	sq_pushinteger(v,b->_buf[idx]);
 	return 1;
 }
 
 int blob__typeof(HSQUIRRELVM v)
 {
-	sq_pushstring(v,"blob",-1);
+	sq_pushstring(v,_SC("blob"),-1);
 	return 1;
 }
 
@@ -378,7 +378,7 @@ int blob__nexti(HSQUIRRELVM v)
 int blob_rawcastI2F(HSQUIRRELVM v)
 {
 	chk_params(v,2);
-	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,"number expected");
+	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,_SC("number expected"));
 	SQInteger i=sq_aux_getinteger(v,2);
 	sq_pushfloat(v,*((SQFloat *)&i));
 	return 1;
@@ -387,7 +387,7 @@ int blob_rawcastI2F(HSQUIRRELVM v)
 int blob_rawcastF2I(HSQUIRRELVM v)
 {
 	chk_params(v,2);
-	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,"number expected");
+	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,_SC("number expected"));
 	SQFloat f=sq_aux_getfloat(v,2);
 	sq_pushinteger(v,*((SQInteger *)&f));
 	return 1;
@@ -396,7 +396,7 @@ int blob_rawcastF2I(HSQUIRRELVM v)
 int blob_swap2(HSQUIRRELVM v)
 {
 	chk_params(v,2);
-	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,"number expected");
+	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,_SC("number expected"));
 	short s=sq_aux_getinteger(v,2);
 	short res=(s<<8)|((s>>8)&0x00FF);
 	sq_pushinteger(v,res);
@@ -409,7 +409,7 @@ int blob_swap2(HSQUIRRELVM v)
 int blob_swap4(HSQUIRRELVM v)
 {
 	chk_params(v,2);
-	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,"number expected");
+	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,_SC("number expected"));
 	SQInteger i=sq_aux_getinteger(v,2);
 	__swap_dword((unsigned int *)&i);
 	sq_pushinteger(v,i);
@@ -419,14 +419,14 @@ int blob_swap4(HSQUIRRELVM v)
 int blob_swapfloat(HSQUIRRELVM v)
 {
 	chk_params(v,2);
-	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,"number expected");
+	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,_SC("number expected"));
 	SQFloat f=sq_aux_getfloat(v,2);
 	__swap_dword((unsigned int *)&f);
 	sq_pushfloat(v,f);
 	return 1;
 }
 
-#define _DECL_FUNC(name) {#name,blob_##name}
+#define _DECL_FUNC(name) {_SC(#name),blob_##name}
 static SQRegFunction blob_funcs[]={
 	_DECL_FUNC(readI1),
     _DECL_FUNC(readI2),
@@ -473,7 +473,7 @@ int blob_crateblob(HSQUIRRELVM v)
 {
 	int n=sq_gettop(v);
 	chk_params(v,3); //1 is the outer value
-	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,"the size is not a number");
+	if(!(sq_gettype(v,2)&SQOBJECT_NUMERIC))return sq_throwerror(v,_SC("the size is not a number"));
 	SQInteger size=sq_aux_getinteger(v,2);
 	sq_blob_newblob(v,size,NULL,NULL);
 	return 1;
@@ -485,7 +485,7 @@ void sq_blob_createdelegate(HSQUIRRELVM v)
 	int i=0;
 	i=0;
 	sq_pushroottable(v);
-	sq_pushstring(v,"__sq_blob_delegate__",-1);
+	sq_pushstring(v,_SC("__sq_blob_delegate__"),-1);
 	if(SQ_FAILED(sq_get(v,-2)))
 	{
 		sq_pop(v,1);
@@ -501,7 +501,7 @@ void sq_blob_createdelegate(HSQUIRRELVM v)
 		}
 
 		sq_pushroottable(v);
-		sq_pushstring(v,"__sq_blob_delegate__",-1);
+		sq_pushstring(v,_SC("__sq_blob_delegate__"),-1);
 		sq_push(v,-3);
 		sq_createslot(v,-3);
 		sq_pop(v,1);
@@ -560,7 +560,7 @@ void sq_blob_register(HSQUIRRELVM v,SQUIRREL_MALLOC _default_malloc,SQUIRREL_FRE
 		sq_createslot(v,-3);
 		i++;
 	}
-	sq_pushstring(v,"createblob",-1);
+	sq_pushstring(v,_SC("createblob"),-1);
 	sq_blob_createdelegate(v);
 	sq_newclosure(v,blob_crateblob,1);
 	sq_createslot(v,-3);

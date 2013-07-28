@@ -8,7 +8,7 @@
 #define SQ_FREE(__ptr,__size) sq_vm_free(__ptr,__size);
 #define SQ_REALLOC(__ptr,__oldsize,__size) sq_vm_realloc(__ptr,__oldsize,__size);
 
-#include <new>
+
 //sqvector mini vector class support objects by value
 template<typename T> class sqvector
 {
@@ -79,12 +79,10 @@ public:
 	void insert(unsigned int idx,const T& val)
 	{
 		resize(_size+1);
-		for(unsigned int i=_size-1;i>idx;i--)
-		{
+		for(unsigned int i=_size-1;i>idx;i--){
 			_vals[i]=_vals[i-1];
 		}
-        //memcpy(&_vals[idx+1],&_vals[idx],sizeof(T)*(_size-(idx+1)));
-		new ((void *)&_vals[idx]) T(val);
+    	_vals[idx]=val;
 	}
 	void remove(unsigned int idx)
 	{

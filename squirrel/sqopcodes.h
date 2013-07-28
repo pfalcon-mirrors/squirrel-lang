@@ -4,7 +4,6 @@
 
 enum SQOpcode
 {
-	
 	_OP_LINE=			0x00,	//LINE				<<linenum>>
 	_OP_LOAD=0x01, //<<target>> <<literal>> 
 	_OP_LOADNULL=0x02, //<<target>>
@@ -64,7 +63,7 @@ enum SQOpcode
 };
 
 struct SQInstructionDesc {
-	const char *name;
+	const SQChar *name;
 	unsigned char psize[4];
 };
 
@@ -88,7 +87,6 @@ struct SQInstruction
 	unsigned char _arg2;
 	unsigned char _arg3;
 };
-
 
 #include "squtils.h"
 typedef sqvector<SQInstruction> SQInstructionVec;

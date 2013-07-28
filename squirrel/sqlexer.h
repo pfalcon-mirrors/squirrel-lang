@@ -8,7 +8,7 @@ struct SQLexer
 {
 	SQLexer();
 	~SQLexer();
-	void Init(SQSharedState *ss,SQREADFUNC rg,SQUserPointer up);
+	void Init(SQSharedState *ss,SQLEXREADFUNC rg,SQUserPointer up);
 	int Lex();
 	SQObjectPtr Tok2Str(int tok);
 private:
@@ -31,7 +31,7 @@ public:
 	const SQChar *_svalue;
 	SQInteger _nvalue;
 	SQFloat _fvalue;
-	SQREADFUNC _readf;
+	SQLEXREADFUNC _readf;
 	SQUserPointer _up;
 	SQChar _currdata;
 	SQSharedState *_sharedstate;

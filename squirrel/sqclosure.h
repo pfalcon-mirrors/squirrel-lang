@@ -79,7 +79,6 @@ public:
 	{
 		SQNativeClosure *nc=(SQNativeClosure*)SQ_MALLOC(sizeof(SQNativeClosure));
 		new (nc) SQNativeClosure(ss,func);
-		
 		return nc;
 	}
 	~SQNativeClosure()

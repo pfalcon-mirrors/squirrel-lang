@@ -44,17 +44,12 @@ public:
 	int CollectGarbage(SQVM *vm); 
 	static void MarkObject(SQObjectPtr &o,SQCollectable **chain);
 #endif
-	/*SQUIRREL_MALLOC _sq_malloc;
-	SQUIRREL_REALLOC _sq_realloc;
-	SQUIRREL_FREE _sq_free;*/
-
 	SQObjectPtrVec *_metamethods;
 	SQObjectPtrVec *_systemstrings;
 	SQObjectPtrVec *_types;
 	StringTable *_stringtable;
 #if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
 	SQCollectable *_gc_chain;
-	
 #endif
 	SQVM *_vms_chain;
 	SQObjectPtr _table_default_delegate;
@@ -74,8 +69,6 @@ private:
 	int _scratchpadsize;
 };
 
-//#define _null_ (GS->_null)
-//#define _notnull_ (GS->_notnull)
 #define _sp(s) (_sharedstate->GetScratchPad(s))
 #define _spval (_sharedstate->GetScratchPad(-1))
 
@@ -86,7 +79,12 @@ private:
 #define _generator_ddel	_table(_sharedstate->_generator_default_delegate) 
 #define _closure_ddel	_table(_sharedstate->_closure_default_delegate) 
 
-//extern SQSharedState *GS;
+#ifdef SQUNICODE //rsl REAL STRING LEN
+#define rsl(l) ((l)<<1)
+#else
+#define rsl(l) (l)
+#endif
+
 extern SQObjectPtr _null_;
 extern SQObjectPtr _notnull_;
 

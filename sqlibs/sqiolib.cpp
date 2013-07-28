@@ -1,10 +1,26 @@
-
+#include <squirrel.h>
 #include <stdio.h>
 #include <string.h>
 #include <new>
-#include <squirrel.h>
+
 #include "sqiolib.h"
 #include "sqbloblib.h"
+
+#ifdef SQUNICODE
+
+#define scfopen	_wfopen
+#define scfgets fgetws
+#define scremove _wremove
+#define screname _wrename
+#else
+#ifdef _WIN32
+#include <io.h> 
+#endif
+#define scfopen	fopen
+#define scfgets fgets
+#define scremove remove
+#define screname rename
+#endif
 
 struct _File{
 	_File()
@@ -28,7 +44,7 @@ struct _File{
 	}
 	bool Open(const SQChar *name,const SQChar *mode)
 	{
-		m_pFile=fopen(name,mode);
+		m_pFile=scfopen(name,mode);
 		return m_pFile?true:false;
 	}
 	int Read(void *buf,int size)
@@ -36,15 +52,16 @@ struct _File{
 		if(!m_pFile)return false;
 		return fread(buf,1,size,m_pFile);
 	}
+	//<<FIXME>> Unicode
 	int ReadLine(void *buf,int maxsize)
 	{
 		if(!m_pFile)return -1;
 		memset(buf,0,maxsize);
-		if(!fgets((char *)buf,maxsize,m_pFile))return -1;
-		int n=strlen((char *)buf);
-		if(((char *)buf)[n-1]=='\n')
+		if(!scfgets((SQChar *)buf,maxsize,m_pFile))return -1;
+		int n=scstrlen((SQChar *)buf);
+		if(((SQChar *)buf)[n-1]==_SC('\n'))
 		{
-			((char *)buf)[n-1]='\0';
+			((SQChar *)buf)[n-1]='\0';
 			return n-1;
 		}
 		return n;
@@ -114,7 +131,7 @@ static int io_fopen(HSQUIRRELVM v)
 			sq_gettype(v,2)!=OT_STRING ||
 			sq_gettype(v,4)!=OT_TABLE)
 		{
-			return sq_throwerror(v,"invalid argument type");
+			return sq_throwerror(v,_SC("invalid argument type"));
 		}
 
 		SQUserPointer ud=sq_newuserdata(v,sizeof(_File));
@@ -124,14 +141,14 @@ static int io_fopen(HSQUIRRELVM v)
 		{
 			f->~_File();
 			sq_pop(v,1); //pop the userdata
-			return sq_throwerror(v,"cannot open the file");
+			return sq_throwerror(v,_SC("cannot open the file"));
 		}
 		sq_setreleasehook(v,-1,file_release);
 		sq_push(v,4);
 		sq_setdelegate(v,-2);
 		return 1;
 	}
-	return sq_throwerror(v,"invalid number of args");
+	return sq_throwerror(v,_SC("invalid number of args"));
 }
 
 static int io_file_close(HSQUIRRELVM v)
@@ -139,11 +156,11 @@ static int io_file_close(HSQUIRRELVM v)
 	if(sq_gettop(v)>=1)
 	{
 		_File *f;
-		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer*)&f)))return sq_throwerror(v,"wrong ud");
+		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer*)&f)))return sq_throwerror(v,_SC("wrong ud"));
 		f->Close();
 		return 0;
 	}
-	return sq_throwerror(v,"invalid number of args");
+	return sq_throwerror(v,_SC("invalid number of args"));
 }
 
 static int io_file_eof(HSQUIRRELVM v)
@@ -151,14 +168,14 @@ static int io_file_eof(HSQUIRRELVM v)
 	if(sq_gettop(v)>=1)
 	{
 		_File *f;
-		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer*)&f)))return sq_throwerror(v,"wrong ud");
+		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer*)&f)))return sq_throwerror(v,_SC("wrong ud"));
 
 		if(f->Eof()) sq_pushinteger(v,1);
 		else sq_pushnull(v);
 
 		return 1;
 	}
-	return sq_throwerror(v,"invalid number of args");
+	return sq_throwerror(v,_SC("invalid number of args"));
 }
 
 
@@ -169,7 +186,7 @@ static int io_file_read(HSQUIRRELVM v)
 		//SQObjectPtr &file=stack_get(v,1);
 		//SQObjectPtr &arg=stack_get(v,2);
 		_File *p;
-		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer*)&p)))return sq_throwerror(v,"wrong ud");
+		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer*)&p)))return sq_throwerror(v,_SC("wrong ud"));
 		switch(sq_gettype(v,2))
 		{
 		case OT_INTEGER:
@@ -220,12 +237,13 @@ static int io_file_read(HSQUIRRELVM v)
 						sq_pushinteger(v,b);
 						return 1;
 					}
+					
 						 }
 					break;
-				case 'str':{
-					if(sq_gettop(v)<3)return sq_throwerror(v,"missing param");
+				case 't':{
+					if(sq_gettop(v)<3)return sq_throwerror(v,_SC("missing param"));
 					SQInteger size,realsize;
-					if(SQ_FAILED(sq_getinteger(v,3,&size)))return sq_throwerror(v,"wrong param");
+					if(SQ_FAILED(sq_getinteger(v,3,&size)))return sq_throwerror(v,_SC("wrong param"));
 					if(realsize=p->Read(sq_getscratchpad(v,size),size)){
 						sq_pushstring(v,(sq_getscratchpad(v,-1)),realsize);
 						return 1;
@@ -238,12 +256,12 @@ static int io_file_read(HSQUIRRELVM v)
 			}
 			break;
 		default:
-			return sq_throwerror(v,"wrong argument");
+			return sq_throwerror(v,_SC("wrong argument"));
 			break;
 		}
-
+		return 0;
 	}
-	return sq_throwerror(v,"invalid number of args");
+	return sq_throwerror(v,_SC("invalid number of args"));
 }
 
 int io_file_readblob(HSQUIRRELVM v)
@@ -251,13 +269,13 @@ int io_file_readblob(HSQUIRRELVM v)
 	if(sq_gettop(v)>=2)
 	{
 		_File *p;
-		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer *)&p)))return sq_throwerror(v,"wrong ud");
+		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer *)&p)))return sq_throwerror(v,_SC("wrong ud"));
 		int size;sq_getinteger(v,2,&size);
 		SQUserPointer blob=sq_blob_newblob(v,size,NULL,NULL);
-		if(!p->Read(blob,size))return sq_throwerror(v,"error reading the file");
+		if(!p->Read(blob,size))return sq_throwerror(v,_SC("error reading the file"));
 		return 1;
 	}
-	return sq_throwerror(v,"invalid number of args");
+	return sq_throwerror(v,_SC("invalid number of args"));
 }
 
 int io_file_writeblob(HSQUIRRELVM v)
@@ -265,14 +283,14 @@ int io_file_writeblob(HSQUIRRELVM v)
 	if(sq_gettop(v)>=2)
 	{
 		_File *p;
-		if(SQ_FAILED(sq_blob_getblob(v,1,(SQUserPointer *)&p)))return sq_throwerror(v,"wrong ud");
+		if(SQ_FAILED(sq_blob_getblob(v,1,(SQUserPointer *)&p)))return sq_throwerror(v,_SC("wrong ud"));
 		SQInteger blobsize=sq_blob_getblobsize(v,2);
 		SQUserPointer blob;
-		if(SQ_FAILED(sq_blob_getblob(v,2,&blob)))return sq_throwerror(v,"wrong arg");
-		if(!p->Write(blob,blobsize))return sq_throwerror(v,"error writing the file");
+		if(SQ_FAILED(sq_blob_getblob(v,2,&blob)))return sq_throwerror(v,_SC("wrong arg"));
+		if(!p->Write(blob,blobsize))return sq_throwerror(v,_SC("error writing the file"));
 		return 1;
 	}
-	return sq_throwerror(v,"invalid number of args");
+	return sq_throwerror(v,_SC("invalid number of args"));
 
 }
 
@@ -281,14 +299,14 @@ int io_file_fillblob(HSQUIRRELVM v)
 	if(sq_gettop(v)>=2)
 	{
 		_File *p;
-		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer *)&p)))return sq_throwerror(v,"wrong ud");
+		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer *)&p)))return sq_throwerror(v,_SC("wrong ud"));
 		SQInteger blobsize=sq_blob_getblobsize(v,2);
 		SQUserPointer blob;
-		if(SQ_FAILED(sq_blob_getblob(v,2,&blob)))return sq_throwerror(v,"wrong arg");
-		if(!p->Read(blob,blobsize))return sq_throwerror(v,"error reading the file");
+		if(SQ_FAILED(sq_blob_getblob(v,2,&blob)))return sq_throwerror(v,_SC("wrong arg"));
+		if(!p->Read(blob,blobsize))return sq_throwerror(v,_SC("error reading the file"));
 		return 1;
 	}
-	return sq_throwerror(v,"invalid number of args");
+	return sq_throwerror(v,_SC("invalid number of args"));
 
 }
 
@@ -299,7 +317,7 @@ static int io_file_write(HSQUIRRELVM v)
 		SQInteger i;SQFloat f;
 		const SQChar* s;
 		_File *p;
-		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer *)&p)))return sq_throwerror(v,"wrong ud");
+		if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer *)&p)))return sq_throwerror(v,_SC("wrong ud"));
 		
 		switch(sq_gettype(v,2))
 		{
@@ -313,23 +331,23 @@ static int io_file_write(HSQUIRRELVM v)
 			break;
 		case OT_STRING:
 			sq_getstring(v,2,&s);
-			p->Write((void *)s,sq_getsize(v,2));
+			p->Write((void *)s,sq_getsize(v,2)*sizeof(SQChar));
 			
 			break;
 		default:
-			return sq_throwerror(v,"wrong argument");
+			return sq_throwerror(v,_SC("wrong argument"));
 			break;
 		}
 		return 0;
 		
 	}
-	return sq_throwerror(v,"invalid number of args");
+	return sq_throwerror(v,_SC("invalid number of args"));
 }
 
 int findstring (const SQChar *name, const SQChar *const list[]) {
   int i;
   for (i=0; list[i]; i++)
-    if (strcmp(list[i], name) == 0)
+    if (scstrcmp(list[i], name) == 0)
       return i;
   return -1;  /* name not found */
 }
@@ -343,13 +361,13 @@ static int io_file_seek(HSQUIRRELVM v)
 		if(sq_gettop(v)>2){
 			sq_getinteger(v,3,&iorigin);
 			switch(iorigin){
-				case 'set':realorigin=SEEK_SET;break;
-				case 'cur':realorigin=SEEK_CUR;break;
-				case 'end':realorigin=SEEK_END;break;
+				case 's':realorigin=SEEK_SET;break;
+				case 'c':realorigin=SEEK_CUR;break;
+				case 'e':realorigin=SEEK_END;break;
 			}
 		}
 		if(sq_gettype(v,1)!=OT_USERDATA
-			|| SQ_FAILED(sq_getinteger(v,2,&offset)))return sq_throwerror(v,"invalid agument");
+			|| SQ_FAILED(sq_getinteger(v,2,&offset)))return sq_throwerror(v,_SC("invalid agument"));
 		
 		_File *p;
 		sq_getuserdata(v,1,(SQUserPointer *)&p);
@@ -358,23 +376,23 @@ static int io_file_seek(HSQUIRRELVM v)
 			return 1;
 		}
 		else{
-			return sq_throwerror(v,"file op failure");
+			return sq_throwerror(v,_SC("file op failure"));
 		}
 		
 	}
-	return sq_throwerror(v,"invalid number of args");
+	return sq_throwerror(v,_SC("invalid number of args"));
 }
 
 static int io_file_typeof(HSQUIRRELVM v)
 {
-	sq_pushstring(v,"file",-1);
+	sq_pushstring(v,_SC("file"),-1);
 	return 1;
 }
 
 static int io_file_size(HSQUIRRELVM v)
 {
 	_File *p;
-	if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer*)&p)))return sq_throwerror(v,"invalid param");
+	if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer*)&p)))return sq_throwerror(v,_SC("invalid param"));
 	sq_pushinteger(v,p->Size());
 	return 1;
 }
@@ -383,10 +401,10 @@ int io_remove(HSQUIRRELVM v)
 {
 	const SQChar *s;
 	if(SQ_SUCCEEDED(sq_getstring(v,2,&s))){
-		if(remove(s)==-1)return sq_throwerror(v,"remove() failed");
+		if(scremove(s)==-1)return sq_throwerror(v,_SC("remove() failed"));
 		
 	}
-	return sq_throwerror(v,"wrong param");
+	return sq_throwerror(v,_SC("wrong param"));
 }
 
 int io_rename(HSQUIRRELVM v)
@@ -394,38 +412,40 @@ int io_rename(HSQUIRRELVM v)
 	const SQChar *oldn,*newn;
 	if(SQ_SUCCEEDED(sq_getstring(v,2,&oldn))
 		&& SQ_SUCCEEDED(sq_getstring(v,3,&newn))){
-		if(rename(oldn,newn)==-1)return sq_throwerror(v,"remove() failed");
+#ifndef SQUNICODE
+		if(screname(oldn,newn)==-1)return sq_throwerror(v,_SC("rename() failed"));
+#endif
 		
 	}
-	return sq_throwerror(v,"wrong param");
+	return sq_throwerror(v,_SC("wrong param"));
 }
 
 
 static SQRegFunction io_funcs[]={
-	{"remove",io_remove},
-	{"rename",io_rename},
+	{_SC("remove"),io_remove},
+	{_SC("rename"),io_rename},
 	{0,0}
 };
 
 static SQRegFunction io_file_funcs[]={
-	{"close",io_file_close},
-	{"eof",io_file_eof},
-	{"read",io_file_read},
-	{"readblob",io_file_readblob},
-	{"writeblob",io_file_writeblob},
-	{"fillblob",io_file_fillblob},
-	{"write",io_file_write},
-	{"seek",io_file_seek},
-	{"size",io_file_size},
+	{_SC("close"),io_file_close},
+	{_SC("eof"),io_file_eof},
+	{_SC("read"),io_file_read},
+	{_SC("readblob"),io_file_readblob},
+	{_SC("writeblob"),io_file_writeblob},
+	{_SC("fillblob"),io_file_fillblob},
+	{_SC("write"),io_file_write},
+	{_SC("seek"),io_file_seek},
+	{_SC("size"),io_file_size},
 // reflex
-	{"_typeof",io_file_typeof},
+	{_SC("_typeof"),io_file_typeof},
 	{0,0}
 };
 
 int sq_iolib_register(HSQUIRRELVM v)
 {
 	int i=0;
-	sq_pushstring(v,"fopen",-1);
+	sq_pushstring(v,_SC("fopen"),-1);
 	sq_newtable(v);
 	////funcions
 	while(io_file_funcs[i].name!=0)
@@ -448,7 +468,7 @@ int sq_iolib_register(HSQUIRRELVM v)
 	sq_setreleasehook(v,-1,file_release);
 
 	sq_pushroottable(v);
-	sq_pushstring(v,"stdout",-1);
+	sq_pushstring(v,_SC("stdout"),-1);
 	sq_push(v,-3);
 	sq_createslot(v,-3);
 
@@ -462,7 +482,7 @@ int sq_iolib_register(HSQUIRRELVM v)
 	sq_setreleasehook(v,-1,file_release);
 
 	sq_pushroottable(v);
-	sq_pushstring(v,"stdin",-1);
+	sq_pushstring(v,_SC("stdin"),-1);
 	sq_push(v,-3);
 	sq_createslot(v,-3);
 

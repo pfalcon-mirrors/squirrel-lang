@@ -7,6 +7,45 @@
 #include "sqfuncproto.h"
 #include "sqclosure.h"
 
+SQTable::SQTable(SQSharedState *ss,int nInitialSize)
+{
+	int pow2size=MINPOWER2;
+	while(nInitialSize>pow2size)pow2size=pow2size<<1;
+	AllocNodes(pow2size);
+	_uiRef=0;
+	_delegate=NULL;
+	INIT_CHAIN();
+	ADD_TO_CHAIN(&_sharedstate->_gc_chain,this);
+}
+
+void SQTable::Remove(const SQObjectPtr &key)
+{
+	unsigned long h=HashKey(key);//_string(key)->_hash;
+	_HashNode *n=&_nodes[h&(_numofnodes-1)];
+	_HashNode *first=n;
+	_HashNode *prev=NULL;
+
+	do
+	{
+		if(type(n->key)==type(key) && _rawval(n->key)==_rawval(key)){
+			if(n==first && n->next){
+				_nodes[h&(_numofnodes-1)].key=n->next->key;
+				_nodes[h&(_numofnodes-1)].val=n->next->val;
+				n->next->val=n->next->key=_null_;
+			}
+			else{
+				if(prev)
+					prev->next=n->next;
+			}
+			if(n>_firstfree)
+				_firstfree=n;
+			n->val=n->key=_null_;
+		}
+		prev=n;
+		n=n->next;
+	}while(n);
+}
+
 void SQTable::AllocNodes(int nSize)
 {
 	_HashNode *nodes=(_HashNode *)SQ_MALLOC(sizeof(_HashNode)*nSize);

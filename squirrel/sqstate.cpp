@@ -13,11 +13,7 @@
 
 SQObjectPtr _null_;
 SQObjectPtr _notnull_(1);
-
-//SQSharedState *GS=NULL;
-SQSharedState::SQSharedState()
-{
-}
+SQSharedState::SQSharedState(){}
 
 #define newsysstring(s) {	\
 	_systemstrings->push_back(SQString::Create(this,s));	\
@@ -52,17 +48,17 @@ void SQSharedState::Init()
 	sq_new(_types,SQObjectPtrVec);
 	//adding type strings to avoid memory trashing
 	//types names
-	newsysstring("null");
-	newsysstring("table");
-	newsysstring("array");
-	newsysstring("closure");
-	newsysstring("string");
-	newsysstring("userdata");
-	newsysstring("integer");
-	newsysstring("float");
-	newsysstring("userpointer");
-	newsysstring("function");
-	newsysstring("generator");
+	newsysstring(_SC("null"));
+	newsysstring(_SC("table"));
+	newsysstring(_SC("array"));
+	newsysstring(_SC("closure"));
+	newsysstring(_SC("string"));
+	newsysstring(_SC("userdata"));
+	newsysstring(_SC("integer"));
+	newsysstring(_SC("float"));
+	newsysstring(_SC("userpointer"));
+	newsysstring(_SC("function"));
+	newsysstring(_SC("generator"));
 	//meta methods
 	newmetamethod(MM_ADD);
 	newmetamethod(MM_SUB);
@@ -100,8 +96,7 @@ SQSharedState::~SQSharedState()
 	_number_default_delegate=_null_;
 	_closure_default_delegate=_null_;
 	_generator_default_delegate=_null_;
-	//make sure that all strings are deleted
-	
+		
 	SQVM *v=_vms_chain;
 	while(_vms_chain){
 		sq_delete(v,SQVM);
@@ -109,7 +104,6 @@ SQSharedState::~SQSharedState()
 	}
 #if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
 	
-
 	SQCollectable *t=_gc_chain;
 	while(t){
 		t->_uiRef++;
@@ -216,7 +210,6 @@ void SQCollectable::RemoveFromChain(SQCollectable **chain,SQCollectable *c)
 	c->_next=NULL;
 	c->_prev=NULL;
 }
-
 #endif
 
 SQChar* SQSharedState::GetScratchPad(int size)
@@ -268,17 +261,17 @@ void StringTable::AllocNodes(int size)
 SQString *StringTable::Add(const SQChar *news,int len)
 {
 	if(len<0)
-		len=strlen(news);
+		len=scstrlen(news);
 	unsigned int h=::_hashstr(news,len)&(_numofslots-1);
 	SQString *s;
 	for (s = _strings[h]; s; s = s->_next){
-		if(s->_len==len && (!memcmp(news,s->_val,len)))
+		if(s->_len==len && (!memcmp(news,s->_val,rsl(len))))
 			return s; //found
 	}
-	SQString *t=(SQString *)SQ_MALLOC(len+sizeof(SQString));
+	SQString *t=(SQString *)SQ_MALLOC(rsl(len)+sizeof(SQString));
 	new (t) SQString;
-	memcpy(t->_val,news,len);
-	t->_val[len]='\0';
+	memcpy(t->_val,news,rsl(len));
+	t->_val[len]=_SC('\0');
 	t->_len=len;
 	t->_hash=::_hashstr(news,len);
 	t->_next=_strings[h];
@@ -314,7 +307,7 @@ void StringTable::Remove(SQString *bs)
 	SQString *prev=NULL;
 	unsigned int h=bs->_hash&(_numofslots-1);
 	for (s = _strings[h]; s; ){
-		if(s->_len==bs->_len && (!memcmp(bs->_val,s->_val,bs->_len))){
+		if(s->_len==bs->_len && (!memcmp(bs->_val,s->_val,rsl(bs->_len)))){
 			if(prev)
 				prev->_next=s->_next;
 			else
@@ -322,7 +315,7 @@ void StringTable::Remove(SQString *bs)
 			_slotused--;
 			int slen=s->_len;
 			s->~SQString();
-			SQ_FREE(s,sizeof(SQString)+slen);
+			SQ_FREE(s,sizeof(SQString)+rsl(slen));
 			return;
 		}
 		prev = s;
@@ -330,5 +323,3 @@ void StringTable::Remove(SQString *bs)
 	}
 	assert(0);//if this fail something is wrong
 }
-
-

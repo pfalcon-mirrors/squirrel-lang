@@ -46,7 +46,10 @@ typedef sqvector<SQLineInfo> SQLineInfoVec;
 struct SQFunctionProto : public SQRefCounted
 {
 private:
-	SQFunctionProto(){_uiRef=0;_stacksize=0;_bgenerator=false;}
+	SQFunctionProto(){
+		_uiRef=0;
+	_stacksize=0;
+	_bgenerator=false;}
 public:
 	static SQFunctionProto *Create()
 	{

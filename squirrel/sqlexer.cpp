@@ -17,14 +17,14 @@
 #define NEXT() Next();_currentcolumn++
 #define APPEND_CHAR(c) {_tempstring[size]=(c);size++;}
 #define TERMINATE_BUFFER() _tempstring[size]=_SC('\0');
-#define ADD_KEYWORD(key,id) _keywords->NewSlot( SQString::Create(ss,#key) , SQInteger(id) )
+#define ADD_KEYWORD(key,id) _keywords->NewSlot( SQString::Create(ss,_SC(#key)) , SQInteger(id) )
 
 SQLexer::SQLexer(){}
 SQLexer::~SQLexer()
 {
 	_keywords->Release();
 }
-void SQLexer::Init(SQSharedState *ss,SQREADFUNC rg,SQUserPointer up)
+void SQLexer::Init(SQSharedState *ss,SQLEXREADFUNC rg,SQUserPointer up)
 {
 	_sharedstate=ss;
 	_keywords=SQTable::Create(ss,26);
@@ -68,7 +68,7 @@ void SQLexer::Init(SQSharedState *ss,SQREADFUNC rg,SQUserPointer up)
 void SQLexer::Next()
 {
 	SQChar t;
-	if(_readf(_up,&t,sizeof(SQChar))!=-1){
+	if((t=_readf(_up))!=0){
 		_currdata=t;
 		return;
 	}
@@ -94,7 +94,7 @@ void SQLexer::LexBlockComment()
 			case _SC('*'): {NEXT(); if(CUR_CHAR==_SC('/')) { nest--; NEXT(); }}; continue;
 			case _SC('/'): {NEXT(); if(CUR_CHAR==_SC('*')) { nest++; NEXT(); }}; continue;
 			case _SC('\n'): _currentline++; NEXT(); continue;
-			case SQUIRREL_EOB: throw ParserException("missing \"*/\" in comment");
+			case SQUIRREL_EOB: throw ParserException(_SC("missing \"*/\" in comment"));
 			default: NEXT();
 		}
 	}
@@ -108,7 +108,7 @@ int SQLexer::Lex()
 		case _SC('\n'):
 			_currentline++;
 			_prevtoken=_curtoken;
-			_curtoken='\n';
+			_curtoken=_SC('\n');
 			NEXT();
 			_lastline=&CUR_CHAR;
 			_currentcolumn=1;
@@ -151,7 +151,7 @@ int SQLexer::Lex()
 			if((stype=ReadString(CUR_CHAR))!=-1){
 				RETURN_TOKEN(stype);
 			}
-			throw ParserException("error parsing the string");
+			throw ParserException(_SC("error parsing the string"));
 			}
 		case _SC('{'):case _SC('}'):case _SC('('):case _SC(')'):case _SC('['):case _SC(']'):
 		case _SC(';'):case _SC(','):case _SC('%'):case _SC('?'):case _SC('^'):case _SC('~'):
@@ -181,17 +181,17 @@ int SQLexer::Lex()
 		case SQUIRREL_EOB:
 			return 0;
 		default:{
-				if (isdigit(CUR_CHAR)) {
+				if (scisdigit(CUR_CHAR)) {
 					int ret=ReadNumber();
 					RETURN_TOKEN(ret);
 				}
-				else if (isalpha(CUR_CHAR) || CUR_CHAR == _SC('_')) {
+				else if (scisalpha(CUR_CHAR) || CUR_CHAR == _SC('_')) {
 					int t=ReadID();
 					RETURN_TOKEN(t);
 				}
 				else {
 					int c = CUR_CHAR;
-					if (iscntrl(c))	throw ParserException("unexpected character(control)");
+					if (sciscntrl(c))	throw ParserException(_SC("unexpected character(control)"));
 					NEXT();
 					RETURN_TOKEN(c);  
 				}
@@ -221,7 +221,7 @@ int SQLexer::ReadString(int ndelim)
 	while(CUR_CHAR!=ndelim){
 		switch(CUR_CHAR){
 		case SQUIRREL_EOB:
-			throw ParserException("unfinished string");
+			throw ParserException(_SC("unfinished string"));
 			return -1;
 		case _SC('\\'):
 			NEXT();
@@ -238,7 +238,7 @@ int SQLexer::ReadString(int ndelim)
 			case _SC('"'): APPEND_CHAR(_SC('"')); NEXT(); break;
 			case _SC('\''): APPEND_CHAR(_SC('\'')); NEXT(); break;
 			default:
-				throw ParserException("unrecognised escaper char");
+				throw ParserException(_SC("unrecognised escaper char"));
 				break;
 			}
 			break;
@@ -249,13 +249,13 @@ int SQLexer::ReadString(int ndelim)
 	}
 	NEXT();
 	TERMINATE_BUFFER();
-	int len=strlen(_tempstring);
+	int len=scstrlen(_tempstring);
 	if(ndelim==_SC('\'')){
-		if(len==0)throw ParserException("empty constant");
-		if(len>4)throw ParserException("constant too long");
+		if(len==0)throw ParserException(_SC("empty constant"));
+		if(len>4)throw ParserException(_SC("constant too long"));
 		_nvalue=0;
 		for(int i = 0; i<len; i++) 
-			_nvalue = (_nvalue<<8)+_tempstring[i];
+			_nvalue = (_nvalue<<sizeof(SQChar))+_tempstring[i];
 		return INTEGER;
 	}
 	_svalue = _tempstring;
@@ -278,11 +278,11 @@ int SQLexer::ReadNumber()
 			APPEND_CHAR(CUR_CHAR);
 			NEXT();
 		}
-		if(size>8)throw ParserException("Hex number over 8 digits");
+		if(size>8)throw ParserException(_SC("Hex number over 8 digits"));
 	}
 	else{
 		APPEND_CHAR(firstchar);
-		while(CUR_CHAR==_SC('.') || isdigit(CUR_CHAR)){
+		while(CUR_CHAR==_SC('.') || scisdigit(CUR_CHAR)){
             if(CUR_CHAR==_SC('.'))type=TFLOAT;
 			APPEND_CHAR(CUR_CHAR);
 			NEXT();
@@ -291,22 +291,19 @@ int SQLexer::ReadNumber()
 	TERMINATE_BUFFER();
 	switch(type){
 	case TFLOAT:
-		_fvalue=(SQFloat)strtod(_tempstring,&sTemp);
+		_fvalue=(SQFloat)scstrtod(_tempstring,&sTemp);
 		return FLOAT;
 		break;
 	case TINT:
-		_nvalue=(SQInteger)atoi(_tempstring);
+		_nvalue=(SQInteger)scatoi(_tempstring);
 		return INTEGER;
 		break;
 	case THEX:
-		*((unsigned long *)&_nvalue)=strtoul(_tempstring,&sTemp,16);
+		*((unsigned long *)&_nvalue)=scstrtoul(_tempstring,&sTemp,16);
 		return INTEGER;
 		break;
 	}
 	return 0;
-#undef TINT
-#undef TFLOAT
-#undef THEX
 }
 
 int SQLexer::ReadID()
@@ -315,7 +312,7 @@ int SQLexer::ReadID()
 	do{
 		APPEND_CHAR(CUR_CHAR);
 		NEXT();
-	}while (isalnum(CUR_CHAR) || CUR_CHAR == _SC('_'));
+	}while (scisalnum(CUR_CHAR) || CUR_CHAR == _SC('_'));
 	TERMINATE_BUFFER();
 	res=GetIDType(_tempstring);
 	if(res==IDENTIFIER){
