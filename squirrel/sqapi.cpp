@@ -128,7 +128,7 @@ SQRESULT sq_compile(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQCha
 	SQObjectPtr o;
 #ifndef NO_COMPILER
 	if(Compile(v, read, p, sourcename, o, raiseerror?true:false, _ss(v)->_debuginfo)) {
-		v->Push(SQClosure::Create(_ss(v), _funcproto(o)));
+		v->Push(SQClosure::Create(_ss(v), _funcproto(o), _table(v->_roottable)->GetWeakRef(OT_TABLE)));
 		return SQ_OK;
 	}
 	return SQ_ERROR;
@@ -484,6 +484,27 @@ SQRESULT sq_getclosurename(HSQUIRRELVM v,SQInteger idx)
 	else { //closure
 		v->Push(_closure(o)->_function->_name);
 	}
+	return SQ_OK;
+}
+
+SQRESULT sq_setclosureroot(HSQUIRRELVM v,SQInteger idx)
+{
+	SQObjectPtr &c = stack_get(v,idx);
+	SQObject o = stack_get(v, -1);
+	if(!sq_isclosure(c)) return sq_throwerror(v, _SC("closure expected"));
+	if(sq_istable(o)) {
+		_closure(c)->SetRoot(_table(o)->GetWeakRef(OT_TABLE));
+		v->Pop();
+		return SQ_OK;
+	}
+	return sq_throwerror(v, _SC("ivalid type"));
+}
+
+SQRESULT sq_getclosureroot(HSQUIRRELVM v,SQInteger idx)
+{
+	SQObjectPtr &c = stack_get(v,idx);
+	if(!sq_isclosure(c)) return sq_throwerror(v, _SC("closure expected"));
+	v->Push(_closure(c)->_root->_obj);
 	return SQ_OK;
 }
 

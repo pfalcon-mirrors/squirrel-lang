@@ -1,3 +1,9 @@
+***version 3.1.0 alpha 1***
+-changed in and instanceof operator precendence
+-root object in closures
+-added closure.setroot closure.getroot
+-added sq_setclosureroot and sq_getclosureroot
+
 ***version 3.0.3 stable***
 -improved error messages for _cmp(when a non integer value is returned) (thx Yexo)
 -added class.newmember() built in method (thx Nam)
@@ -6,12 +12,9 @@
 -added sq_getversion()
 -added sq_typeof()
 -added sq_getclosurename()
--added file.close() in stdlib
 -documented closure.getinfos() built-in method
--fixed string iteration doesn't return negative numbers for characters > 127
 -fixed bug in tofloat() when converting a string with scientific notation without a decimal point (thx wr2)
 -fixed potential infinite loop in array.sort() when the _cmp function is inconsistent (thx Yexo)
--fixed obscure bug in the compiler(thx yishin)
 -fixed some minor bug
 
 ***2011-11-28		   ***

@@ -890,6 +890,20 @@ static SQInteger closure_bindenv(HSQUIRRELVM v)
 	return 1;
 }
 
+static SQInteger closure_getroot(HSQUIRRELVM v)
+{
+	if(SQ_FAILED(sq_getclosureroot(v,-1)))
+		return SQ_ERROR;
+	return 1;
+}
+
+static SQInteger closure_setroot(HSQUIRRELVM v)
+{
+	if(SQ_FAILED(sq_setclosureroot(v,-2)))
+		return SQ_ERROR;
+	return 1;
+}
+
 static SQInteger closure_getinfos(HSQUIRRELVM v) {
 	SQObject o = stack_get(v,1);
 	SQTable *res = SQTable::Create(_ss(v),4);
@@ -944,6 +958,8 @@ SQRegFunction SQSharedState::_closure_default_delegate_funcz[]={
 	{_SC("tostring"),default_delegate_tostring,1, _SC(".")},
 	{_SC("bindenv"),closure_bindenv,2, _SC("c x|y|t")},
 	{_SC("getinfos"),closure_getinfos,1, _SC("c")},
+	{_SC("getroot"),closure_getroot,1, _SC("c")},
+	{_SC("setroot"),closure_setroot,2, _SC("ct")},
 	{0,0}
 };
 

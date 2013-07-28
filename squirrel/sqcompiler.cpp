@@ -489,8 +489,7 @@ public:
 			_fs->SetIntructionParam(jpos, 1, (_fs->GetCurrentPos() - jpos));
 			break;
 			}
-		case TK_IN: BIN_EXP(_OP_EXISTS, &SQCompiler::BitwiseOrExp); break;
-		case TK_INSTANCEOF: BIN_EXP(_OP_INSTANCEOF, &SQCompiler::BitwiseOrExp); break;
+		
 		default:
 			return;
 		}
@@ -534,6 +533,8 @@ public:
 		case _SC('<'): BIN_EXP(_OP_CMP, &SQCompiler::ShiftExp,CMP_L); break;
 		case TK_GE: BIN_EXP(_OP_CMP, &SQCompiler::ShiftExp,CMP_GE); break;
 		case TK_LE: BIN_EXP(_OP_CMP, &SQCompiler::ShiftExp,CMP_LE); break;
+		case TK_IN: BIN_EXP(_OP_EXISTS, &SQCompiler::ShiftExp); break;
+		case TK_INSTANCEOF: BIN_EXP(_OP_INSTANCEOF, &SQCompiler::ShiftExp); break;
 		default: return;	
 		}
 	}
@@ -1147,7 +1148,6 @@ public:
 		_fs->SetIntructionParam(foreachpos + 1, 1, _fs->GetCurrentPos() - foreachpos);
 		END_BREAKBLE_BLOCK(foreachpos - 1);
 		//restore the local variable stack(remove index,val and ref idx)
-		_fs->PopTarget();
 		END_SCOPE();
 	}
 	void SwitchStatement()

@@ -62,7 +62,7 @@ SQInteger SQString::Next(const SQObjectPtr &refpos, SQObjectPtr &outkey, SQObjec
 	SQInteger idx = (SQInteger)TranslateIndex(refpos);
 	while(idx < _len){
 		outkey = (SQInteger)idx;
-		outval = (SQInteger)((SQUnsignedInteger)_val[idx]);
+		outval = SQInteger(_val[idx]);
 		//return idx for the next iteration
 		return ++idx;
 	}
@@ -254,6 +254,7 @@ SQInteger SQFunctionProto::GetLine(SQInstruction *curr)
 
 SQClosure::~SQClosure()
 {
+	__ObjRelease(_root);
 	__ObjRelease(_env);
 	__ObjRelease(_base);
 	REMOVE_FROM_CHAIN(&_ss(this)->_gc_chain,this);
@@ -367,7 +368,8 @@ bool SQClosure::Load(SQVM *v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &ret)
 	SQObjectPtr func;
 	_CHECK_IO(SQFunctionProto::Load(v,up,read,func));
 	_CHECK_IO(CheckTag(v,read,up,SQ_CLOSURESTREAM_TAIL));
-	ret = SQClosure::Create(_ss(v),_funcproto(func));
+	ret = SQClosure::Create(_ss(v),_funcproto(func),_table(v->_roottable)->GetWeakRef(OT_TABLE));
+	//FIXME: load an root for this closure
 	return true;
 }
 

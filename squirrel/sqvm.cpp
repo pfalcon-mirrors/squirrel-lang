@@ -576,7 +576,7 @@ bool SQVM::FOREACH_OP(SQObjectPtr &o1,SQObjectPtr &o2,SQObjectPtr
 bool SQVM::CLOSURE_OP(SQObjectPtr &target, SQFunctionProto *func)
 {
 	SQInteger nouters;
-	SQClosure *closure = SQClosure::Create(_ss(this), func);
+	SQClosure *closure = SQClosure::Create(_ss(this), func,_table(_roottable)->GetWeakRef(OT_TABLE));
 	if((nouters = func->_noutervalues)) {
 		for(SQInteger i = 0; i<nouters; i++) {
 			SQOuterVar &v = func->_outervalues[i];
@@ -846,7 +846,15 @@ exception_restore:
 				}
 				continue;
 			case _OP_LOADNULLS:{ for(SQInt32 n=0; n < arg1; n++) STK(arg0+n).Null(); }continue;
-			case _OP_LOADROOT:	TARGET = _roottable; continue;
+			case _OP_LOADROOT:	{
+				SQWeakRef *w = _closure(ci->_closure)->_root;
+				if(type(w->_obj) != OT_NULL) {
+					TARGET = w->_obj;
+				} else {
+					TARGET = _roottable; //shoud this be like this? or null
+				}
+								}
+				continue;
 			case _OP_LOADBOOL: TARGET = arg1?true:false; continue;
 			case _OP_DMOVE: STK(arg0) = STK(arg1); STK(arg2) = STK(arg3); continue;
 			case _OP_JMP: ci->_ip += (sarg1); continue;
@@ -1224,7 +1232,12 @@ bool SQVM::Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,
 	}
 //#ifdef ROOT_FALLBACK
 	if(selfidx == 0) {
-		if(_table(_roottable)->Get(key,dest)) return true;
+		SQWeakRef *w = _closure(ci->_closure)->_root;
+		if(type(w->_obj) != OT_NULL) 
+		{
+			if(Get(*((const SQObjectPtr *)&w->_obj),key,dest,false,DONT_FALL_BACK)) return true;
+		}
+		
 	}
 //#endif
 	Raise_IdxError(key);
