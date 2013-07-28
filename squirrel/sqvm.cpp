@@ -60,6 +60,10 @@ SQVM::SQVM(SQSharedState *ss)
 void SQVM::Finalize()
 {
 	_roottable = _null_;
+	_lasterror = _null_;
+	_errorhandler = _null_;
+	_debughook = _null_;
+	temp_reg = _null_;
 	int size=_stack.size();
 	for(int i=0;i<size;i++)
 		_stack[i]=_null_;

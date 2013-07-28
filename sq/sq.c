@@ -175,13 +175,11 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 				return _DONE;
 			}
 			else {
-				int top = sq_gettop(v);
 				if(SQ_SUCCEEDED(sqstd_dofile(v,filename,0,1))) {
 					return _DONE;
 				}
 				else {
 					const SQChar *err;
-					int xtop = sq_gettop(v);
 					sq_getlasterror(v);
 					if(SQ_SUCCEEDED(sq_getstring(v,-1,&err))) {
 						scprintf(_SC("Error [%s]\n"),err);

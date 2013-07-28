@@ -242,7 +242,7 @@ void sq_base_register(HSQUIRRELVM v)
 		sq_pushstring(v,base_funcs[i].name,-1);
 		sq_newclosure(v,base_funcs[i].f,0);
 		sq_setnativeclosurename(v,-1,base_funcs[i].name);
-		sq_setparamscheck(v,base_funcs[i].nparamscheck,NULL);
+		sq_setparamscheck(v,base_funcs[i].nparamscheck,base_funcs[i].typemask);
 		sq_createslot(v,-3);
 		i++;
 	}

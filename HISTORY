@@ -1,3 +1,7 @@
+***version 1.02 stable***
+-fixed a couple of minor bugs
+
+***2004-11-09         ***
 ***version 1.01 stable***
 -fixed a minor bug
 -added conditional compilation flag SQ_VM_ONLY
