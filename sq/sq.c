@@ -239,7 +239,7 @@ void Interactive(HSQUIRRELVM v)
 	sq_pushuserpointer(v,&done);
 	sq_newclosure(v,quit,1);
 	sq_setparamscheck(v,1,NULL);
-	sq_createslot(v,-3);
+	sq_newslot(v,-3,SQFalse);
 	sq_pop(v,1);
 
     while (!done) 
