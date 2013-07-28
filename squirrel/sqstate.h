@@ -87,6 +87,8 @@ private:
 
 extern SQObjectPtr _null_;
 extern SQObjectPtr _notnull_;
+extern SQObjectPtr _one_;
+extern SQObjectPtr _minusone_;
 
 void *sq_vm_malloc(unsigned int size);
 void *sq_vm_realloc(void *p,unsigned int oldsize,unsigned int size);

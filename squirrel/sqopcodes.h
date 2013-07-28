@@ -57,9 +57,13 @@ enum SQOpcode
 	_OP_SHIFTR=0x32,
 	_OP_RESUME=0x33,//<<target>> <<generator>>
 	_OP_CLONE=0x34,//<<target>> <<obj>>
+	_OP_INC=0x35,//<<target>> <<src>> ++i
+	_OP_DEC=0x36,//<<target>> <<src>> --i
+	_OP_PINC=0x37,//<<target>> <<src>> i++
+	_OP_PDEC=0x38,//<<target>> <<src>> i--
 	//optimized stuff
-	_OP_GETK=0x35,
-	_OP_PREPCALLK=0x36,
+	_OP_GETK=0x39,
+	_OP_PREPCALLK=0x3A,
 };
 
 struct SQInstructionDesc {

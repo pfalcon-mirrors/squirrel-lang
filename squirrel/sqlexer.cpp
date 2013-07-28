@@ -133,7 +133,7 @@ int SQLexer::Lex()
 		case _SC('<'):
 			NEXT();
 			if ( CUR_CHAR == _SC('=') ) { NEXT(); RETURN_TOKEN(LE) }
-			else if ( CUR_CHAR == _SC('-') ) { NEXT(); RETURN_TOKEN(CREATE); }
+			else if ( CUR_CHAR == _SC('-') ) { NEXT(); RETURN_TOKEN(NEWSLOT); }
 			else if ( CUR_CHAR == _SC('<') ) { NEXT(); RETURN_TOKEN(SHIFTL); }
 			else { RETURN_TOKEN('<') }
 		case _SC('>'):
@@ -172,12 +172,14 @@ int SQLexer::Lex()
 			else { NEXT(); RETURN_TOKEN(DOUBLE_COLON); }
 		case _SC('-'):
 			NEXT();
-			if (CUR_CHAR != _SC('=')){ RETURN_TOKEN('-')}
-			else { NEXT(); RETURN_TOKEN(MINUSEQ) }
+			if (CUR_CHAR == _SC('=')){ NEXT(); RETURN_TOKEN(MINUSEQ);}
+			else if  (CUR_CHAR == _SC('-')){ NEXT(); RETURN_TOKEN(MINUSMINUS);}
+			else RETURN_TOKEN('-');
 		case _SC('+'):
 			NEXT();
-			if (CUR_CHAR != _SC('=')){ RETURN_TOKEN('+')}
-			else { NEXT(); RETURN_TOKEN(PLUSEQ) }
+			if (CUR_CHAR == _SC('=')){ NEXT(); RETURN_TOKEN(PLUSEQ);}
+			else if (CUR_CHAR == _SC('+')){ NEXT(); RETURN_TOKEN(PLUSPLUS);}
+			else RETURN_TOKEN('+');
 		case SQUIRREL_EOB:
 			return 0;
 		default:{
@@ -293,15 +295,12 @@ int SQLexer::ReadNumber()
 	case TFLOAT:
 		_fvalue=(SQFloat)scstrtod(_tempstring,&sTemp);
 		return FLOAT;
-		break;
 	case TINT:
 		_nvalue=(SQInteger)scatoi(_tempstring);
 		return INTEGER;
-		break;
 	case THEX:
 		*((unsigned long *)&_nvalue)=scstrtoul(_tempstring,&sTemp,16);
 		return INTEGER;
-		break;
 	}
 	return 0;
 }

@@ -4,7 +4,8 @@
 
 #include "sqopcodes.h"
 #include "sqobject.h"
-
+#define MAX_NATIVE_CALLS 100
+#define MIN_STACK_OVERHEAD 10
 //base lib
 void sq_base_register(HSQUIRRELVM v);
 
@@ -29,23 +30,11 @@ struct SQVM
 {
 	struct CallInfo{
 		CallInfo(){}
-		CallInfo(const CallInfo& ci)
-		{
-			_iv=ci._iv;
-			_literals=ci._literals;
-			_closure=ci._closure;
-			_generator=ci._generator;
-			_prevstkbase=ci._prevstkbase;
-			_ip=ci._ip;
-			_root=ci._root;
-			_etraps.copy(ci._etraps);
-			_prevtop=ci._prevtop;
-			_target=ci._target;
-		}
+		CallInfo(const CallInfo& ci){(*this)=ci;}
 		SQInstructionVec *_iv;
 		SQObjectPtrVec *_literals;
-		SQObjectPtr _closure;
-		SQObjectPtr _generator;
+		SQObject _closure;
+		SQObject _generator;
 		ExceptionsTraps _etraps;
 		int _prevstkbase;
 		int _prevtop;
@@ -68,7 +57,6 @@ public:
 	bool Call(SQObjectPtr &closure,int nparams,int stackbase,SQObjectPtr &outres);
 
 	void CallDebugHook(int type);
-	void ThrowError(const SQChar *err);
 	SQObjectPtrVec _stack;
 	int _top;
 	int _stackbase;
@@ -81,12 +69,18 @@ public:
 	int ObjCmp(const SQObjectPtr &o1,const SQObjectPtr &o2);
 	void StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObjectPtr &dest);
 	void IdxError(SQObject &o);
+	void CompareError(const SQObject &o1,const SQObject &o2);
+	void RT_Error(const SQChar *s,...);
+	SQString *PrintObjVal(const SQObject &o);
 
 	void TypeOf(const SQObjectPtr &obj1,SQObjectPtr &dest);
 	bool CallMetaMethod(SQTable *mt,SQMetaMethod mm,int nparams,SQObjectPtr &outres);
 	bool ArithMetaMethod(int op,const SQObjectPtr &o1,const SQObjectPtr &o2,SQObjectPtr &dest);
 	void Modulo(const SQObjectPtr &o1,const SQObjectPtr &o2,SQObjectPtr &dest);
 	bool Return(int _arg0,int _arg1,SQObjectPtr &retval);
+
+	//void LocalInc(SQObjectPtr &target,SQObjectPtr &a,SQObjectPtr &incr,bool postfix,bool reassing);
+	void DerefInc(SQObjectPtr &target,SQObjectPtr &self,SQObjectPtr &key,SQObjectPtr &incr,bool postfix);
 #ifdef _DEBUG
 	void dumpstack(int stackbase=-1,bool dumpall=false);
 #endif
@@ -109,13 +103,14 @@ public:
 		}
 	}
 	void Remove(int n){
-		n=(n>=0)?n:_top+n;
+		n=(n>=0)?n+_stackbase-1:_top+n;
 		for(int i=n;i<_top;i++){
 			_stack[i]=_stack[i+1];
 		}
 		_stack[_top]=_null_;
 		_top--;
 	}
+
 
 	void Push(const SQObjectPtr &o){_stack[_top++]=o;}
 	SQObjectPtr &Top(){return _stack[_top-1];}
@@ -135,8 +130,14 @@ public:
 	SQVM *_next;
 	SQVM *_prev;
 	SQSharedState *_sharedstate;
+	int _nnativecalls;
 };
 
+struct AutoDec{
+	AutoDec(int *n){_n=n;}
+	~AutoDec(){(*_n)--;}
+	int *_n;
+};
 
 SQObjectPtr &stack_get(HSQUIRRELVM v,int idx);
 const SQChar *GetTypeName(const SQObjectPtr &obj1);
@@ -157,6 +158,9 @@ const SQChar *GetTypeName(SQObjectType type);
 
 #define POP_CALLINFO(v){ \
 	v->_callsstack.pop_back(); \
-	v->ci=&v->_callsstack.back() ; \
+	if(v->_callsstack.size())	\
+		v->ci=&v->_callsstack.back() ; \
+	else	\
+		v->ci=NULL ; \
 }
 #endif //_SQVM_H_

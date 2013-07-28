@@ -2,6 +2,7 @@
 	see copyright notice in squirrel.h
 */
 #include "sqpcheader.h"
+#include <stdarg.h>
 #include "sqvm.h"
 #include "sqfuncproto.h"
 #include "sqclosure.h"
@@ -31,4 +32,42 @@ int sq_stackinfos(HSQUIRRELVM v,int level,SQStackInfos *si)
 		return 1;
 	}
 	return 0;
+}
+
+void SQVM::RT_Error(const SQChar *s,...)
+{
+	va_list vl;
+	va_start(vl, s);
+	scvsprintf(_sp(rsl(scstrlen(s)+(NUMBER_MAX_CHAR*2))), s, vl);
+	va_end(vl);
+	throw SQException(_ss(this),_spval);
+}
+
+SQString *SQVM::PrintObjVal(const SQObject &o)
+{
+	switch(type(o)){
+	case OT_STRING:return _string(o);
+	case OT_INTEGER:
+		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+1)),_SC("%d"),_integer(o));
+		return SQString::Create(_ss(this),_spval);
+		break;
+	case OT_FLOAT:
+		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+1)),_SC("%.14g"),_float(o));
+		return SQString::Create(_ss(this),_spval);
+		break;
+	default:
+		return SQString::Create(_ss(this),GetTypeName(o));
+	}
+}
+
+void SQVM::IdxError(SQObject &o)
+{
+	SQObjectPtr oval=PrintObjVal(o);
+	RT_Error(_SC("the index '%.50s' does not exists"),_stringval(oval));
+}
+
+void SQVM::CompareError(const SQObject &o1,const SQObject &o2)
+{
+	SQObjectPtr oval1=PrintObjVal(o1),oval2=PrintObjVal(o2);
+	RT_Error(_SC("comparsion between '%.50s' and '%.50s'"),_stringval(oval1),_stringval(oval2));
 }

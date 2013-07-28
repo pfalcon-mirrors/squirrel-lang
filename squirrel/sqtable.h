@@ -69,8 +69,7 @@ public:
 			if(type(n->key)==type(key) && _rawval(n->key)==_rawval(key)){
 				return n;
 			}
-			n=n->next;
-		}while(n);
+		}while(n=n->next);
 		return NULL;
 	}
 	bool Get(const SQObjectPtr &key,SQObjectPtr &val)
@@ -160,8 +159,13 @@ public:
 	{
 		sq_delete(this,SQTable);
 	}
-	void SetDelegate(SQTable *mt)
+	bool SetDelegate(SQTable *mt)
 	{
+		SQTable *temp=mt;
+		while(temp){
+			if(temp->_delegate==this)return false; //cycle detected
+			temp=temp->_delegate;
+		}
 		if(mt)
 			mt->_uiRef++;
 		if(_delegate){
@@ -170,6 +174,7 @@ public:
 				_delegate->Release();
 		}
 		_delegate=mt;
+		return true;
 	}
 };
 

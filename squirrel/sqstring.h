@@ -16,7 +16,6 @@ struct SQString : public SQRefCounted
 	SQString(){}
 	~SQString(){}
 public:
-	
 	static SQString *Create(SQSharedState *ss,const SQChar *,int len=-1 );
 	int Next(const SQObjectPtr &refpos,SQObjectPtr &outkey,SQObjectPtr &outval)
 	{

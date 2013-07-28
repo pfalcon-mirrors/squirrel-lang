@@ -1,3 +1,13 @@
+***version 0.4 alpha***
+-faster VM
+-sq_call will pop arguments and closure also in case of failure
+-fixed a bug in sq_remove
+-now the VM detects delegation cycles(and throws an exception)
+-new operators ++ and --
+-new operator ',' comma operator
+-fixed some expression precedence issue
+-fixed bug in sq_arraypop
+
 ***version 0.3 alpha***
 -first alpha release
 -optional Unicode core(define SQUNICODE or _UNICODE on Win32)

@@ -27,7 +27,7 @@ struct SQVM;
 #define	_NULL	278
 #define	FOREACH	279
 #define	IN	280
-#define	CREATE	281
+#define	NEWSLOT	281
 #define	MODULO	282
 #define	LOCAL	283
 #define	CLONE	284
@@ -49,6 +49,8 @@ struct SQVM;
 #define CASE 300
 #define DEFAULT 301
 #define THIS 302
+#define PLUSPLUS 303
+#define MINUSMINUS 304
 
 struct ParserException{SQChar *desc;ParserException(SQChar *err):desc(err){}};
 bool Compile(SQVM *vm,SQLEXREADFUNC rg,SQUserPointer up,const SQChar *sourcename,SQObjectPtr &out,bool raiseerror,bool lineinfo);

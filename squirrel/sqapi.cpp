@@ -12,12 +12,15 @@
 SQObjectPtr &sq_aux_gettypedarg(HSQUIRRELVM v,int idx,SQObjectType type)
 {
 	SQObjectPtr &o=stack_get(v,idx);
-	if(type(o)!=type)sqraise_str_error(_ss(v),_SC("wrong argument type"));
+	if(type(o)!=type){
+		SQObjectPtr oval=v->PrintObjVal(o);
+		v->RT_Error(_SC("wrong argument type, expected '%s' got '%.50s'"),GetTypeName(type),_stringval(oval));
+	}
 	return o;
 }
 void sq_aux_paramscheck(HSQUIRRELVM v,int count)
 {
-	if(sq_gettop(v)<count)sqraise_str_error(_ss(v),_SC("not enough params in the stack"));
+	if(sq_gettop(v)<count)v->RT_Error(_SC("not enough params in the stack"));
 }		
 
 int sq_aux_throwobject(HSQUIRRELVM v,SQException &e)
@@ -133,34 +136,34 @@ void sq_pushstring(HSQUIRRELVM v,const SQChar *s,int len)
 
 void sq_pushinteger(HSQUIRRELVM v,SQInteger n)
 {
-	v->Push(SQObjectPtr(n));
+	v->Push(n);
 }
 
 void sq_pushfloat(HSQUIRRELVM v,SQFloat n)
 {
-	v->Push(SQObjectPtr(n));
+	v->Push(n);
 }
 
 void sq_pushuserpointer(HSQUIRRELVM v,SQUserPointer p)
 {
-	v->Push(SQObjectPtr(p));
+	v->Push(p);
 }
 
 SQUserPointer sq_newuserdata(HSQUIRRELVM v,unsigned int size)
 {
 	SQUserData *ud=SQUserData::Create(_ss(v),size);
-	v->Push(SQObjectPtr(ud));
+	v->Push(ud);
 	return ud->_val;
 }
 
 void sq_newtable(HSQUIRRELVM v)
 {
-	v->Push(SQObjectPtr(SQTable::Create(_ss(v),0)));	
+	v->Push(SQTable::Create(_ss(v),0));	
 }
 
 void sq_newarray(HSQUIRRELVM v,int size)
 {
-	v->Push(SQObjectPtr(SQArray::Create(_ss(v),size)));	
+	v->Push(SQArray::Create(_ss(v),size));	
 }
 
 
@@ -182,8 +185,9 @@ SQRESULT sq_arraypop(HSQUIRRELVM v,int idx,int pushval)
 		sq_aux_paramscheck(v,1);
 		SQObjectPtr &arr=sq_aux_gettypedarg(v,idx,OT_ARRAY);
 		if(_array(arr)->Size()>0){
-            if(pushval!=0){v->Push(_array(arr)->Top());_array(arr)->Pop();return 1;}
-			return 0;
+            if(pushval!=0){v->Push(_array(arr)->Top());}
+			_array(arr)->Pop();
+			return pushval;
 		}
 		return sq_throwerror(v,_SC("empty array"));
 	}
@@ -398,7 +402,6 @@ SQRESULT sq_set(HSQUIRRELVM v,int idx)
 		v->IdxError(v->GetUp(-2));return SQ_ERROR;
 	}
 	catch(SQException &e){return sq_aux_throwobject(v,e);}
-	
 }
 
 SQRESULT sq_rawset(HSQUIRRELVM v,int idx)
@@ -422,7 +425,7 @@ SQRESULT sq_setdelegate(HSQUIRRELVM v,int idx)
 	switch(type){
 	case OT_TABLE:
 		if(type(mt)==OT_TABLE){
-			_table(self)->SetDelegate(_table(mt));v->Pop();}
+			if(!_table(self)->SetDelegate(_table(mt)))return sq_throwerror(v,_SC("delagate cycle"));v->Pop();}
 		else if(type(mt)==OT_NULL){
 			_table(self)->SetDelegate(NULL);v->Pop();}
 		else return sq_aux_invalidtype(v,type);
@@ -512,13 +515,12 @@ void sq_pushobject(HSQUIRRELVM v,HSQOBJECT obj)
 
 void sq_resetobject(HSQOBJECT *po)
 {
-	po->_type=OT_NULL;
-	po->_unVal.pUserPointer=NULL;
+	po->_unVal.pUserPointer=NULL;po->_type=OT_NULL;
 }
 
 int sq_throwerror(HSQUIRRELVM v,const SQChar *err)
 {
-	v->ThrowError(err);
+	v->_lasterror=SQString::Create(_ss(v),err);
 	return -1;
 }
 
@@ -553,9 +555,10 @@ SQRESULT sq_call(HSQUIRRELVM v,int params,int retval)
 			}
 			return SQ_OK;
 		}
+		v->Pop(params+1);
 		return sq_throwerror(v,_SC("call failed"));
 	}
-	catch(SQException &e){return sq_aux_throwobject(v,e);}
+	catch(SQException &e){v->Pop(params+1); return sq_aux_throwobject(v,e);}
 }
 
 void sq_setreleasehook(HSQUIRRELVM v,int idx,SQUSERDATARELEASE hook)

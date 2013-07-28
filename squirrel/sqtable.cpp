@@ -24,9 +24,7 @@ void SQTable::Remove(const SQObjectPtr &key)
 	_HashNode *n=&_nodes[h&(_numofnodes-1)];
 	_HashNode *first=n;
 	_HashNode *prev=NULL;
-
-	do
-	{
+	do{
 		if(type(n->key)==type(key) && _rawval(n->key)==_rawval(key)){
 			if(n==first && n->next){
 				_nodes[h&(_numofnodes-1)].key=n->next->key;

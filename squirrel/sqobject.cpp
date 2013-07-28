@@ -28,10 +28,8 @@ unsigned int TranslateIndex(const SQObjectPtr &idx)
 	switch(type(idx)){
 		case OT_NULL:
 			return 0;
-			break;
 		case OT_INTEGER:
 			return (unsigned int)_integer(idx);
-			break;
 	}
 	assert(0);
 	return 0;
@@ -39,8 +37,8 @@ unsigned int TranslateIndex(const SQObjectPtr &idx)
 
 int SQGenerator::Yield(SQVM *v)
 {
-	if(_state==eSuspended)sqraise_str_error(_ss(v),_SC("internal vm error, yielding dead generator"));
-	if(_state==eDead)sqraise_str_error(_ss(v),_SC("internal vm error, yielding a dead generator"));
+	if(_state==eSuspended)v->RT_Error(_SC("internal vm error, yielding dead generator"));
+	if(_state==eDead)v->RT_Error(_SC("internal vm error, yielding a dead generator"));
 	int size=v->_top-v->_stackbase;
 	_ci=*v->ci;
 	_stack.resize(size);
@@ -55,14 +53,14 @@ int SQGenerator::Yield(SQVM *v)
 void SQGenerator::Resume(SQVM *v,int target)
 {
 	int size=_stack.size();
-	if(_state==eDead)sqraise_str_error(_ss(v),_SC("resuming dead generator"));
-	if(_state==eRunning)sqraise_str_error(_ss(v),_SC("resuming active generator"));
+	if(_state==eDead)v->RT_Error(_SC("resuming dead generator"));
+	if(_state==eRunning)v->RT_Error(_SC("resuming active generator"));
 	int prevtop=v->_top-v->_stackbase;
 	PUSH_CALLINFO(v,_ci);
 	int oldstackbase=v->_stackbase;
 	v->_stackbase=v->_top;
 	v->ci->_target=target;
-	v->ci->_generator=this;
+	v->ci->_generator=SQObjectPtr(this);
 	int bytesize=sizeof(SQObjectPtr)*size;
 	memcpy(&v->_stack[v->_stackbase],&_stack._vals[0],bytesize);
 	memset(&_stack._vals[0],0,bytesize);

@@ -13,6 +13,9 @@
 
 SQObjectPtr _null_;
 SQObjectPtr _notnull_(1);
+SQObjectPtr _one_(1);
+SQObjectPtr _minusone_(-1);
+
 SQSharedState::SQSharedState(){}
 
 #define newsysstring(s) {	\

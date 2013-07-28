@@ -17,17 +17,15 @@ int sq_aux_checkargs(HSQUIRRELVM v,int nargs,int ncheck,...)
 	if(sq_gettop(v)<nargs)return sq_throwerror(v,_SC("invalid num of args"));
 	int count = 0, sum = 0;
 	SQObjectType type;
-   va_list marker;
+	va_list marker;
 
-   va_start( marker, ncheck );     /* Initialize variable arguments. */
-   for(int i=0;i<ncheck;i++)
-   {
-      type = va_arg( marker, SQObjectType);
-	  if(sq_gettype(v,i+1)!=type)return sq_throwerror(v,_SC("invalid num of args"));
-   }
-   va_end( marker );              /* Reset variable arguments.      */
-   return 1;
-
+	va_start( marker, ncheck );     /* Initialize variable arguments. */
+	for(int i=0;i<ncheck;i++){
+		type = va_arg( marker, SQObjectType);
+		if(sq_gettype(v,i+1)!=type)return sq_throwerror(v,_SC("invalid num of args"));
+	}
+	va_end( marker );              /* Reset variable arguments.      */
+	return 1;
 }
 
 bool str2num(const SQChar *s,SQObjectPtr &res)
@@ -47,7 +45,6 @@ bool str2num(const SQChar *s,SQObjectPtr &res)
 		res=SQInteger(scatoi(s));
 		return true;
 	}
-	
 }
 
 #ifdef GARBAGE_COLLECTOR
@@ -106,7 +103,6 @@ static int get_slice_params(HSQUIRRELVM v,int &sidx,int &eidx,SQObjectPtr &o)
 		SQObjectPtr &start=stack_get(v,2);
 		if(type(start)!=OT_NULL && sq_isnumeric(start)){
 			sidx=tointeger(start);
-			
 		}
 		if(top>2){
 			SQObjectPtr &end=stack_get(v,3);

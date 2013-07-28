@@ -68,8 +68,8 @@ public:
 	bool IsDerefToken(int tok)
 	{
 		switch(tok){
-		case _SC('='):case _SC('('):case CREATE:
-		case MINUSEQ:case PLUSEQ:return true;
+		case _SC('='):case _SC('('):case NEWSLOT:
+		case MINUSEQ:case PLUSEQ:case PLUSPLUS:case MINUSMINUS:return true;
 		}
 		return false;
 	}
@@ -160,6 +160,7 @@ public:
 		catch(ParserException &ex){
 			if(_raiseerror && _vm->_compilererrorhandler){
 				SQObjectPtr ret;
+				_vm->_lasterror=_null_;
 				_vm->_compilererrorhandler(_vm,ex.desc,type(_sourcename)==OT_STRING?_stringval(_sourcename):_SC("unknown"),
 					_lex._currentline,_lex._currentcolumn);
 			}
@@ -178,30 +179,14 @@ public:
 	{
 		_fs->AddLineInfos(_lex._currentline,_lineinfo);
 		switch(_token){
-		case _SC(';'):
-			Lex();
-			break;
-		case IF:
-			IfStatement();
-			break;
-		case WHILE:
-			WhileStatement();
-			break;
-		case DO:
-			DoWhileStatement();
-			break;
-		case FOR:
-			ForStatement();
-			break;
-		case FOREACH:
-			ForEachStatement();
-			break;
-		case SWITCH:
-			SwitchStatement();
-			break;
-		case LOCAL:
-			LocalDeclStatement();
-			break;
+		case _SC(';'):	Lex();					break;
+		case IF:		IfStatement();			break;
+		case WHILE:		WhileStatement();		break;
+		case DO:		DoWhileStatement();		break;
+		case FOR:		ForStatement();			break;
+		case FOREACH:	ForEachStatement();		break;
+		case SWITCH:	SwitchStatement();		break;
+		case LOCAL:		LocalDeclStatement();	break;
 		case RETURN:
 		case YIELD:{
 			SQOpcode op;
@@ -214,7 +199,7 @@ public:
 			}
 			Lex();
 			if(!IsEndOfStatement()){
-				Expression();
+				CommaExpr();
 				_fs->AddInstruction(op,1,_fs->PopTarget());
 			}
 			else{ _fs->AddInstruction(op,-1); }
@@ -247,11 +232,11 @@ public:
 			break;
 		case THROW:
 			Lex();
-			Expression();
+			CommaExpr();
 			_fs->AddInstruction(_OP_THROW,_fs->PopTarget());
 			break;
 		default:
-			Expression();
+			CommaExpr();
 			_fs->PopTarget();
 			break;
 		}
@@ -270,6 +255,10 @@ public:
 		int p1=_fs->PopTarget(); //key in OP_GET
 		_fs->AddInstruction(op,_fs->PushTarget(),p1,p2,p3);
 	}
+	void CommaExpr()
+	{
+		for(Expression();_token==',';_fs->PopTarget(),Lex(),CommaExpr());
+	}
 	ExpState Expression(bool funcarg=false,bool bdelete=false)
 	{
 		PushExpState();
@@ -278,7 +267,7 @@ public:
 		LogicalOrExp();
 		switch(_token){
 		case _SC('='):
-		case CREATE:
+		case NEWSLOT:
 		case MINUSEQ:
 		case PLUSEQ:{
 				int op=_token;
@@ -287,7 +276,7 @@ public:
 				Lex(); Expression();
 
 				switch(op){
-				case CREATE:
+				case NEWSLOT:
 					if(ds==DEREF_FIELD)
 						EmitDerefOp(_OP_NEWSLOT);
 					else //if _derefstate != DEREF_NO_DEREF && DEREF_FIELD so is the index of a local
@@ -302,19 +291,14 @@ public:
 						_fs->AddInstruction(_OP_MOVE,p1,p2);
 					}
 					break;
-				case MINUSEQ: 
-					if(ds==DEREF_FIELD)
-						EmitDerefOp(_OP_MINUSEQ);
-					else {//if _derefstate != DEREF_NO_DEREF && DEREF_FIELD so is the index of a local
-						Emit2ArgsOP(_OP_MINUSEQ,-1);
-					}
-					break;
+				case MINUSEQ:
 				case PLUSEQ: 
 					if(ds==DEREF_FIELD)
-						EmitDerefOp(_OP_PLUSEQ);
-					else {//if _derefstate != DEREF_NO_DEREF && DEREF_FIELD so is the index of a local
-						Emit2ArgsOP(_OP_PLUSEQ,-1);
-					}				}
+						EmitDerefOp(op==MINUSEQ?_OP_MINUSEQ:_OP_PLUSEQ);
+					else //if _derefstate != DEREF_NO_DEREF && DEREF_FIELD so is the index of a local
+						Emit2ArgsOP(op==MINUSEQ?_OP_MINUSEQ:_OP_PLUSEQ,-1);
+					break;
+				}
 			}
 			break;
 		case _SC('?'):{
@@ -360,7 +344,6 @@ public:
 			if(trg!=second_exp)_fs->AddInstruction(_OP_MOVE,trg,second_exp);
 			_fs->SnoozeOpt();
 			_fs->SetIntructionParam(jpos,1,(_fs->GetCurrentPos()-jpos));
-
 			break;
 		}else return;
 	}
@@ -438,15 +421,74 @@ public:
 	
 	void MultExp()
 	{
-		Factor();
+		PrefixedExpr();
 		for(;;)switch(_token){
-		case _SC('*'):BIN_EXP(_OP_MUL,&SQCompiler::Factor);break;
-		case _SC('/'):BIN_EXP(_OP_DIV,&SQCompiler::Factor);break;
-		case _SC('%'): BIN_EXP(_OP_MODULO,&SQCompiler::Factor);break;
+		case _SC('*'):BIN_EXP(_OP_MUL,&SQCompiler::PrefixedExpr);break;
+		case _SC('/'):BIN_EXP(_OP_DIV,&SQCompiler::PrefixedExpr);break;
+		case _SC('%'): BIN_EXP(_OP_MODULO,&SQCompiler::PrefixedExpr);break;
 		default:return;
 		}
 	}
-	void Factor()
+	//if 'pos' != -1 the previous variable is a local variable
+	void PrefixedExpr()
+	{
+		int pos=Factor();
+		for(;;){
+			switch(_token){
+			case _SC('.'):{
+				pos=-1;
+				SQObjectPtr idx;
+				Lex(); idx=Expect(IDENTIFIER); 
+				_fs->AddInstruction(_OP_LOAD,_fs->PushTarget(),_fs->GetStringConstant(_stringval(idx)));
+				if(NeedGet() )Emit2ArgsOP(_OP_GET);
+				_exst._deref=DEREF_FIELD;
+				}
+				break;
+			case _SC('['): 
+				Lex(); Expression(); Expect(_SC(']')); 
+				pos=-1;
+				if(NeedGet())Emit2ArgsOP(_OP_GET);
+				_exst._deref=DEREF_FIELD;
+				break;
+			case MINUSMINUS:
+			case PLUSPLUS:
+			if(!IsEndOfStatement()){int tok=_token;Lex();
+				if(pos<0)
+					Emit2ArgsOP(tok==MINUSMINUS?_OP_PDEC:_OP_PINC);
+				else {//if _derefstate != DEREF_NO_DEREF && DEREF_FIELD so is the index of a local
+					int src=_fs->PopTarget();
+					_fs->AddInstruction(tok==MINUSMINUS?_OP_PDEC:_OP_PINC,_fs->PushTarget(),src,0,0xFF);
+				}
+				
+			}
+			return;
+			break;	
+			case _SC('('): 
+				{
+				if(_exst._deref!=DEREF_NO_DEREF){
+					if(pos<0){
+						int key=_fs->PopTarget(); //key
+						int table=_fs->PopTarget(); //table etc...
+						int closure=_fs->PushTarget();
+						int ttarget=_fs->PushTarget();
+						_fs->AddInstruction(_OP_PREPCALL,closure,key,table,ttarget);
+					}
+					else{
+						_fs->AddInstruction(_OP_MOVE,_fs->PushTarget(),0);
+					}
+				}
+				else
+					_fs->AddInstruction(_OP_MOVE,_fs->PushTarget(),0);
+				_exst._deref=DEREF_NO_DEREF;
+				Lex();
+				FunctionCallArgs();
+				 }
+				break;
+			default: return;
+			}
+		}
+	}
+	int Factor()
 	{
 		switch(_token)
 		{
@@ -473,14 +515,16 @@ public:
 					}else _fs->PushTarget(pos);
 					_exst._deref=pos;
 				}
-				PrefixedExpr(pos);
+				return _exst._deref;
+				//PrefixedExpr(pos);
 			}
 			break;
 		case DOUBLE_COLON:  // "::"
 			_fs->AddInstruction(_OP_LOADROOTTABLE,_fs->PushTarget());
 			_exst._deref=DEREF_FIELD;
 			_token=_SC('.'); //hack
-			PrefixedExpr(-1);
+			//PrefixedExpr(-1);
+			return -1;
 			break;
 		case _NULL: 
 			_fs->AddInstruction(_OP_LOADNULL,_fs->PushTarget());
@@ -515,13 +559,12 @@ public:
 			int tpos=_fs->GetCurrentPos(),nkeys=0;
 			Lex();
 			while(_token!=_SC('}')){
-				if(_token==_SC('[')){Lex();Expression();Expect(_SC(']'));}
+				if(_token==_SC('[')){Lex();CommaExpr();Expect(_SC(']'));}
 				else{
 					_fs->AddInstruction(_OP_LOAD,_fs->PushTarget(),_fs->GetStringConstant(_stringval(Expect(IDENTIFIER))));
 				}
 				Expect(_SC('='));Expression();
 				if(_token==_SC(','))Lex();//optional comma
-				
 				nkeys++;
 				int val=_fs->PopTarget();
 				int key=_fs->PopTarget();
@@ -540,68 +583,27 @@ public:
 		case TYPEOF : UnaryOP(_OP_TYPEOF); break;
 		case RESUME : UnaryOP(_OP_RESUME); break;
 		case CLONE : UnaryOP(_OP_CLONE); break;
+		case MINUSMINUS : 
+		case PLUSPLUS :PrefixIncDec(_token); break;
 		case DELETE : DeleteExpr(); break;
 		case DELEGATE : DelegateExpr(); break;
-		case _SC('('): Lex(); Expression(); Expect(_SC(')')); PrefixedExpr(); 
+		case _SC('('): Lex(); CommaExpr(); Expect(_SC(')')); //PrefixedExpr(); 
 			break;
 		default: Error(_SC("expression expected"));
 		}
+		return -1;
 	}
 	void UnaryOP(SQOpcode op)
 	{
-		Lex();Factor();
+		Lex();PrefixedExpr();
 		int src=_fs->PopTarget();
 		_fs->AddInstruction(op,_fs->PushTarget(),src);
 	}
 	bool NeedGet()
 	{
-		return _token!=_SC('=') && _token!=PLUSEQ && _token!=MINUSEQ && _token!=_SC('(') && _token!=CREATE && ((!_exst._delete) || (_exst._delete && (_token==_SC('.') || _token==_SC('['))));
+		return _token!=_SC('=') && _token!=PLUSPLUS && _token!=MINUSMINUS && _token!=PLUSEQ && _token!=MINUSEQ && _token!=_SC('(') && _token!=NEWSLOT && ((!_exst._delete) || (_exst._delete && (_token==_SC('.') || _token==_SC('['))));
 	}
-	//if 'pos' != -1 the previous variable is a local variable
-	void PrefixedExpr(int pos=-1)
-	{
-		bool bexit=false;
-		while(!bexit){
-			switch(_token){
-			case _SC('.'):{
-				pos=-1;
-				SQObjectPtr idx;
-				Lex(); idx=Expect(IDENTIFIER); 
-				_fs->AddInstruction(_OP_LOAD,_fs->PushTarget(),_fs->GetStringConstant(_stringval(idx)));
-				if(NeedGet() )Emit2ArgsOP(_OP_GET);
-				_exst._deref=DEREF_FIELD;
-				}
-				break;
-			case _SC('['): 
-				Lex(); Expression(); Expect(_SC(']')); 
-				pos=-1;
-				if(NeedGet())Emit2ArgsOP(_OP_GET);
-				_exst._deref=DEREF_FIELD;
-				break;
-			case _SC('('): {
-				if(_exst._deref!=DEREF_NO_DEREF){
-					if(pos==-1){
-						int key=_fs->PopTarget(); //key
-						int table=_fs->PopTarget(); //table etc...
-						int closure=_fs->PushTarget();
-						int ttarget=_fs->PushTarget();
-						_fs->AddInstruction(_OP_PREPCALL,closure,key,table,ttarget);
-					}
-					else{
-						_fs->AddInstruction(_OP_MOVE,_fs->PushTarget(),0);
-					}
-				}
-				else
-					_fs->AddInstruction(_OP_MOVE,_fs->PushTarget(),0);
-				_exst._deref=DEREF_NO_DEREF;
-				Lex();
-				FunctionCallArgs();
-				 }
-				break;
-			default: return;
-			}
-		}
-	}
+	
 	void FunctionCallArgs()
 	{
 		int nargs=1;//this
@@ -640,7 +642,7 @@ public:
 	{
 		int jmppos;
 		bool haselse=false;
-		Lex();Expect(_SC('('));Expression();Expect(_SC(')'));
+		Lex();Expect(_SC('('));CommaExpr();Expect(_SC(')'));
 		_fs->AddInstruction(_OP_JZ,_fs->PopTarget());
 		int jnepos=_fs->GetCurrentPos();
 		int stacksize=_fs->GetStackSize();
@@ -668,7 +670,7 @@ public:
 		int jzpos,jmppos;
 		int stacksize=_fs->GetStackSize();
 		jmppos=_fs->GetCurrentPos();
-		Lex();Expect(_SC('('));Expression();Expect(_SC(')'));
+		Lex();Expect(_SC('('));CommaExpr();Expect(_SC(')'));
 		
 		BEGIN_BREAKBLE_BLOCK();
 		_fs->AddInstruction(_OP_JZ,_fs->PopTarget());
@@ -693,7 +695,7 @@ public:
 		CleanStack(stacksize);
 		Expect(WHILE);
 		int continuetrg=_fs->GetCurrentPos()+1;
-		Expect(_SC('('));Expression();Expect(_SC(')'));
+		Expect(_SC('('));CommaExpr();Expect(_SC(')'));
 		_fs->AddInstruction(_OP_JNZ,_fs->PopTarget(),jzpos-_fs->GetCurrentPos()-1);
 		END_BREAKBLE_BLOCK(continuetrg);
 	}
@@ -704,17 +706,17 @@ public:
 		Expect(_SC('('));
 		if(_token==LOCAL)LocalDeclStatement();
 		else if(_token!=_SC(';')){
-			Expression();
+			CommaExpr();
 			_fs->PopTarget();
 		}
 		Expect(_SC(';'));
 		int jmppos=_fs->GetCurrentPos();
 		int jzpos=-1;
-		if(_token!=_SC(';')){Expression();_fs->AddInstruction(_OP_JZ,_fs->PopTarget()); jzpos=_fs->GetCurrentPos();}
+		if(_token!=_SC(';')){CommaExpr();_fs->AddInstruction(_OP_JZ,_fs->PopTarget()); jzpos=_fs->GetCurrentPos();}
 		Expect(_SC(';'));
 		int expstart=_fs->GetCurrentPos()+1;
 		if(_token!=_SC(')')){
-			Expression();
+			CommaExpr();
 			_fs->PopTarget();
 		}
 		Expect(_SC(')'));
@@ -781,7 +783,7 @@ public:
 	void SwitchStatement()
 	{
 		IntVec casesj,stats_sizes,breaks,continues;
-		Lex();Expect(_SC('('));Expression();Expect(_SC(')'));
+		Lex();Expect(_SC('('));CommaExpr();Expect(_SC(')'));
 		Expect(_SC('{'));
 		int expr=_fs->TopTarget();
 		_fs->_breaktargets++;
@@ -903,21 +905,37 @@ public:
 	}
 	void DelegateExpr()
 	{
-		Lex();Expression();
+		Lex();CommaExpr();
 		Expect(_SC(':'));
-		Expression();
+		CommaExpr();
 		int table=_fs->PopTarget();int delegate=_fs->PopTarget();
 		_fs->AddInstruction(_OP_DELEGATE,_fs->PushTarget(),table,delegate);
 	}
 	void DeleteExpr()
 	{
 		ExpState es;
-		Lex();es=Expression(false,true);
-		int ds=es._deref;
-		if(ds==DEREF_NO_DEREF)Error(_SC("can't delete an expression"));
-
-		if(ds==DEREF_FIELD)Emit2ArgsOP(_OP_DELETE);
+		Lex();PushExpState();
+		_exst._delete=true;
+		_exst._funcarg=false;
+		PrefixedExpr();
+		es=PopExpState();
+		if(es._deref==DEREF_NO_DEREF)Error(_SC("can't delete an expression"));
+		if(es._deref==DEREF_FIELD)Emit2ArgsOP(_OP_DELETE);
 		else Error(_SC("cannot delete a local"));
+	}
+	void PrefixIncDec(int token)
+	{
+		ExpState es;
+		Lex();PushExpState();
+		_exst._delete=true;
+		_exst._funcarg=false;
+		PrefixedExpr();
+		es=PopExpState();
+		if(es._deref==DEREF_FIELD)Emit2ArgsOP(token==PLUSPLUS?_OP_INC:_OP_DEC);
+		else {
+			int src=_fs->PopTarget();
+			_fs->AddInstruction(token==PLUSPLUS?_OP_INC:_OP_DEC,_fs->PushTarget(),src,0,0xFF);
+		}
 	}
 	void CreateFunction(SQObjectPtr name)
 	{

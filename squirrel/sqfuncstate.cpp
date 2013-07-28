@@ -62,6 +62,10 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_SHIFTR"),1,1,1,0},
 	{_SC("_OP_RESUME"),1,1,0,0},
 	{_SC("_OP_CLONE"),1,1,0,0},
+	{_SC("_OP_INC"),1,1,0,0},
+	{_SC("_OP_DEC"),1,1,0,0},
+	{_SC("_OP_PINC"),1,1,0,0},
+	{_SC("_OP_PDEC"),1,1,0,0},
 	//optimiz
 	{_SC("_OP_GETK"),1,1,1,0},
 	{_SC("_OP_PREPCALLK"),1,1,1,1},
@@ -348,6 +352,7 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 			}
 			break;
 		case _OP_ADD:case _OP_SUB:case _OP_MUL:case _OP_DIV:
+		case _OP_EQ:case _OP_NE:case _OP_G:case _OP_GE:case _OP_L:case _OP_LE:
 			if(pi.op==_OP_LOAD && pi._arg0==i._arg1	&& (!IsLocal(pi._arg0) ))
 			{
 				pi.op=i.op;

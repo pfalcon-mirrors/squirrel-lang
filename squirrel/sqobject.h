@@ -240,9 +240,6 @@ struct SQCollectable : public SQRefCounted {
 #endif
 
 unsigned int TranslateIndex(const SQObjectPtr &idx);
-#define sqraiseerror(str) throw SQException(str);
-#define sqraise_str_error(ss,str) throw SQException(ss,str);
-
 typedef sqvector<SQObjectPtr> SQObjectPtrVec;
 
 #endif //_SQOBJECT_H_

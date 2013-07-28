@@ -61,7 +61,7 @@ int compile_file(HSQUIRRELVM v)
 	const SQChar *sFileName;
 	if(sq_gettop(v)>=1){
 		if(SQ_SUCCEEDED(sq_getstring(v,2,&sFileName))){
-			return CompileScriptFromFile(v,sFileName,0,0);
+			return CompileScriptFromFile(v,sFileName,1,0);
 		}
 	}
 	return sq_throwerror(v,_SC("(compile_file)wrong argument number"));
@@ -304,7 +304,7 @@ int file_write(SQUserPointer file,SQUserPointer p,int size)
 
 void compiler_error(HSQUIRRELVM v,const SQChar *sErr,const SQChar *sSource,int line,int column)
 {
-	scfprintf(stderr,_SC("ERROR %s line=(%d) column=(%d) [%s]"),sErr,line,column,sSource);
+	scfprintf(stderr,_SC("ERROR %s line=(%d) column=(%d) [%s]\n"),sErr,line,column,sSource);
 }
 
 typedef struct tagBufState{
@@ -315,15 +315,10 @@ typedef struct tagBufState{
 
 SQChar buf_lexfeed(SQUserPointer file)
 {
-#define __CHAR_SIZE 1
-	char c;
 	BufState *buf=(BufState*)file;
-	if(buf->size<(buf->ptr+__CHAR_SIZE))
+	if(buf->size<(buf->ptr+1))
 		return 0;
-	
-	memcpy(&c,&buf->buf[buf->ptr],__CHAR_SIZE);
-	buf->ptr+=__CHAR_SIZE;
-	return (SQChar)c;
+	return (SQChar)buf->buf[buf->ptr++];
 }
 
 void Interactive(HSQUIRRELVM v)
@@ -422,6 +417,7 @@ void x_free(void *p,unsigned int size){
 
 int main(int argc, char* argv[])
 {
+	
 	HSQUIRRELVM v;
 	const SQChar *filename=NULL;
 #if defined(_MSC_VER) && defined(_DEBUG)

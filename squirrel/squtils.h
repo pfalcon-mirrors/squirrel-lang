@@ -8,8 +8,7 @@
 #define SQ_FREE(__ptr,__size) sq_vm_free(__ptr,__size);
 #define SQ_REALLOC(__ptr,__oldsize,__size) sq_vm_realloc(__ptr,__oldsize,__size);
 
-
-//sqvector mini vector class support objects by value
+//sqvector mini vector class, supports objects by value
 template<typename T> class sqvector
 {
 public:
@@ -22,7 +21,6 @@ public:
 	sqvector(const sqvector<T>& v)
 	{
 		copy(v);
-		return *this;
 	}
 	void copy(const sqvector<T>& v)
 	{
@@ -41,12 +39,10 @@ public:
 		}
 	}
 	void reserve(unsigned int newsize){_realloc(newsize);}
-
 	inline void resize(unsigned int newsize,const T& fill=T())
 	{
 		if(newsize>_allocated)
 			_realloc(newsize);
-
 		if(newsize>_size){
 			while(_size<newsize){
 				new ((void *)&_vals[_size]) T(fill);
@@ -59,7 +55,6 @@ public:
 			}
 			_size=newsize;
 		}
-		
 	}
 	inline void srinktofit(){if(_size>4){resize(_size);}}
 	inline T& top() const {return _vals[_size-1];}
@@ -73,8 +68,7 @@ public:
 	}
 	inline void pop_back()
 	{
-		_size--;
-		_vals[_size].~T();
+		_size--;_vals[_size].~T();
 	}
 	void insert(unsigned int idx,const T& val)
 	{
