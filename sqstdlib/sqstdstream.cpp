@@ -163,7 +163,7 @@ SQInteger _stream_writen(HSQUIRRELVM v)
 	case 'f': {
 		float f;
 		sq_getfloat(v, 2, &tf);
-		f = tf;
+		f = (float)tf;
 		self->Write(&f, sizeof(float));
 			  }
 		break;

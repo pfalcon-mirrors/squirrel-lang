@@ -84,7 +84,7 @@ SQInteger sq_getvmstate(HSQUIRRELVM v)
 	if(v->_suspended)
 		return SQ_VMSTATE_SUSPENDED;
 	else { 
-		if(v->_callsstack.size() != 0) return SQ_VMSTATE_RUNNING;
+		if(v->_callsstacksize != 0) return SQ_VMSTATE_RUNNING;
 		else return SQ_VMSTATE_IDLE;
 	}
 }
@@ -137,13 +137,22 @@ void sq_notifyallexceptions(HSQUIRRELVM v, SQBool enable)
 void sq_addref(HSQUIRRELVM v,HSQOBJECT *po)
 {
 	if(!ISREFCOUNTED(type(*po))) return;
+#ifdef NO_GARBAGE_COLLECTOR
+	__AddRef(po->_type,po->_unVal);
+#else
 	_ss(v)->_refs_table.AddRef(*po);
+#endif
 }
 
 SQBool sq_release(HSQUIRRELVM v,HSQOBJECT *po)
 {
 	if(!ISREFCOUNTED(type(*po))) return SQTrue;
+#ifdef NO_GARBAGE_COLLECTOR
+	__Release(po->_type,po->_unVal);
+	return SQFalse; //the ret val doesn't work(and cannot be fixed)
+#else
 	return _ss(v)->_refs_table.Release(*po);
+#endif
 }
 
 const SQChar *sq_objtostring(HSQOBJECT *o) 
@@ -323,7 +332,7 @@ SQRESULT sq_getclosureinfo(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger *nparam
 	if(sq_isclosure(o)) {
 		SQClosure *c = _closure(o);
 		SQFunctionProto *proto = _funcproto(c->_function);
-		*nparams = (SQUnsignedInteger)proto->_parameters.size();
+		*nparams = (SQUnsignedInteger)proto->_nparameters;
         *nfreevars = (SQUnsignedInteger)c->_outervalues.size();
 		return SQ_OK;
 	}
@@ -763,12 +772,12 @@ SQRESULT sq_getdelegate(HSQUIRRELVM v,SQInteger idx)
 	SQObjectPtr &self=stack_get(v,idx);
 	switch(type(self)){
 	case OT_TABLE:
-		if(!_table(self)->_delegate)break;
-		v->Push(SQObjectPtr(_table(self)->_delegate));
-		break;
 	case OT_USERDATA:
-		if(!_userdata(self)->_delegate)break;
-		v->Push(SQObjectPtr(_userdata(self)->_delegate));
+		if(!_delegable(self)->_delegate){
+			v->Push(_null_);
+			break;
+		}
+		v->Push(SQObjectPtr(_delegable(self)->_delegate));
 		break;
 	default: return sq_throwerror(v,_SC("wrong type")); break;
 	}
@@ -821,7 +830,7 @@ SQRESULT sq_getstackobj(HSQUIRRELVM v,SQInteger idx,HSQOBJECT *po)
 
 const SQChar *sq_getlocal(HSQUIRRELVM v,SQUnsignedInteger level,SQUnsignedInteger idx)
 {
-	SQUnsignedInteger cstksize=v->_callsstack.size();
+	SQUnsignedInteger cstksize=v->_callsstacksize;
 	SQUnsignedInteger lvl=(cstksize-level)-1;
 	SQInteger stackbase=v->_stackbase;
 	if(lvl<cstksize){
@@ -834,7 +843,12 @@ const SQChar *sq_getlocal(HSQUIRRELVM v,SQUnsignedInteger level,SQUnsignedIntege
 			return NULL;
 		SQClosure *c=_closure(ci._closure);
 		SQFunctionProto *func=_funcproto(c->_function);
-		return func->GetLocal(v,stackbase,idx,(SQInteger)(ci._ip-func->_instructions._vals)-1);
+		if(func->_noutervalues > (SQInteger)idx) {
+			v->Push(c->_outervalues[idx]);
+			return _stringval(func->_outervalues[idx]._name);
+		}
+		idx -= func->_noutervalues;
+		return func->GetLocal(v,stackbase,idx,(SQInteger)(ci._ip-func->_instructions)-1);
 	}
 	return NULL;
 }
@@ -960,14 +974,15 @@ SQRESULT sq_writeclosure(HSQUIRRELVM v,SQWRITEFUNC w,SQUserPointer up)
 
 SQRESULT sq_readclosure(HSQUIRRELVM v,SQREADFUNC r,SQUserPointer up)
 {
-	SQObjectPtr func=SQFunctionProto::Create();
-	SQObjectPtr closure=SQClosure::Create(_ss(v),_funcproto(func));
+	//SQObjectPtr func=SQFunctionProto::Create();
+	SQObjectPtr closure;
+	
 	unsigned short tag;
 	if(r(up,&tag,2) != 2)
 		return sq_throwerror(v,_SC("io error"));
 	if(tag != SQ_BYTECODE_STREAM_TAG)
 		return sq_throwerror(v,_SC("invalid stream"));
-	if(!_closure(closure)->Load(v,up,r))
+	if(!SQClosure::Load(v,up,r,closure))
 		return SQ_ERROR;
 	v->Push(closure);
 	return SQ_OK;

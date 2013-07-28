@@ -85,9 +85,16 @@ struct SQDelegable;
 #endif
 
 #ifdef SQUNICODE
+#if (defined(_MSC_VER) && _MSC_VER >= 1400) // 1400 = VS8
+
 #if defined(wchar_t) //this is if the compiler considers wchar_t as native type
 #define wchar_t unsigned short
 #endif
+
+#else
+typedef unsigned short wchar_t;
+#endif
+
 typedef wchar_t SQChar;
 #define _SC(a) L##a
 #define	scstrcmp	wcscmp
@@ -129,7 +136,7 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 2.1 stable")
+#define SQUIRREL_VERSION	_SC("Squirrel 2.1.1 stable")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2006 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
@@ -215,8 +222,8 @@ typedef union tagSQObjectValue
 
 typedef struct tagSQObject
 {
-	SQObjectValue _unVal;
 	SQObjectType _type;
+	SQObjectValue _unVal;
 }SQObject;
 
 typedef struct tagSQStackInfos{
@@ -321,8 +328,7 @@ SQUIRREL_API SQRESULT sq_getdefaultdelegate(HSQUIRRELVM v,SQObjectType t);
 SQUIRREL_API void sq_pushroottable(HSQUIRRELVM v);
 SQUIRREL_API void sq_pushregistrytable(HSQUIRRELVM v);
 SQUIRREL_API SQRESULT sq_setroottable(HSQUIRRELVM v);
-/*SQUIRREL_API SQRESULT sq_createslot(HSQUIRRELVM v,SQInteger idx);*/
-SQRESULT sq_newslot(HSQUIRRELVM v, SQInteger idx, SQBool bstatic);
+SQUIRREL_API SQRESULT sq_newslot(HSQUIRRELVM v, SQInteger idx, SQBool bstatic);
 SQUIRREL_API SQRESULT sq_deleteslot(HSQUIRRELVM v,SQInteger idx,SQBool pushval);
 SQUIRREL_API SQRESULT sq_set(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQRESULT sq_get(HSQUIRRELVM v,SQInteger idx);
