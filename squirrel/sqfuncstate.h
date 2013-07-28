@@ -39,7 +39,8 @@ struct SQFuncState
 	int PopTarget();
 	int TopTarget();
 	bool IsLocal(unsigned int stkpos);
-	
+
+	int _returnexp;
 	SQLocalVarInfoVec _vlocals;
 	SQIntVec _targetstack;
 	int _stacksize;

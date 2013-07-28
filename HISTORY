@@ -1,19 +1,28 @@
+***version 1.0 release candidate 2(RC 2)***
+-fixed bug in the vm(thx Pierre Renaux)
+-fixed bug in the optimizer(thx Pierre Renaux)
+-fixed some bug in the documentation(thx JD)
+-added new api functions for raw object handling
+-removed nested multiline comments
+-reduced memory footprint in C references
+
+***2004-08-23        ***
 ***version 1.0 release candidate 1(RC 1)***
-fixed division by zero
-the 'in' operator and obj.rawget() do not query the default delegate anymore
-added function sq_getprintfunc()
-added new standard library 'auxlib'(implements default error handlers)
+-fixed division by zero
+-the 'in' operator and obj.rawget() do not query the default delegate anymore
+-added function sq_getprintfunc()
+-added new standard library 'auxlib'(implements default error handlers)
 
 ***2004-07-12        ***
 ***version 1.0 beta 4***
-fixed a bug in the integer.tochar() built-in method
-fixed unary minus operator
-fixed bug in dofile()
-fixed inconsistency between != and == operators(on float/integer comparison)
-added javascript style unsigned right shift operator '>>>'
-added array(size) constructor built-in function
-array.resize(size,[fill]) built-in function accepts an optional 'fill' value
-improved debug API, added sq_getclosureinfo() and sq_setnativeclosurename()
+-fixed a bug in the integer.tochar() built-in method
+-fixed unary minus operator
+-fixed bug in dofile()
+-fixed inconsistency between != and == operators(on float/integer comparison)
+-added javascript style unsigned right shift operator '>>>'
+-added array(size) constructor built-in function
+-array.resize(size,[fill]) built-in function accepts an optional 'fill' value
+-improved debug API, added sq_getclosureinfo() and sq_setnativeclosurename()
 
 ***2004-05-23        ***
 ***version 1.0 beta 3***

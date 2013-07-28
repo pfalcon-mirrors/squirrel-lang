@@ -86,7 +86,7 @@ int sq_getvmstate(HSQUIRRELVM v)
 
 void sq_seterrorhandler(HSQUIRRELVM v)
 {
-	SQObjectPtr o = stack_get(v, -1);
+	SQObject o = stack_get(v, -1);
 	if(sq_isclosure(o) || sq_isnativeclosure(o) || sq_isnull(o)) {
 		v->_errorhandler = o;
 		v->Pop();
@@ -95,7 +95,7 @@ void sq_seterrorhandler(HSQUIRRELVM v)
 
 void sq_setdebughook(HSQUIRRELVM v)
 {
-	SQObjectPtr o = stack_get(v,-1);
+	SQObject o = stack_get(v,-1);
 	if(sq_isclosure(o) || sq_isnativeclosure(o) || sq_isnull(o)) {
 		v->_debughook = o;
 		v->Pop();
@@ -113,8 +113,7 @@ SQRESULT sq_compile(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQCha
 {
 	SQObjectPtr o;
 	if(Compile(v, read, p, sourcename, o, raiseerror>0?true:false, _ss(v)->_debuginfo)) {
-		o = SQClosure::Create(_ss(v), _funcproto(o));
-		v->Push(o);
+		v->Push(SQClosure::Create(_ss(v), _funcproto(o)));
 		return SQ_OK;
 	}
 	return SQ_ERROR;
@@ -128,7 +127,7 @@ void sq_enabledebuginfo(HSQUIRRELVM v, int debuginfo)
 void sq_addref(HSQUIRRELVM v,HSQOBJECT *po)
 {
 	SQObjectPtr refs;
-	if(type(*po) == OT_NULL)return;
+	if(!ISREFCOUNTED(type(*po))) return;
 	if(_table(_ss(v)->_refs_table)->Get(*po, refs)) {
 		refs = _integer(refs) + 1;
 	}
@@ -141,7 +140,7 @@ void sq_addref(HSQUIRRELVM v,HSQOBJECT *po)
 void sq_release(HSQUIRRELVM v,HSQOBJECT *po)
 {
 	SQObjectPtr refs;
-	if(type(*po) == OT_NULL) return;
+	if(!ISREFCOUNTED(type(*po))) return;
 	if(_table(_ss(v)->_refs_table)->Get(*po, refs)) {
 		int n = _integer(refs) - 1;
 		if(n <= 0) {
@@ -152,6 +151,30 @@ void sq_release(HSQUIRRELVM v,HSQOBJECT *po)
 			refs = n;_table(_ss(v)->_refs_table)->Set(*po, refs);
 		}
 	}
+}
+
+const SQChar *sq_objtostring(HSQOBJECT *o) 
+{
+	if(sq_type(*o) == OT_STRING) {
+		return o->_unVal.pString->_val;
+	}
+	return NULL;
+}
+
+SQInteger sq_objtointeger(HSQOBJECT *o) 
+{
+	if(sq_isnumeric(*o)) {
+		return tointeger(*o);
+	}
+	return 0;
+}
+
+SQFloat sq_objtofloat(HSQOBJECT *o) 
+{
+	if(sq_isnumeric(*o)) {
+		return tofloat(*o);
+	}
+	return 0;
 }
 
 void sq_pushnull(HSQUIRRELVM v)
@@ -275,7 +298,7 @@ void sq_newclosure(HSQUIRRELVM v,SQFUNCTION func,unsigned int nfreevars)
 
 SQRESULT sq_getclosureinfo(HSQUIRRELVM v,int idx,unsigned int *nparams,unsigned int *nfreevars)
 {
-	SQObjectPtr o = stack_get(v, idx);
+	SQObject o = stack_get(v, idx);
 	if(sq_isclosure(o)) {
 		SQClosure *c = _closure(o);
 		SQFunctionProto *proto = _funcproto(c->_function);
@@ -288,7 +311,7 @@ SQRESULT sq_getclosureinfo(HSQUIRRELVM v,int idx,unsigned int *nparams,unsigned 
 
 SQRESULT sq_setnativeclosurename(HSQUIRRELVM v,int idx,const SQChar *name)
 {
-	SQObjectPtr o = stack_get(v, idx);
+	SQObject o = stack_get(v, idx);
 	if(sq_isnativeclosure(o)) {
 		SQNativeClosure *nc = _nativeclosure(o);
 		nc->_name = SQString::Create(_ss(v),name);
@@ -299,7 +322,7 @@ SQRESULT sq_setnativeclosurename(HSQUIRRELVM v,int idx,const SQChar *name)
 
 SQRESULT sq_setparamscheck(HSQUIRRELVM v,int nparamscheck,const SQChar *typemask)
 {
-	SQObjectPtr o = stack_get(v, -1);
+	SQObject o = stack_get(v, -1);
 	if(!sq_isnativeclosure(o))
 		return sq_throwerror(v, _SC("native closure expected"));
 	SQNativeClosure *nc = _nativeclosure(o);
@@ -328,7 +351,7 @@ void sq_pushregistrytable(HSQUIRRELVM v)
 
 SQRESULT sq_setroottable(HSQUIRRELVM v)
 {
-	SQObjectPtr o = stack_get(v, -1);
+	SQObject o = stack_get(v, -1);
 	if(sq_istable(o) || sq_isnull(o)) {
 		v->_roottable = o;
 		v->Pop();

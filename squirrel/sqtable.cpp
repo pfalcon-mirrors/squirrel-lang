@@ -20,7 +20,7 @@ SQTable::SQTable(SQSharedState *ss,int nInitialSize)
 
 void SQTable::Remove(const SQObjectPtr &key)
 {
-	unsigned long h = HashKey(key);//_string(key)->_hash;
+	unsigned long h = HashKey(key);
 	_HashNode *n = &_nodes[h&(_numofnodes-1)];
 	_HashNode *first = n;
 	_HashNode *prev = NULL;

@@ -97,7 +97,7 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 1.0 (release candidate 1)")
+#define SQUIRREL_VERSION	_SC("Squirrel 1.0 (release candidate 2)")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2004 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
@@ -283,6 +283,9 @@ SQUIRREL_API void sq_pushobject(HSQUIRRELVM v,HSQOBJECT obj);
 SQUIRREL_API void sq_addref(HSQUIRRELVM v,HSQOBJECT *po);
 SQUIRREL_API void sq_release(HSQUIRRELVM v,HSQOBJECT *po);
 SQUIRREL_API void sq_resetobject(HSQOBJECT *po);
+SQUIRREL_API const SQChar *sq_objtostring(HSQOBJECT *o);
+SQUIRREL_API SQInteger sq_objtointeger(HSQOBJECT *o);
+SQUIRREL_API SQFloat sq_objtofloat(HSQOBJECT *o);
 
 /*GC*/
 SQUIRREL_API int sq_collectgarbage(HSQUIRRELVM v);
@@ -301,20 +304,20 @@ SQUIRREL_API SQRESULT sq_stackinfos(HSQUIRRELVM v,int level,SQStackInfos *si);
 SQUIRREL_API void sq_setdebughook(HSQUIRRELVM v);
 
 /*UTILITY MACRO*/
-#define sq_isnumeric(o) (o._type&SQOBJECT_NUMERIC)
-#define sq_istable(o) (o._type==OT_TABLE)
-#define sq_isfunction(o) (o._type==OT_FUNCPROTO)
-#define sq_isclosure(o) (o._type==OT_CLOSURE)
-#define sq_isgenerator(o) (o._type==OT_GENERATOR)
-#define sq_isnativeclosure(o) (o._type==OT_NATIVECLOSURE)
-#define sq_isstring(o) (o._type==OT_STRING)
-#define sq_isinteger(o) (o._type==OT_INTEGER)
-#define sq_isfloat(o) (o._type==OT_FLOAT)
-#define sq_isuserpointer(o) (o._type==OT_USERPOINTER)
-#define sq_isuserdata(o) (o._type==OT_USERDATA)
-#define sq_isthread(o) (o._type==OT_THREAD)
-#define sq_isnull(o) (o._type==OT_NULL)
-#define sq_type(o) (o._type)
+#define sq_isnumeric(o) ((o)._type&SQOBJECT_NUMERIC)
+#define sq_istable(o) ((o)._type==OT_TABLE)
+#define sq_isfunction(o) ((o)._type==OT_FUNCPROTO)
+#define sq_isclosure(o) ((o)._type==OT_CLOSURE)
+#define sq_isgenerator(o) ((o)._type==OT_GENERATOR)
+#define sq_isnativeclosure(o) ((o)._type==OT_NATIVECLOSURE)
+#define sq_isstring(o) ((o)._type==OT_STRING)
+#define sq_isinteger(o) ((o)._type==OT_INTEGER)
+#define sq_isfloat(o) ((o)._type==OT_FLOAT)
+#define sq_isuserpointer(o) ((o)._type==OT_USERPOINTER)
+#define sq_isuserdata(o) ((o)._type==OT_USERDATA)
+#define sq_isthread(o) ((o)._type==OT_THREAD)
+#define sq_isnull(o) ((o)._type==OT_NULL)
+#define sq_type(o) ((o)._type)
 
 #define SQ_OK (0)
 #define SQ_ERROR (-1)

@@ -128,6 +128,13 @@ public:
 			Error(_SC("end of statement expected (; or lf)"));
 		}
 	}
+	void MoveIfCurrentTargetIsLocal() {
+		int trg = _fs->TopTarget();
+		if(_fs->IsLocal(trg)) {
+			trg = _fs->PopTarget(); //no pops the target and move it
+			_fs->AddInstruction(_OP_MOVE, _fs->PushTarget(), trg);
+		}
+	}
 	bool Compile(SQObjectPtr &o)
 	{
 		SQ_TRY {
@@ -198,14 +205,17 @@ public:
 			}
 			Lex();
 			if(!IsEndOfStatement()) {
+				int retexp = _fs->GetCurrentPos()+1;
 				CommaExpr();
 				if(op == _OP_RETURN && _fs->_traps > 0)
 					_fs->AddInstruction(_OP_POPTRAP, _fs->_traps, 0);
+				_fs->_returnexp = retexp;
 				_fs->AddInstruction(op, 1, _fs->PopTarget());
 			}
 			else{ 
 				if(op == _OP_RETURN && _fs->_traps > 0)
 					_fs->AddInstruction(_OP_POPTRAP, _fs->_traps ,0);
+				_fs->_returnexp = -1;
 				_fs->AddInstruction(op, 0xFF); 
 			}
 			break;}
@@ -270,10 +280,10 @@ public:
 	{
 		for(Expression();_token == ',';_fs->PopTarget(), Lex(), CommaExpr());
 	}
-	ExpState Expression(bool funcarg = false, bool bdelete = false)
+	ExpState Expression(bool funcarg = false)
 	{
 		PushExpState();
-		_exst._delete = bdelete;
+		_exst._delete = false;
 		_exst._funcarg = funcarg;
 		LogicalOrExp();
 		switch(_token)  {
@@ -351,6 +361,7 @@ public:
 			int jpos = _fs->GetCurrentPos();
 			if(trg != first_exp) _fs->AddInstruction(_OP_MOVE, trg, first_exp);
 			Lex(); LogicalOrExp();
+			_fs->SnoozeOpt();
 			int second_exp = _fs->PopTarget();
 			if(trg != second_exp) _fs->AddInstruction(_OP_MOVE, trg, second_exp);
 			_fs->SnoozeOpt();
@@ -363,11 +374,15 @@ public:
 		BitwiseOrExp();
 		for(;;) switch(_token) {
 		case TK_AND: {
-			int op1 = _fs->PopTarget();
-			_fs->AddInstruction(_OP_AND, _fs->PushTarget(), 0, op1, 0);
+			int trg = _fs->PopTarget();
+			_fs->AddInstruction(_OP_AND, _fs->PushTarget(), 0, trg, 0);
 			_fs->PopTarget();
 			int jpos = _fs->GetCurrentPos();
 			Lex(); LogicalAndExp();
+			if(trg != _fs->TopTarget()) {
+				_fs->AddInstruction(_OP_MOVE,trg,_fs->PopTarget());
+				_fs->PushTarget(trg);
+			}
 			_fs->SnoozeOpt();
 			_fs->SetIntructionParam(jpos, 1, _fs->GetCurrentPos() - jpos);
 			break;
@@ -647,9 +662,7 @@ public:
 		int nargs = 1;//this
 		 while(_token != _SC(')')) {
 			 Expression(true);
-			 int pos = _fs->PopTarget();
-			 int trg = _fs->PushTarget(); 
-			 if(trg != pos)_fs->AddInstruction(_OP_MOVE, trg, pos);
+			 MoveIfCurrentTargetIsLocal();
 			 nargs++; if(_token == _SC(',')) Lex();
 		 }
 		 Lex();

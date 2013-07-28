@@ -97,6 +97,7 @@ SQFuncState::SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *pa
 		_parent = parent;
 		_stacksize = 0;
 		_traps = 0;
+		_returnexp = 0;
 }
 
 #ifdef _DEBUG_DUMP
@@ -338,11 +339,11 @@ void SQFuncState::AddLineInfos(int line,bool lineop,bool force)
 void SQFuncState::AddInstruction(SQInstruction &i)
 {
 	int size = _instructions.size();
-	if(size > 0 && (_optimization || i.op == _OP_RETURN)){ //simple optimizer
+	if(size > 0 && _optimization){ //simple optimizer
 		SQInstruction &pi = _instructions[size-1];//previous intruction
 		switch(i.op) {
 		case _OP_RETURN:
-			if( _parent && i._arg0 != 0xFF && pi.op == _OP_CALL) {
+			if( _parent && i._arg0 != 0xFF && pi.op == _OP_CALL && _returnexp < size-1) {
 				pi.op = _OP_TAILCALL;
 			}
 		break;

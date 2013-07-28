@@ -89,10 +89,11 @@ SQObjectPtr SQLexer::Tok2Str(int tok)
 
 void SQLexer::LexBlockComment()
 {
-	for(int nest = 1; nest > 0;) {
+	bool done = false;
+	while(!done) {
 		switch(CUR_CHAR) {
-			case _SC('*'): { NEXT(); if(CUR_CHAR == _SC('/')) { nest--; NEXT(); }}; continue;
-			case _SC('/'): { NEXT(); if(CUR_CHAR == _SC('*')) { nest++; NEXT(); }}; continue;
+			case _SC('*'): { NEXT(); if(CUR_CHAR == _SC('/')) { done = true; NEXT(); }}; continue;
+			//case _SC('/'): { NEXT(); if(CUR_CHAR == _SC('*')) { nest++; NEXT(); }}; continue;
 			case _SC('\n'): _currentline++; NEXT(); continue;
 			case SQUIRREL_EOB: throw ParserException(_SC("missing \"*/\" in comment"));
 			default: NEXT();

@@ -80,7 +80,9 @@ int _stream_readblob(HSQUIRRELVM v)
 	return 1;
 }
 
-
+#define SAFE_READN(ptr,len) { \
+	if(self->Read(ptr,len) != len) return sq_throwerror(v,_SC("io error")); \
+	}
 int _stream_readn(HSQUIRRELVM v)
 {
 	SETUP_STREAM(v);
@@ -89,43 +91,43 @@ int _stream_readn(HSQUIRRELVM v)
 	switch(format) {
 	case 'i': {
 		int i;
-		self->Read(&i, sizeof(i));
+		SAFE_READN(&i, sizeof(i));
 		sq_pushinteger(v, i);
 			  }
 		break;
 	case 's': {
 		short s;
-		self->Read(&s, sizeof(short));
+		SAFE_READN(&s, sizeof(short));
 		sq_pushinteger(v, s);
 			  }
 		break;
 	case 'w': {
 		unsigned short w;
-		self->Read(&w, sizeof(unsigned short));
+		SAFE_READN(&w, sizeof(unsigned short));
 		sq_pushinteger(v, w);
 			  }
 		break;
 	case 'c': {
 		char c;
-		self->Read(&c, sizeof(char));
+		SAFE_READN(&c, sizeof(char));
 		sq_pushinteger(v, c);
 			  }
 		break;
 	case 'b': {
 		unsigned char c;
-		self->Read(&c, sizeof(unsigned char));
+		SAFE_READN(&c, sizeof(unsigned char));
 		sq_pushinteger(v, c);
 			  }
 		break;
 	case 'f': {
 		float f;
-		self->Read(&f, sizeof(float));
+		SAFE_READN(&f, sizeof(float));
 		sq_pushfloat(v, f);
 			  }
 		break;
 	case 'd': {
 		double d;
-		self->Read(&d, sizeof(double));
+		SAFE_READN(&d, sizeof(double));
 		sq_pushfloat(v, (SQFloat)d);
 			  }
 		break;
@@ -180,7 +182,7 @@ int _stream_writeblob(HSQUIRRELVM v)
 		return sq_throwerror(v,_SC("invalid parameter"));
 	size = sqstd_getblobsize(v,2);
 	if(self->Write(data,size) != size)
-		return sq_throwerror(v,_SC("write error"));
+		return sq_throwerror(v,_SC("io error"));
 	sq_pushinteger(v,size);
 	return 1;
 }
