@@ -90,10 +90,10 @@ SQRESULT sqstd_register_mathlib(HSQUIRRELVM v)
 {
 	SQInteger i=0;
 	while(mathlib_funcs[i].name!=0)	{
-		sq_pushstring(v,mathlib_funcs[i].name,-1);
+		sq_pushstringex(v,mathlib_funcs[i].name,-1,SQTrue);
 		sq_newclosure(v,mathlib_funcs[i].f,0);
 		sq_setparamscheck(v,mathlib_funcs[i].nparamscheck,mathlib_funcs[i].typemask);
-		sq_setnativeclosurename(v,-1,mathlib_funcs[i].name);
+		sq_setnativeclosurenameex(v,-1,mathlib_funcs[i].name,SQTrue);
 		sq_newslot(v,-3,SQFalse);
 		i++;
 	}

@@ -355,6 +355,7 @@ SQUIRREL_API void sq_newclosure(HSQUIRRELVM v,SQFUNCTION func,SQUnsignedInteger 
 SQUIRREL_API SQRESULT sq_setparamscheck(HSQUIRRELVM v,SQInteger nparamscheck,const SQChar *typemask);
 SQUIRREL_API SQRESULT sq_bindenv(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API void sq_pushstring(HSQUIRRELVM v,const SQChar *s,SQInteger len);
+SQUIRREL_API void sq_pushstringex(HSQUIRRELVM v,const SQChar *s,SQInteger len,SQBool isconst);
 SQUIRREL_API void sq_pushfloat(HSQUIRRELVM v,SQFloat f);
 SQUIRREL_API void sq_pushinteger(HSQUIRRELVM v,SQInteger n);
 SQUIRREL_API void sq_pushbool(HSQUIRRELVM v,SQBool b);
@@ -383,6 +384,7 @@ SQUIRREL_API SQRESULT sq_getfunctioninfo(HSQUIRRELVM v,SQInteger level,SQFunctio
 SQUIRREL_API SQRESULT sq_getclosureinfo(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger *nparams,SQUnsignedInteger *nfreevars);
 SQUIRREL_API SQRESULT sq_getclosurename(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQRESULT sq_setnativeclosurename(HSQUIRRELVM v,SQInteger idx,const SQChar *name);
+SQUIRREL_API SQRESULT sq_setnativeclosurenameex(HSQUIRRELVM v,SQInteger idx,const SQChar *name,SQBool isconst);
 SQUIRREL_API SQRESULT sq_setinstanceup(HSQUIRRELVM v, SQInteger idx, SQUserPointer p);
 SQUIRREL_API SQRESULT sq_getinstanceup(HSQUIRRELVM v, SQInteger idx, SQUserPointer *p,SQUserPointer typetag);
 SQUIRREL_API SQRESULT sq_setclassudsize(HSQUIRRELVM v, SQInteger idx, SQInteger udsize);

@@ -255,9 +255,9 @@ static SQRegFunction _stream_methods[] = {
 void init_streamclass(HSQUIRRELVM v)
 {
 	sq_pushregistrytable(v);
-	sq_pushstring(v,_SC("std_stream"),-1);
+	sq_pushstringex(v,_SC("std_stream"),-1,SQTrue);
 	if(SQ_FAILED(sq_get(v,-2))) {
-		sq_pushstring(v,_SC("std_stream"),-1);
+		sq_pushstringex(v,_SC("std_stream"),-1,SQTrue);
 		sq_newclass(v,SQFalse);
 		sq_settypetag(v,-1,(SQUserPointer)SQSTD_STREAM_TYPE_TAG);
 		SQInteger i = 0;
@@ -271,8 +271,8 @@ void init_streamclass(HSQUIRRELVM v)
 		}
 		sq_newslot(v,-3,SQFalse);
 		sq_pushroottable(v);
-		sq_pushstring(v,_SC("stream"),-1);
-		sq_pushstring(v,_SC("std_stream"),-1);
+		sq_pushstringex(v,_SC("stream"),-1,SQTrue);
+		sq_pushstringex(v,_SC("std_stream"),-1,SQTrue);
 		sq_get(v,-4);
 		sq_newslot(v,-3,SQFalse);
 		sq_pop(v,1);
@@ -291,18 +291,18 @@ SQRESULT declare_stream(HSQUIRRELVM v,const SQChar* name,SQUserPointer typetag,c
 	//create delegate
     init_streamclass(v);
 	sq_pushregistrytable(v);
-	sq_pushstring(v,reg_name,-1);
-	sq_pushstring(v,_SC("std_stream"),-1);
+	sq_pushstringex(v,reg_name,-1,SQTrue);
+	sq_pushstringex(v,_SC("std_stream"),-1,SQTrue);
 	if(SQ_SUCCEEDED(sq_get(v,-3))) {
 		sq_newclass(v,SQTrue);
 		sq_settypetag(v,-1,typetag);
 		SQInteger i = 0;
 		while(methods[i].name != 0) {
 			SQRegFunction &f = methods[i];
-			sq_pushstring(v,f.name,-1);
+			sq_pushstringex(v,f.name,-1,SQTrue);
 			sq_newclosure(v,f.f,0);
 			sq_setparamscheck(v,f.nparamscheck,f.typemask);
-			sq_setnativeclosurename(v,-1,f.name);
+			sq_setnativeclosurenameex(v,-1,f.name,SQTrue);
 			sq_newslot(v,-3,SQFalse);
 			i++;
 		}
@@ -313,10 +313,10 @@ SQRESULT declare_stream(HSQUIRRELVM v,const SQChar* name,SQUserPointer typetag,c
 		while(globals[i].name!=0)
 		{
 			SQRegFunction &f = globals[i];
-			sq_pushstring(v,f.name,-1);
+			sq_pushstringex(v,f.name,-1,SQTrue);
 			sq_newclosure(v,f.f,0);
 			sq_setparamscheck(v,f.nparamscheck,f.typemask);
-			sq_setnativeclosurename(v,-1,f.name);
+			sq_setnativeclosurenameex(v,-1,f.name,SQTrue);
 			sq_newslot(v,-3,SQFalse);
 			i++;
 		}
