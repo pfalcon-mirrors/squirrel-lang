@@ -189,6 +189,7 @@ public:
 			SQOpcode op;
 			if(_token==TK_RETURN){
 				op=_OP_RETURN;
+				
 			}
 			else{
 				op=_OP_YIELD;
@@ -197,9 +198,15 @@ public:
 			Lex();
 			if(!IsEndOfStatement()){
 				CommaExpr();
+				if(op == _OP_RETURN && _fs->_traps>0)
+					_fs->AddInstruction(_OP_POPTRAP,_fs->_traps,0);
 				_fs->AddInstruction(op,1,_fs->PopTarget());
 			}
-			else{ _fs->AddInstruction(op,0xFF); }
+			else{ 
+				if(op == _OP_RETURN && _fs->_traps>0)
+					_fs->AddInstruction(_OP_POPTRAP,_fs->_traps,0);
+				_fs->AddInstruction(op,0xFF); 
+			}
 			break;}
 		case TK_BREAK:
 			if(_fs->_breaktargets.size()<=0)Error(_SC("'break' has to be in a loop block"));
@@ -456,7 +463,7 @@ public:
 				break;
 			case TK_MINUSMINUS:
 			case TK_PLUSPLUS:
-			if(!IsEndOfStatement()){int tok=_token;Lex();
+			if(_exst._deref!=DEREF_NO_DEREF && !IsEndOfStatement()){int tok=_token;Lex();
 				if(pos<0)
 					Emit2ArgsOP(tok==TK_MINUSMINUS?_OP_PDEC:_OP_PINC);
 				else {//if _derefstate != DEREF_NO_DEREF && DEREF_FIELD so is the index of a local
@@ -520,14 +527,12 @@ public:
 					_exst._deref=pos;
 				}
 				return _exst._deref;
-				//PrefixedExpr(pos);
 			}
 			break;
 		case TK_DOUBLE_COLON:  // "::"
 			_fs->AddInstruction(_OP_LOADROOTTABLE,_fs->PushTarget());
 			_exst._deref=DEREF_FIELD;
 			_token=_SC('.'); //hack
-			//PrefixedExpr(-1);
 			return -1;
 			break;
 		case TK_NULL: 
@@ -604,7 +609,7 @@ public:
 		case TK_PLUSPLUS :PrefixIncDec(_token); break;
 		case TK_DELETE : DeleteExpr(); break;
 		case TK_DELEGATE : DelegateExpr(); break;
-		case _SC('('): Lex(); CommaExpr(); Expect(_SC(')')); //PrefixedExpr(); 
+		case _SC('('): Lex(); CommaExpr(); Expect(_SC(')'));
 			break;
 		default: Error(_SC("expression expected"));
 		}
@@ -869,10 +874,12 @@ public:
 		SQObjectPtr exid;
 		Lex();
 		_fs->AddInstruction(_OP_PUSHTRAP,0,0);
+		_fs->_traps++;
 		if(_fs->_breaktargets.size())_fs->_breaktargets.top()++;
 		if(_fs->_continuetargets.size())_fs->_continuetargets.top()++;
 		int trappos=_fs->GetCurrentPos();
 		Statement();
+		_fs->_traps--;
 		_fs->AddInstruction(_OP_POPTRAP,1,0);
 		if(_fs->_breaktargets.size())_fs->_breaktargets.top()--;
 		if(_fs->_continuetargets.size())_fs->_continuetargets.top()--;

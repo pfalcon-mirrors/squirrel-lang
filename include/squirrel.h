@@ -97,7 +97,7 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 1.0 (beta 1)")
+#define SQUIRREL_VERSION	_SC("Squirrel 1.0 (beta 2)")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2004 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
@@ -107,26 +107,26 @@ typedef char SQChar;
 
 #define SQUIRREL_EOB 0
 
-#define SQOBJECT_REF_COUNTED	0x8000
-#define SQOBJECT_NUMERIC		0x0800
+#define SQOBJECT_REF_COUNTED	0x00800000
+#define SQOBJECT_NUMERIC		0x00080000
 typedef unsigned int SQObjectType;
 
-#define _RT_MASK 0x00FF
+#define _RT_MASK 0x0000FFFF
 #define _RAW_TYPE(type) (type&_RT_MASK)
 
 #define _RT_NULL			0x0000
 #define _RT_INTEGER			0x0001
 #define _RT_FLOAT			0x0002
-#define _RT_STRING			0x0003
-#define _RT_TABLE			0x0004
-#define _RT_ARRAY			0x0005
-#define _RT_USERDATA		0x0006
-#define _RT_CLOSURE			0x0007
-#define _RT_NATIVECLOSURE	0x0008
-#define _RT_GENERATOR		0x0009
-#define _RT_USERPOINTER		0x000A
-#define _RT_THREAD			0x000B
-#define _RT_FUNCPROTO		0x000C
+#define _RT_STRING			0x0004
+#define _RT_TABLE			0x0008
+#define _RT_ARRAY			0x0010
+#define _RT_USERDATA		0x0020
+#define _RT_CLOSURE			0x0040
+#define _RT_NATIVECLOSURE	0x0080
+#define _RT_GENERATOR		0x0100
+#define _RT_USERPOINTER		0x0200
+#define _RT_THREAD			0x0400
+#define _RT_FUNCPROTO		0x0800
 
 #define OT_NULL				_RT_NULL
 #define OT_INTEGER			(_RT_INTEGER|SQOBJECT_NUMERIC)
@@ -195,6 +195,7 @@ typedef struct tagSQRegFunction{
 	const SQChar *name;
 	SQFUNCTION f;
 	int nparamscheck;
+	const SQChar *typemask;
 }SQRegFunction;
 
 /*vm*/
@@ -210,8 +211,9 @@ SQUIRREL_API SQRESULT sq_wakeupvm(HSQUIRRELVM v,int resumedret,int retval);
 SQUIRREL_API int sq_getvmstate(HSQUIRRELVM v);
 
 /*compiler*/
-SQUIRREL_API SQRESULT sq_compile(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQChar *sourcename,int raiseerror,int lineinfo);
-SQUIRREL_API SQRESULT sq_compilebuffer(HSQUIRRELVM v,const SQChar *s,int size,const SQChar *sourcename,int raiseerror,int lineinfo);
+SQUIRREL_API SQRESULT sq_compile(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQChar *sourcename,int raiseerror);
+SQUIRREL_API SQRESULT sq_compilebuffer(HSQUIRRELVM v,const SQChar *s,int size,const SQChar *sourcename,int raiseerror);
+SQUIRREL_API void sq_enabledebuginfo(HSQUIRRELVM v, int debuginfo);
 SQUIRREL_API void sq_setcompilererrorhandler(HSQUIRRELVM v,SQCOMPILERERROR f);
 
 /*stack operations*/
@@ -228,7 +230,8 @@ SQUIRREL_API void sq_move(HSQUIRRELVM dest,HSQUIRRELVM src,int idx);
 SQUIRREL_API SQUserPointer sq_newuserdata(HSQUIRRELVM v,unsigned int size);
 SQUIRREL_API void sq_newtable(HSQUIRRELVM v);
 SQUIRREL_API void sq_newarray(HSQUIRRELVM v,int size);
-SQUIRREL_API void sq_newclosure(HSQUIRRELVM v,SQFUNCTION func,int nparamscheck,unsigned int nfreevars);
+SQUIRREL_API void sq_newclosure(HSQUIRRELVM v,SQFUNCTION func,unsigned int nfreevars);
+SQUIRREL_API SQRESULT sq_setparamscheck(HSQUIRRELVM v,int nparamscheck,const SQChar *typemask);
 SQUIRREL_API void sq_pushstring(HSQUIRRELVM v,const SQChar *s,int len);
 SQUIRREL_API void sq_pushfloat(HSQUIRRELVM v,SQFloat f);
 SQUIRREL_API void sq_pushinteger(HSQUIRRELVM v,SQInteger n);
@@ -239,13 +242,16 @@ SQUIRREL_API SQInteger sq_getsize(HSQUIRRELVM v,int idx);
 SQUIRREL_API SQRESULT sq_getstring(HSQUIRRELVM v,int idx,const SQChar **c);
 SQUIRREL_API SQRESULT sq_getinteger(HSQUIRRELVM v,int idx,SQInteger *i);
 SQUIRREL_API SQRESULT sq_getfloat(HSQUIRRELVM v,int idx,SQFloat *f);
+SQUIRREL_API SQRESULT sq_getthread(HSQUIRRELVM v,int idx,HSQUIRRELVM *thread);
 SQUIRREL_API SQRESULT sq_getuserpointer(HSQUIRRELVM v,int idx,SQUserPointer *p);
-SQUIRREL_API SQRESULT sq_getuserdata(HSQUIRRELVM v,int idx,SQUserPointer *p);
+SQUIRREL_API SQRESULT sq_getuserdata(HSQUIRRELVM v,int idx,SQUserPointer *p,unsigned int *typetag);
+SQUIRREL_API SQRESULT sq_settypetag(HSQUIRRELVM v,int idx,unsigned int typetag);
 SQUIRREL_API void sq_setreleasehook(HSQUIRRELVM v,int idx,SQUSERDATARELEASE hook);
 SQUIRREL_API SQChar *sq_getscratchpad(HSQUIRRELVM v,int minsize);
 
 /*object manipulation*/
 SQUIRREL_API void sq_pushroottable(HSQUIRRELVM v);
+SQUIRREL_API void sq_pushregistrytable(HSQUIRRELVM v);
 SQUIRREL_API SQRESULT sq_setroottable(HSQUIRRELVM v);
 SQUIRREL_API SQRESULT sq_createslot(HSQUIRRELVM v,int idx);
 SQUIRREL_API SQRESULT sq_deleteslot(HSQUIRRELVM v,int idx,int pushval);
@@ -317,4 +323,5 @@ SQUIRREL_API void sq_setdebughook(HSQUIRRELVM v);
 #ifdef __cplusplus
 } /*extern "C"*/
 #endif
+
 #endif /*_SQUIRREL_H_*/

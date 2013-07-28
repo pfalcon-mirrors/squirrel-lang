@@ -24,8 +24,10 @@
 				trg=tofloat(o1) op tofloat(o2); \
 			}	\
 		} else { \
-		if(!ArithMetaMethod(#op[0],o1,o2,trg)) \
-			RT_Error(_SC("arith op on between '%s' and '%s'"),GetTypeName(o1),GetTypeName(o2)); \
+			if(#op[0] == '+' &&	(type(o1) == OT_STRING || type(o2) == OT_STRING)) \
+					StringCat(o1, o2, trg); \
+			else if(!ArithMetaMethod(#op[0],o1,o2,trg)) \
+				RT_Error(_SC("arith op %c on between '%s' and '%s'"),#op[0],GetTypeName(o1),GetTypeName(o2)); \
 		} \
 	}
 
@@ -221,24 +223,24 @@ SQException::SQException(const SQObjectPtr &b)
 
 const SQChar *GetTypeName(SQObjectType type)
 {
-	switch(type)
+	switch(_RAW_TYPE(type))
 	{
-	case OT_NULL:return _SC("null");
-	case OT_INTEGER:return _SC("integer");
-	case OT_FLOAT:return _SC("float");
-	case OT_STRING:return _SC("string");
-	case OT_TABLE:return _SC("table");
-	case OT_ARRAY:return _SC("array");
-	case OT_GENERATOR:return _SC("generator");
-	case OT_CLOSURE:
-	case OT_NATIVECLOSURE:
+	case _RT_NULL:return _SC("null");
+	case _RT_INTEGER:return _SC("integer");
+	case _RT_FLOAT:return _SC("float");
+	case _RT_STRING:return _SC("string");
+	case _RT_TABLE:return _SC("table");
+	case _RT_ARRAY:return _SC("array");
+	case _RT_GENERATOR:return _SC("generator");
+	case _RT_CLOSURE:
+	case _RT_NATIVECLOSURE:
 		return _SC("function");
-	case OT_USERDATA:
-	case OT_USERPOINTER:
+	case _RT_USERDATA:
+	case _RT_USERPOINTER:
 		return _SC("userdata");
-	case OT_THREAD:
+	case _RT_THREAD:
 		return _SC("thread");
-	case OT_FUNCPROTO:
+	case _RT_FUNCPROTO:
 		return _SC("function");
 	default:
 		return NULL;
@@ -307,11 +309,11 @@ void SQVM::StartCall(SQClosure *closure,int target,int nargs,int stackbase,bool 
 
 	if (!tailcall) {
 		PUSH_CALLINFO(this, CallInfo());
-		ci->_etraps=0;
+		ci->_etraps = 0;
 		ci->_prevstkbase = stackbase - _stackbase;
 		ci->_target = target;
 		ci->_prevtop = _top - _stackbase;
-		ci->_ncalls=1;
+		ci->_ncalls = 1;
 		ci->_root = false;
 	}
 	else {
@@ -590,12 +592,7 @@ common_call:
 			case _OP_JZ:  if (type(STK(arg0)) == OT_NULL) ci->_ip+=(sarg1); continue;
 
 #define COND_LITERAL (arg3!=0?(*ci->_literals)[arg1]:STK(arg1))
-			case _OP_ADD: {
-				SQObjectPtr &o = COND_LITERAL;
-				if(type(STK(arg2)) != OT_STRING && type(o) != OT_STRING) { ARITH_OP( + , TARGET, STK(arg2), o); }
-				else StringCat(STK(arg2), o, TARGET);
-				}
-				continue;
+			case _OP_ADD: ARITH_OP( + , temp_reg, STK(arg2), COND_LITERAL); TARGET = temp_reg; continue;
 			case _OP_SUB: ARITH_OP( - , temp_reg, STK(arg2), COND_LITERAL); TARGET = temp_reg; continue;
 			case _OP_MUL: ARITH_OP( * , temp_reg, STK(arg2), COND_LITERAL); TARGET = temp_reg; continue;
 			case _OP_DIV: ARITH_OP( / , temp_reg, STK(arg2), COND_LITERAL); TARGET = temp_reg; continue;
@@ -878,6 +875,12 @@ bool SQVM::CallNative(SQNativeClosure *nclosure,int nargs,int stackbase,bool tai
 		|| ((nparamscheck < 0) && (nargs < (-nparamscheck)))) 
 		RT_Error(_SC("wrong number of parameters"));
 
+	int tcs;
+	if(tcs = nclosure->_typecheck.size()) {
+		for(int i = 0; i < nargs && i < tcs; i++)
+			if((nclosure->_typecheck[i] != -1) && !(type(_stack[stackbase+i]) & nclosure->_typecheck[i]))
+					ParamTypeError(i,nclosure->_typecheck[i],type(_stack[stackbase+i]));
+	}
 	_nnativecalls++;
 	if ((_top + MIN_STACK_OVERHEAD) > (int)_stack.size()) {
 		_stack.resize(_stack.size() + (MIN_STACK_OVERHEAD<<1));
@@ -893,7 +896,7 @@ bool SQVM::CallNative(SQNativeClosure *nclosure,int nargs,int stackbase,bool tai
 	_stackbase = stackbase;
 	//push outers
 	int outers = nclosure->_outervalues.size();
-	for (int i = 0; i < outers; i++){
+	for (int i = 0; i < outers; i++) {
 		Push(nclosure->_outervalues[i]);
 	}
 	ci->_prevtop = (oldtop - oldstackbase);

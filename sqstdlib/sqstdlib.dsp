@@ -1,34 +1,34 @@
-# Microsoft Developer Studio Project File - Name="sqlibs" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="sqstdlib" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Static Library" 0x0104
 
-CFG=sqlibs - Win32 Debug
+CFG=sqstdlib - Win32 Release
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "sqlibs.mak".
+!MESSAGE NMAKE /f "sqstdlib.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "sqlibs.mak" CFG="sqlibs - Win32 Debug"
+!MESSAGE NMAKE /f "sqstdlib.mak" CFG="sqstdlib - Win32 Release"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "sqlibs - Win32 Release" (based on "Win32 (x86) Static Library")
-!MESSAGE "sqlibs - Win32 Debug" (based on "Win32 (x86) Static Library")
+!MESSAGE "sqstdlib - Win32 Release" (based on "Win32 (x86) Static Library")
+!MESSAGE "sqstdlib - Win32 Debug" (based on "Win32 (x86) Static Library")
 !MESSAGE 
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
-# PROP Scc_ProjName ""
-# PROP Scc_LocalPath ""
+# PROP Scc_ProjName ""$/squirrel", HAAAAAAA"
+# PROP Scc_LocalPath ".."
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "sqlibs - Win32 Release"
+!IF  "$(CFG)" == "sqstdlib - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -49,9 +49,9 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"..\lib\sqlibs.lib"
+# ADD LIB32 /nologo /out:"..\lib\sqstdlib.lib"
 
-!ELSEIF  "$(CFG)" == "sqlibs - Win32 Debug"
+!ELSEIF  "$(CFG)" == "sqstdlib - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -63,8 +63,8 @@ LIB32=link.exe -lib
 # PROP Output_Dir "Debug"
 # PROP Intermediate_Dir "Debug"
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ  /c
-# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "..\include" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ  /c
+# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
+# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "..\include" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
 # ADD BASE RSC /l 0x410 /d "_DEBUG"
 # ADD RSC /l 0x410 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -72,32 +72,44 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"..\lib\sqlibs.lib"
+# ADD LIB32 /nologo /out:"..\lib\sqstdlib.lib"
 
 !ENDIF 
 
 # Begin Target
 
-# Name "sqlibs - Win32 Release"
-# Name "sqlibs - Win32 Debug"
+# Name "sqstdlib - Win32 Release"
+# Name "sqstdlib - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\sqbloblib.cpp
+SOURCE=.\sqstdblob.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\sqiolib.cpp
+SOURCE=.\sqstdio.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\sqmathlib.cpp
+SOURCE=.\sqstdmath.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\sqsystemlib.cpp
+SOURCE=.\sqstdmodule.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\sqstdstream.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\sqstdstring.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\sqstdsystem.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -105,15 +117,11 @@ SOURCE=.\sqsystemlib.cpp
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=.\sqiolib.h
+SOURCE=.\sqstdblobimpl.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\sqmathlib.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\sqsystemlib.h
+SOURCE=.\sqstdstream.h
 # End Source File
 # End Group
 # End Target

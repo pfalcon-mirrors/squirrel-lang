@@ -15,13 +15,14 @@ struct SQUserData : CHAINABLE_OBJ
 		SQUserData* ud = (SQUserData*)SQ_MALLOC(sizeof(SQUserData)+(size-1));
 		new (ud) SQUserData(ss);
 		ud->_size = size - 1;
+		ud->_typetag = 0;
 		return ud;
 	}
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
 	void Finalize(){SetDelegate(NULL);}
 #endif
-	void Release(){
+	void Release() {
 		if (_hook) _hook(_val,_size);
 		int tsize = _size;
 		this->~SQUserData();
@@ -40,6 +41,7 @@ struct SQUserData : CHAINABLE_OBJ
 	SQTable *_delegate;
 	int _size;
 	SQUSERDATARELEASE _hook;
+	unsigned int _typetag;
 	SQChar _val[1];
 };
 

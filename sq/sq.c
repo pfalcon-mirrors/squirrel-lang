@@ -4,19 +4,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #ifdef _WIN32
 //#include <conio.h>
 #include <windows.h>
+#else
+#include <dlfcn.h>
 #endif
 #if defined(_MSC_VER) && defined(_DEBUG)
 #include <crtdbg.h>
 #include <conio.h>
 #endif
 #include <squirrel.h>
-#include <sqbloblib.h>
-#include <sqiolib.h>
-#include <sqsystemlib.h>
-#include <sqmathlib.h>
+#include <sqstdblob.h>
+#include <sqstdmodule.h>
+#include <sqstdsystem.h>
+#include <sqstdio.h>
+#include <sqstdmath.h>	
+#include <sqstdstring.h>
+
 #include <time.h>
 #include <math.h>
 
@@ -30,7 +36,7 @@
 #define scvprintf vprintf
 #endif
 
-int CompileScriptFromFile(HSQUIRRELVM,const SQChar *name,int printerror,int lineinfo);
+int CompileScriptFromFile(HSQUIRRELVM,const SQChar *name,int bprinterror);
 void PrintCallStack(HSQUIRRELVM);
 void PrintVersionInfos();
 
@@ -61,13 +67,8 @@ int printerror(HSQUIRRELVM v)
 int compile_file(HSQUIRRELVM v)
 {
 	const SQChar *sFileName;
-	int lineinfo=0;
 	if(SQ_SUCCEEDED(sq_getstring(v,2,&sFileName))){
-		if(sq_gettop(v)>2){
-			SQObjectType t=sq_gettype(v,3);
-			lineinfo=(t!=OT_NULL?1:0);
-		}
-		return CompileScriptFromFile(v,sFileName,1,lineinfo);
+		return CompileScriptFromFile(v,sFileName,0);
 	}
 	return sq_throwerror(v,_SC("wrong argument"));
 }
@@ -109,7 +110,7 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 				switch(argv[arg][1])
 				{
 				case 'd': //DEBUG(debug infos)
-					lineinfo=1;
+					sq_enabledebuginfo(v,1);
 					break;
 				case 'v':
 					return _VERSION;
@@ -152,7 +153,7 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 			}
 			sq_createslot(v,-3);
 			sq_pop(v,1);
-			if(CompileScriptFromFile(v,filename,1,lineinfo)>0){
+			if(CompileScriptFromFile(v,filename,1)>0){
 				sq_pushroottable(v);
 				sq_call(v,1,0);
 				return _DONE;
@@ -286,16 +287,16 @@ int file_write(SQUserPointer file,SQUserPointer p,int size)
 	return fwrite(p,1,size,(FILE *)file);
 }
 
-int CompileScript(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQChar *sourcename,int bprinterror,int lineinfo)
+int CompileScript(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQChar *sourcename,int bprinterror)
 {
 	int ret=-1;
-	if(SQ_SUCCEEDED(sq_compile(v,read,p,sourcename,bprinterror,lineinfo))){
+	if(SQ_SUCCEEDED(sq_compile(v,read,p,sourcename,bprinterror))){
 		ret=1;
 	}
 	return ret;
 }
 
-int CompileScriptFromFile(HSQUIRRELVM v,const SQChar *filename,int bprinterror,int lineinfo)
+int CompileScriptFromFile(HSQUIRRELVM v,const SQChar *filename,int bprinterror)
 {
 	FILE *file=scfopen(filename,_SC("rb"));
 	int ret;
@@ -307,7 +308,7 @@ int CompileScriptFromFile(HSQUIRRELVM v,const SQChar *filename,int bprinterror,i
 		else
 			fseek(file,0,SEEK_SET);
 
-		if(CompileScript(v,func,file,filename,bprinterror,lineinfo)>0){
+		if(CompileScript(v,func,file,filename,bprinterror)>0){
 			fclose(file);
 			return 1;
 		}
@@ -317,13 +318,10 @@ int CompileScriptFromFile(HSQUIRRELVM v,const SQChar *filename,int bprinterror,i
 	return sq_throwerror(v,_SC("cannot open the file"));
 }
 
-
-
 void compiler_error(HSQUIRRELVM v,const SQChar *sErr,const SQChar *sSource,int line,int column)
 {
 	scfprintf(stderr,_SC("ERROR %s line=(%d) column=(%d) [%s]\n"),sErr,line,column,sSource);
 }
-
 
 void Interactive(HSQUIRRELVM v)
 {
@@ -339,7 +337,8 @@ void Interactive(HSQUIRRELVM v)
 	sq_pushroottable(v);
 	sq_pushstring(v,_SC("quit"),-1);
 	sq_pushuserpointer(v,&done);
-	sq_newclosure(v,quit,1,1);
+	sq_newclosure(v,quit,1);
+	sq_setparamscheck(v,1,NULL);
 	sq_createslot(v,-3);
 	sq_pop(v,1);
 
@@ -386,7 +385,7 @@ void Interactive(HSQUIRRELVM v)
 		i=scstrlen(buffer);
 		if(i>0){
 			int oldtop=sq_gettop(v);
-			if(SQ_SUCCEEDED(sq_compilebuffer(v,buffer,i,_SC("interactive console"),1,0))){
+			if(SQ_SUCCEEDED(sq_compilebuffer(v,buffer,i,_SC("interactive console"),1))){
 				sq_pushroottable(v);
 				if(SQ_SUCCEEDED(sq_call(v,1,retval)) &&	retval){
 					scprintf(_SC("\n"));
@@ -406,41 +405,105 @@ void Interactive(HSQUIRRELVM v)
 	}
 }
 
+SQRESULT _sqstd_moduleapi_openmodule(HSQUIRRELVM v,const SQChar* modulename ,SQSTDHMODULE* pm)
+{
+#define MAX_MODULE_PATH 512
+	char realmodulename[MAX_MODULE_PATH];
+#ifdef _UNICODE
+	int slen = wcstombs(realmodulename,modulename,MAX_MODULE_PATH-1);
+	realmodulename[slen] = _SC('\0');
+#else
+	strcpy(realmodulename,modulename);
+#endif
+#ifdef _WIN32
+	*pm = LoadLibrary(realmodulename);
+#else
+	*pm = dlopen(modulename,RTLD_NOW);
+#endif
+	if(*pm == NULL)
+		return SQ_ERROR;
+	return SQ_OK;
+}
 
-void *x_malloc(unsigned int size){
+void *_sqstd_moduleapi_getsymbol(HSQUIRRELVM v,SQSTDHMODULE m,const SQChar* symbol)
+{
+#define MAX_SYMBOL_NAME 128
+	char realsymbolname[MAX_SYMBOL_NAME];
+#ifdef _UNICODE
+	int slen = wcstombs(realsymbolname,symbol,MAX_SYMBOL_NAME-1);
+	realsymbolname[slen] = _SC('\0');
+#else
+	strcpy(realsymbolname,symbol);
+#endif
+
+#ifdef _WIN32
+	return (void *)GetProcAddress((HMODULE)m,realsymbolname);
+#else
+	return dlsym(m,realsymbolname);
+#endif
+}
+
+void _sqstd_moduleapi_closemodule(SQSTDHMODULE m)
+{
+#ifdef _WIN32
+	FreeLibrary((HMODULE)m);
+#else
+	dlclose(m);
+#endif
+}
+
+SQSTDUserModuleAPI api = {
+	_sqstd_moduleapi_openmodule,
+	_sqstd_moduleapi_getsymbol,
+	_sqstd_moduleapi_closemodule
+};
+
+void *x_malloc(unsigned int size) {
 	return malloc(size);
 }
 
-void x_free(void *p,unsigned int size){
+void x_free(void *p,unsigned int size) {
 	free(p);
 }
 
 int main(int argc, char* argv[])
 {
-	
+	const SQChar *error;
 	HSQUIRRELVM v;
+	
 	const SQChar *filename=NULL;
 #if defined(_MSC_VER) && defined(_DEBUG)
 	_CrtSetAllocHook(MemAllocHook);
 #endif
 	
 	v=sq_open(1024);
-	
-	sq_pushroottable(v);
-	sq_blob_register(v,x_malloc,x_free);
-	sq_iolib_register(v);
-	sq_systemlib_register(v);
-	sq_mathlib_register(v);
 	sq_setprintfunc(v,printfunc);
+
+	sq_pushroottable(v);
+
+	sqstd_register_bloblib(v);
+	sqstd_register_iolib(v);
+	if(SQ_FAILED(sqstd_register_modulelib(v,&api))) {
+		sq_getlasterror(v);
+		sq_getstring(v,-1,&error);
+		scprintf(_SC("MODULE LIB [%s]\n"),error);
+		sq_pop(v,1);
+	}
+	
+	sqstd_register_systemlib(v);
+	sqstd_register_mathlib(v);
+	sqstd_register_stringlib(v);
+	
 
 	//sets error handlers
 	sq_setcompilererrorhandler(v,compiler_error);
-	sq_newclosure(v,printerror,2,0);
+	sq_newclosure(v,printerror,0);
 	sq_seterrorhandler(v);
 
 	sq_pushroottable(v);
 	sq_pushstring(v,_SC("compile_file"),-1);
-	sq_newclosure(v,compile_file,-2,0);
+	sq_newclosure(v,compile_file,0);
+	sq_setparamscheck(v,-2,NULL);
 	sq_createslot(v,-3);
 	sq_pop(v,1);
 

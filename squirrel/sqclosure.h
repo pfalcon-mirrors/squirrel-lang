@@ -90,6 +90,7 @@ public:
 #endif
 	SQFUNCTION _function;
 	SQObjectPtrVec _outervalues;
+	SQIntVec _typecheck;
 	int _nparamscheck;
 };
 

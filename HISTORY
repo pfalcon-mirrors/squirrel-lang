@@ -1,3 +1,20 @@
+***version 1.0 beta 2***
+-minor compiler/parser bug fixes
+-sq_newclosure has a different prototype, the "paramscheck" of paramter has been moved to the new function sq_setparamscheck()
+-sq_setparamscheck allows to add automatic parameters type checking in native closures
+-sq_compile() lost the lineinfo parameter
+-new api sq_enabledebuginfo() globally sets compiler's debug info generation
+-added consistency check on bytecode serialization
+-fixed += operator, now works on strings like +
+-added global slot in the base lib _charsize_ to recognize unicode builds from ascii builds runtime
+-added registry table
+-new api call sq_pushregistrytable()
+-added type tag to the userdata type sq_settypetag()
+-sq_getuserdata now queries the userdata typetag
+-the built in function collect_garbage() as been renamed collectgarbage() for consistency reasons
+-new standard libraries(sqlibs are now obsolete)
+
+***2004-02-20	     ***
 ***version 1.0 beta 1***
 -fixed a bug in the compiler (thanks Martin Kofler)
 -fixed bug in the switch case statement

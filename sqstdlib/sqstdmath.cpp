@@ -1,19 +1,19 @@
 #include <squirrel.h>
 #include <math.h>
-#include <string.h>
 #include <stdlib.h>
-#include "sqmathlib.h"
+#include "sqstdmath.h"
 
 #define SINGLE_ARG_FUNC(_funcname) static int math_##_funcname(HSQUIRRELVM v){ \
 	SQFloat f; \
-	if(sq_gettop(v)!=2 || SQ_FAILED(sq_getfloat(v,2,&f)))return sq_throwerror(v,_SC("invalid param")); \
+	sq_getfloat(v,2,&f); \
 	sq_pushfloat(v,(SQFloat)_funcname(f)); \
 	return 1; \
 }
 
 #define TWO_ARGS_FUNC(_funcname) static int math_##_funcname(HSQUIRRELVM v){ \
 	SQFloat p1,p2; \
-	if(sq_gettop(v)!=3 || SQ_FAILED(sq_getfloat(v,2,&p1)) || SQ_FAILED(sq_getfloat(v,3,&p2)))return sq_throwerror(v,_SC("invalid param")); \
+	sq_getfloat(v,2,&p1); \
+	sq_getfloat(v,3,&p2); \
 	sq_pushfloat(v,(SQFloat)_funcname(p1,p2)); \
 	return 1; \
 }
@@ -28,14 +28,14 @@ static int math_srand(HSQUIRRELVM v)
 
 static int math_rand(HSQUIRRELVM v)
 {
-	sq_pushfloat(v,rand());
+	sq_pushinteger(v,rand());
 	return 1;
 }
 
 static int math_abs(HSQUIRRELVM v)
 {
 	SQInteger n;
-	if(sq_gettop(v)!=2 || SQ_FAILED(sq_getinteger(v,2,&n)))return sq_throwerror(v,_SC("invalid param")); 
+	sq_getinteger(v,2,&n);
 	sq_pushinteger(v,(SQInteger)abs(n)); 
 	return 1; 
 }
@@ -56,26 +56,26 @@ SINGLE_ARG_FUNC(floor)
 SINGLE_ARG_FUNC(ceil)
 SINGLE_ARG_FUNC(exp)
 
-#define _DECL_FUNC(name,nparams) {_SC(#name),math_##name,nparams}
-static SQRegFunction mathlib_funcs[]={
-	_DECL_FUNC(sqrt,2),
-	_DECL_FUNC(sin,2),
-	_DECL_FUNC(cos,2),
-	_DECL_FUNC(asin,2),
-	_DECL_FUNC(acos,2),
-	_DECL_FUNC(log,2),
-	_DECL_FUNC(log10,2),
-	_DECL_FUNC(tan,2),
-	_DECL_FUNC(atan,2),
-	_DECL_FUNC(atan2,3),
-	_DECL_FUNC(pow,3),
-	_DECL_FUNC(floor,2),
-	_DECL_FUNC(ceil,2),
-	_DECL_FUNC(exp,2),
-	_DECL_FUNC(srand,2),
-	_DECL_FUNC(rand,1),
-	_DECL_FUNC(fabs,2),
-	_DECL_FUNC(abs,2),
+#define _DECL_FUNC(name,nparams,tycheck) {_SC(#name),math_##name,nparams,tycheck}
+static SQRegFunction mathlib_funcs[] = {
+	_DECL_FUNC(sqrt,2,_SC(".n")),
+	_DECL_FUNC(sin,2,_SC(".n")),
+	_DECL_FUNC(cos,2,_SC(".n")),
+	_DECL_FUNC(asin,2,_SC(".n")),
+	_DECL_FUNC(acos,2,_SC(".n")),
+	_DECL_FUNC(log,2,_SC(".n")),
+	_DECL_FUNC(log10,2,_SC(".n")),
+	_DECL_FUNC(tan,2,_SC(".n")),
+	_DECL_FUNC(atan,2,_SC(".n")),
+	_DECL_FUNC(atan2,3,_SC(".nn")),
+	_DECL_FUNC(pow,3,_SC(".nn")),
+	_DECL_FUNC(floor,2,_SC(".n")),
+	_DECL_FUNC(ceil,2,_SC(".n")),
+	_DECL_FUNC(exp,2,_SC(".n")),
+	_DECL_FUNC(srand,2,_SC(".n")),
+	_DECL_FUNC(rand,1,NULL),
+	_DECL_FUNC(fabs,2,_SC(".n")),
+	_DECL_FUNC(abs,2,_SC(".n")),
 	{0,0},
 };
 
@@ -83,13 +83,13 @@ static SQRegFunction mathlib_funcs[]={
 #define M_PI (3.14159265358979323846)
 #endif
 
-int sq_mathlib_register(HSQUIRRELVM v)
+SQRESULT sqstd_register_mathlib(HSQUIRRELVM v)
 {
 	int i=0;
-	while(mathlib_funcs[i].name!=0)
-	{
+	while(mathlib_funcs[i].name!=0)	{
 		sq_pushstring(v,mathlib_funcs[i].name,-1);
-		sq_newclosure(v,mathlib_funcs[i].f,mathlib_funcs[i].nparamscheck,0);
+		sq_newclosure(v,mathlib_funcs[i].f,0);
+		sq_setparamscheck(v,mathlib_funcs[i].nparamscheck,mathlib_funcs[i].typemask);
 		sq_createslot(v,-3);
 		i++;
 	}
@@ -99,5 +99,5 @@ int sq_mathlib_register(HSQUIRRELVM v)
 	sq_pushstring(v,_SC("PI"),-1);
 	sq_pushfloat(v,(SQFloat)M_PI);
 	sq_createslot(v,-3);
-	return 1;
+	return SQ_OK;
 }

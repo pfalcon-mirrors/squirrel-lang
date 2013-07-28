@@ -1,19 +1,21 @@
-Squirrel 1.0 beta 1
+Squirrel 1.0 beta 2
 --------------------------------------------------------
 What is in this distribution?
 
 squirrel
 	static library implementing the compiler and interpreter of the language
 
-sqlibs
-	very raw set of utility libraries (io,system,math and blob) for play around
-	with the language and as example for C++ bindings.
+sqstdlib
+	the standard utility libraries
 	
 sq
 	stand alone interpreter
 
 doc
 	The manual
+	
+etc/tesmodule
+	a sample dynamic binary module
 
 samples
 	samples programs
@@ -26,6 +28,12 @@ GCC USERS
 There is a very simple makefile that compiles all libraries and exes
 from the root of the project run 'make'
  $ make
+
+For MinGW and Cygwin users(due the lack of libdl.a)
+ $ make win
+ 
+To compiler the sample module
+ $ make -f testmodule.mk
  
 VISUAL C++ USERS
 .........................................................

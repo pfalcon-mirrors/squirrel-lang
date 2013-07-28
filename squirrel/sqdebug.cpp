@@ -71,3 +71,19 @@ void SQVM::CompareError(const SQObject &o1, const SQObject &o2)
 	SQObjectPtr oval1 = PrintObjVal(o1),oval2 = PrintObjVal(o2);
 	RT_Error(_SC("comparsion between '%.50s' and '%.50s'"), _stringval(oval1), _stringval(oval2));
 }
+
+void SQVM::ParamTypeError(int nparam,int typemask,int type)
+{
+	SQObjectPtr exptypes = SQString::Create(_ss(this),_SC(""),-1);
+	int found = 0;	
+	for(int i=0; i<16; i++)
+	{
+		int mask = 0x00000001<<i;
+		if(typemask & (mask)) {
+			if(found>0) StringCat(exptypes,SQString::Create(_ss(this),_SC("|"),-1),exptypes);
+			found ++;
+			StringCat(exptypes,SQString::Create(_ss(this),GetTypeName(mask),-1),exptypes);
+		}
+	}
+	RT_Error(_SC("parameter %d has an invalid type '%s' ; expected: '%s'"), nparam, GetTypeName(type), _stringval(exptypes));
+}

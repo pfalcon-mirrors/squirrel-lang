@@ -31,7 +31,6 @@ private:
 #define REMOVE_STRING(ss,bstr) ss->_stringtable->Remove(bstr)
 
 struct SQObjectPtr;
-typedef sqvector<SQObjectPtr> SQObjectPtrVec;
 
 struct SQSharedState
 {
@@ -49,6 +48,7 @@ public:
 	SQObjectPtrVec *_types;
 	StringTable *_stringtable;
 	SQObjectPtr _refs_table;
+	SQObjectPtr _registry;
 #ifndef NO_GARBAGE_COLLECTOR
 	SQCollectable *_gc_chain;
 #endif
@@ -70,6 +70,7 @@ public:
 	
 	SQCOMPILERERROR _compilererrorhandler;
 	SQPRINTFUNCTION _printfunc;
+	bool _debuginfo;
 private:
 	SQChar *_scratchpad;
 	int _scratchpadsize;
@@ -96,6 +97,8 @@ extern SQObjectPtr _null_;
 extern SQObjectPtr _notnull_;
 extern SQObjectPtr _one_;
 extern SQObjectPtr _minusone_;
+
+bool CompileTypemask(SQIntVec &res,const SQChar *typemask);
 
 void *sq_vm_malloc(unsigned int size);
 void *sq_vm_realloc(void *p,unsigned int oldsize,unsigned int size);

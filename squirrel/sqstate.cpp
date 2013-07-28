@@ -20,6 +20,7 @@ SQSharedState::SQSharedState()
 {
 	_compilererrorhandler = NULL;
 	_printfunc = NULL;
+	_debuginfo = false;
 }
 
 #define newsysstring(s) {	\
@@ -30,6 +31,44 @@ SQSharedState::SQSharedState()
 	_metamethods->push_back(SQString::Create(this,s));	\
 	}
 
+bool CompileTypemask(SQIntVec &res,const SQChar *typemask)
+{
+	int i = 0;
+	
+	int mask = 0;
+	while(typemask[i] != 0) {
+		
+		switch(typemask[i]){
+				case 'i': mask |= _RT_INTEGER; break;
+				case 'f': mask |= _RT_FLOAT; break;
+				case 'n': mask |= (_RT_FLOAT | _RT_INTEGER); break;
+				case 's': mask |= _RT_STRING; break;
+				case 't': mask |= _RT_TABLE; break;
+				case 'a': mask |= _RT_ARRAY; break;
+				case 'u': mask |= _RT_USERDATA; break;
+				case 'c': mask |= (_RT_CLOSURE | _RT_NATIVECLOSURE); break;
+//				case 'n': mask |= _RT_NATIVECLOSURE; break;
+				case 'g': mask |= _RT_GENERATOR; break;
+				case 'p': mask |= _RT_USERPOINTER; break;
+				case 'v': mask |= _RT_THREAD; break;
+				case '.': mask = -1; res.push_back(mask); i++; mask = 0; continue;
+				default:
+					return false;
+		}
+		i++;
+		if(typemask[i] == '|') { 
+			i++; 
+			if(typemask[i] == 0)
+				return false;
+			continue; 
+		}
+		res.push_back(mask);
+		mask = 0;
+		
+	}
+	return true;
+}
+
 SQTable *CreateDefaultDelegate(SQSharedState *ss,SQRegFunction *funcz)
 {
 	int i=0;
@@ -37,6 +76,8 @@ SQTable *CreateDefaultDelegate(SQSharedState *ss,SQRegFunction *funcz)
 	while(funcz[i].name!=0){
 		SQNativeClosure *nc = SQNativeClosure::Create(ss,funcz[i].f);
 		nc->_nparamscheck = funcz[i].nparamscheck;
+		if(funcz[i].typemask && !CompileTypemask(nc->_typecheck,funcz[i].typemask))
+			return NULL;
 		t->NewSlot(SQString::Create(ss,funcz[i].name),nc);
 		i++;
 	}
@@ -84,7 +125,8 @@ void SQSharedState::Init()
 	newmetamethod(MM_NEWSLOT);
 	newmetamethod(MM_DELSLOT);
 
-	_refs_table=SQTable::Create(this,0);
+	_refs_table = SQTable::Create(this,0);
+	_registry = SQTable::Create(this,0);
 	_table_default_delegate=CreateDefaultDelegate(this,_table_default_delegate_funcz);
 	_array_default_delegate=CreateDefaultDelegate(this,_array_default_delegate_funcz);
 	_string_default_delegate=CreateDefaultDelegate(this,_string_default_delegate_funcz);
@@ -98,7 +140,9 @@ void SQSharedState::Init()
 SQSharedState::~SQSharedState()
 {
 	_table(_refs_table)->Finalize();
-	_refs_table=_null_;
+	_table(_registry)->Finalize();
+	_refs_table = _null_;
+	_registry = _null_;
 	while(!_systemstrings->empty()){
 		_systemstrings->back()=_null_;
 		_systemstrings->pop_back();
@@ -164,6 +208,7 @@ int SQSharedState::CollectGarbage(SQVM *vm)
 	vms->Mark(&tchain);
 
 	MarkObject(_refs_table,&tchain);
+	MarkObject(_registry,&tchain);
 	MarkObject(_table_default_delegate,&tchain);
 	MarkObject(_array_default_delegate,&tchain);
 	MarkObject(_string_default_delegate,&tchain);

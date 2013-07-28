@@ -117,18 +117,45 @@ int SQFunctionProto::GetLine(SQInstruction *curr)
 	return line;
 }
 
+int SafeWrite(HSQUIRRELVM v,SQWRITEFUNC write,SQUserPointer up,SQUserPointer dest,int size)
+{
+	if(write(up,dest,size) != size)
+		v->RT_Error(_SC("io error (write function failure)"));
+	return size;
+}
+
+int SafeRead(HSQUIRRELVM v,SQWRITEFUNC read,SQUserPointer up,SQUserPointer dest,int size)
+{
+	if(size && read(up,dest,size) != size)
+		v->RT_Error(_SC("io error, read function failure, the origin stream could be corrupted/trucated"));
+	return size;
+}
+
+int WriteTag(HSQUIRRELVM v,SQWRITEFUNC write,SQUserPointer up,int tag)
+{
+	return SafeWrite(v,write,up,&tag,sizeof(tag));
+}
+
+int CheckTag(HSQUIRRELVM v,SQWRITEFUNC read,SQUserPointer up,int tag)
+{
+	int t,ret = SafeRead(v,read,up,&t,sizeof(t));
+	if(t != tag)
+		v->RT_Error(_SC("invalid or corrupted closure stream"));
+	return ret;
+}
+
 int WriteObject(HSQUIRRELVM v,SQUserPointer up,SQWRITEFUNC write,SQObjectPtr &o)
 {
-	int nwritten=write(up,&type(o),sizeof(SQObjectType));
+	int nwritten=SafeWrite(v,write,up,&type(o),sizeof(SQObjectType));
 	switch(type(o)){
 	case OT_STRING:
-		nwritten+=write(up,&_string(o)->_len,sizeof(SQInteger));
-		nwritten+=write(up,_stringval(o),rsl(_string(o)->_len));
+		nwritten+=SafeWrite(v,write,up,&_string(o)->_len,sizeof(SQInteger));
+		nwritten+=SafeWrite(v,write,up,_stringval(o),rsl(_string(o)->_len));
 		break;
 	case OT_INTEGER:
-		nwritten+=write(up,&_integer(o),sizeof(SQInteger));break;
+		nwritten+=SafeWrite(v,write,up,&_integer(o),sizeof(SQInteger));break;
 	case OT_FLOAT:
-		nwritten+=write(up,&_float(o),sizeof(SQFloat));break;
+		nwritten+=SafeWrite(v,write,up,&_float(o),sizeof(SQFloat));break;
 	case OT_NULL:
 		break;
 	default:
@@ -140,22 +167,22 @@ int WriteObject(HSQUIRRELVM v,SQUserPointer up,SQWRITEFUNC write,SQObjectPtr &o)
 int ReadObject(HSQUIRRELVM v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &o)
 {
 	SQObjectType t;
-	int nreaded=read(up,&t,sizeof(SQObjectType));
+	int nreaded=SafeRead(v,read,up,&t,sizeof(SQObjectType));
 	switch(t){
 	case OT_STRING:{
 		int len;
-		nreaded+=read(up,&len,sizeof(SQInteger));
-		nreaded+=read(up,_ss(v)->GetScratchPad(rsl(len)),rsl(len));
+		nreaded+=SafeRead(v,read,up,&len,sizeof(SQInteger));
+		nreaded+=SafeRead(v,read,up,_ss(v)->GetScratchPad(rsl(len)),rsl(len));
 		o=SQString::Create(_ss(v),_ss(v)->GetScratchPad(-1),len);
 				   }
 		break;
 	case OT_INTEGER:{
 		SQInteger i;
-		nreaded+=read(up,&i,sizeof(SQInteger)); o = i; break;
+		nreaded+=SafeRead(v,read,up,&i,sizeof(SQInteger)); o = i; break;
 					}
 	case OT_FLOAT:{
 		SQFloat f;
-		nreaded+=read(up,&f,sizeof(SQFloat)); o = f; break;
+		nreaded+=SafeRead(v,read,up,&f,sizeof(SQFloat)); o = f; break;
 				  }
 	case OT_NULL:
 		o=_null_;
@@ -168,104 +195,126 @@ int ReadObject(HSQUIRRELVM v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &o)
 
 void SQClosure::Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write)
 {
+	WriteTag(v,write,up,SQ_CLOSURESTREAM_HEAD);
+	WriteTag(v,write,up,sizeof(SQChar));
 	_funcproto(_function)->Save(v,up,write);
+	WriteTag(v,write,up,SQ_CLOSURESTREAM_TAIL);
 }
 
 void SQClosure::Load(SQVM *v,SQUserPointer up,SQREADFUNC read)
 {
+	CheckTag(v,read,up,SQ_CLOSURESTREAM_HEAD);
+	CheckTag(v,read,up,sizeof(SQChar));
 	_funcproto(_function)->Load(v,up,read);
+	CheckTag(v,read,up,SQ_CLOSURESTREAM_TAIL);
 }
 
 void SQFunctionProto::Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write)
 {
 	int i,nsize=_literals.size();
+	WriteTag(v,write,up,SQ_CLOSURESTREAM_PART);
 	WriteObject(v,up,write,_sourcename);
 	WriteObject(v,up,write,_name);
-	write(up,&nsize,sizeof(nsize));
+	WriteTag(v,write,up,SQ_CLOSURESTREAM_PART);
+	SafeWrite(v,write,up,&nsize,sizeof(nsize));
 	for(i=0;i<nsize;i++){
 		WriteObject(v,up,write,_literals[i]);
 	}
+	WriteTag(v,write,up,SQ_CLOSURESTREAM_PART);
 	nsize=_parameters.size();
-	write(up,&nsize,sizeof(nsize));
+	SafeWrite(v,write,up,&nsize,sizeof(nsize));
 	for(i=0;i<nsize;i++){
 		WriteObject(v,up,write,_parameters[i]);
 	}
+	WriteTag(v,write,up,SQ_CLOSURESTREAM_PART);
 	nsize=_outervalues.size();
-	write(up,&nsize,sizeof(nsize));
+	SafeWrite(v,write,up,&nsize,sizeof(nsize));
 	for(i=0;i<nsize;i++){
-		write(up,&_outervalues[i]._blocal,sizeof(bool));
+		SafeWrite(v,write,up,&_outervalues[i]._blocal,sizeof(bool));
 		WriteObject(v,up,write,_outervalues[i]._src);
 	}
+	WriteTag(v,write,up,SQ_CLOSURESTREAM_PART);
 	nsize=_localvarinfos.size();
-	write(up,&nsize,sizeof(nsize));
+	SafeWrite(v,write,up,&nsize,sizeof(nsize));
 	for(i=0;i<nsize;i++){
 		SQLocalVarInfo &lvi=_localvarinfos[i];
 		WriteObject(v,up,write,lvi._name);
-		write(up,&lvi._pos,sizeof(unsigned int));
-		write(up,&lvi._start_op,sizeof(unsigned int));
-		write(up,&lvi._end_op,sizeof(unsigned int));
+		SafeWrite(v,write,up,&lvi._pos,sizeof(unsigned int));
+		SafeWrite(v,write,up,&lvi._start_op,sizeof(unsigned int));
+		SafeWrite(v,write,up,&lvi._end_op,sizeof(unsigned int));
 	}
+	WriteTag(v,write,up,SQ_CLOSURESTREAM_PART);
 	nsize=_lineinfos.size();
-	write(up,&nsize,sizeof(nsize));
-	write(up,&_lineinfos[0],sizeof(SQLineInfo)*nsize);
+	SafeWrite(v,write,up,&nsize,sizeof(nsize));
+	SafeWrite(v,write,up,&_lineinfos[0],sizeof(SQLineInfo)*nsize);
+	WriteTag(v,write,up,SQ_CLOSURESTREAM_PART);
 	nsize=_instructions.size();
-	write(up,&nsize,sizeof(nsize));
-	write(up,&_instructions[0],sizeof(SQInstruction)*nsize);
+	SafeWrite(v,write,up,&nsize,sizeof(nsize));
+	SafeWrite(v,write,up,&_instructions[0],sizeof(SQInstruction)*nsize);
+	WriteTag(v,write,up,SQ_CLOSURESTREAM_PART);
 	nsize=_functions.size();
-	write(up,&nsize,sizeof(nsize));
+	SafeWrite(v,write,up,&nsize,sizeof(nsize));
 	for(i=0;i<nsize;i++){
 		_funcproto(_functions[i])->Save(v,up,write);
 	}
-	write(up,&_stacksize,sizeof(_stacksize));
-	write(up,&_bgenerator,sizeof(_bgenerator));
+	SafeWrite(v,write,up,&_stacksize,sizeof(_stacksize));
+	SafeWrite(v,write,up,&_bgenerator,sizeof(_bgenerator));
 }
 
 void SQFunctionProto::Load(SQVM *v,SQUserPointer up,SQREADFUNC read)
 {
 	int i, nsize = _literals.size();
 	SQObjectPtr o;
+	CheckTag(v,read,up,SQ_CLOSURESTREAM_PART);
 	ReadObject(v, up, read, _sourcename);
 	ReadObject(v, up, read, _name);
-	read(up, &nsize, sizeof(nsize));
+	CheckTag(v,read,up,SQ_CLOSURESTREAM_PART);
+	SafeRead(v,read,up, &nsize, sizeof(nsize));
 	for(i = 0;i < nsize; i++){
 		ReadObject(v, up, read, o);
 		_literals.push_back(o);
 	}
-	read(up, &nsize, sizeof(nsize));
+	CheckTag(v,read,up,SQ_CLOSURESTREAM_PART);
+	SafeRead(v,read,up, &nsize, sizeof(nsize));
 	for(i = 0; i < nsize; i++){
 		ReadObject(v, up, read, o);
 		_parameters.push_back(o);
 	}
-	read(up,&nsize,sizeof(nsize));
+	CheckTag(v,read,up,SQ_CLOSURESTREAM_PART);
+	SafeRead(v,read,up,&nsize,sizeof(nsize));
 	for(i = 0; i < nsize; i++){
 		bool bl;
-		read(up, &bl, sizeof(bool));
+		SafeRead(v,read,up, &bl, sizeof(bool));
 		ReadObject(v, up, read, o);
 		_outervalues.push_back(SQOuterVar(o, bl));
 	}
-	read(up, &nsize, sizeof(nsize));
+	CheckTag(v,read,up,SQ_CLOSURESTREAM_PART);
+	SafeRead(v,read,up,&nsize, sizeof(nsize));
 	for(i = 0; i < nsize; i++){
 		SQLocalVarInfo lvi;
 		ReadObject(v, up, read, lvi._name);
-		read(up, &lvi._pos, sizeof(unsigned int));
-		read(up, &lvi._start_op, sizeof(unsigned int));
-		read(up, &lvi._end_op, sizeof(unsigned int));
+		SafeRead(v,read,up, &lvi._pos, sizeof(unsigned int));
+		SafeRead(v,read,up, &lvi._start_op, sizeof(unsigned int));
+		SafeRead(v,read,up, &lvi._end_op, sizeof(unsigned int));
 		_localvarinfos.push_back(lvi);
 	}
-	read(up, &nsize,sizeof(nsize));
+	CheckTag(v,read,up,SQ_CLOSURESTREAM_PART);
+	SafeRead(v,read,up, &nsize,sizeof(nsize));
 	_lineinfos.resize(nsize);
-	read(up, &_lineinfos[0], sizeof(SQLineInfo)*nsize);
-	read(up, &nsize, sizeof(nsize));
+	SafeRead(v,read,up, &_lineinfos[0], sizeof(SQLineInfo)*nsize);
+	CheckTag(v,read,up,SQ_CLOSURESTREAM_PART);
+	SafeRead(v,read,up, &nsize, sizeof(nsize));
 	_instructions.resize(nsize);
-	read(up, &_instructions[0], sizeof(SQInstruction)*nsize);
-	read(up, &nsize, sizeof(nsize));
+	SafeRead(v,read,up, &_instructions[0], sizeof(SQInstruction)*nsize);
+	CheckTag(v,read,up,SQ_CLOSURESTREAM_PART);
+	SafeRead(v,read,up, &nsize, sizeof(nsize));
 	for(i = 0; i < nsize; i++){
 		o = SQFunctionProto::Create();
 		_funcproto(o)->Load(v, up, read);
 		_functions.push_back(o);
 	}
-	read(up, &_stacksize, sizeof(_stacksize));
-	read(up, &_bgenerator, sizeof(_bgenerator));
+	SafeRead(v,read,up, &_stacksize, sizeof(_stacksize));
+	SafeRead(v,read,up, &_bgenerator, sizeof(_bgenerator));
 }
 
 #ifndef NO_GARBAGE_COLLECTOR

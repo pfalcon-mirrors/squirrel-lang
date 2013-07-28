@@ -4,8 +4,6 @@
 ///////////////////////////////////
 #include "squtils.h"
 
-typedef sqvector<int> IntVec;
-
 #define MAX_FUNC_STACKSIZE 0xFF
 #define MAX_LITERALS 0xFFFF
 
@@ -44,10 +42,10 @@ struct SQFuncState
 	bool IsLocal(unsigned int stkpos);
 	
 	SQLocalVarInfoVec _vlocals;
-	IntVec _targetstack;
+	SQIntVec _targetstack;
 	int _stacksize;
-	IntVec _unresolvedbreaks;
-	IntVec _unresolvedcontinues;
+	SQIntVec _unresolvedbreaks;
+	SQIntVec _unresolvedcontinues;
 	SQObjectPtrVec _functions;
 	SQObjectPtrVec _parameters;
 	SQOuterVarVec _outervalues;
@@ -58,9 +56,10 @@ struct SQFuncState
 	SQLineInfoVec _lineinfos;
 	SQObjectPtr _func;
 	SQFuncState *_parent;
-	IntVec _breaktargets; //contains number of nested exception traps
-	IntVec _continuetargets;
+	SQIntVec _breaktargets; //contains number of nested exception traps
+	SQIntVec _continuetargets;
 	int _lastline;
+	int _traps;
 	bool _optimization;
 	SQSharedState *_sharedstate;
 private:

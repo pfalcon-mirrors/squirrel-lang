@@ -93,6 +93,7 @@ SQFuncState::SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *pa
 		_func = func;
 		_parent = parent;
 		_stacksize = 0;
+		_traps = 0;
 }
 
 #ifdef _DEBUG_DUMP

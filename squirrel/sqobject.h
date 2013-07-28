@@ -4,6 +4,10 @@
 
 #include "squtils.h"
 
+#define SQ_CLOSURESTREAM_HEAD (('S'<<24)|('Q'<<16)|('I'<<8)|('R'))
+#define SQ_CLOSURESTREAM_PART (('P'<<24)|('A'<<16)|('R'<<8)|('T'))
+#define SQ_CLOSURESTREAM_TAIL (('T'<<24)|('A'<<16)|('I'<<8)|('L'))
+
 #define SQ_TRY try
 #define SQ_CATCH(type, ex) catch(type &ex)
 
@@ -253,5 +257,6 @@ struct SQCollectable : public SQRefCounted {
 
 unsigned int TranslateIndex(const SQObjectPtr &idx);
 typedef sqvector<SQObjectPtr> SQObjectPtrVec;
+typedef sqvector<int> SQIntVec;
 
 #endif //_SQOBJECT_H_

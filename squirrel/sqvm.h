@@ -12,7 +12,7 @@
 void sq_base_register(HSQUIRRELVM v);
 
 struct SQExceptionTrap{
-	SQExceptionTrap(){}
+	SQExceptionTrap() {}
 	SQExceptionTrap(int ss, int stackbase,SQInstruction *ip, int ex_target){ _stacksize = ss; _stackbase = stackbase; _ip = ip; _extarget = ex_target;}
 	SQExceptionTrap(const SQExceptionTrap &et) { (*this) = et;	}
 	int _stackbase;
@@ -31,7 +31,6 @@ struct SQVM : public CHAINABLE_OBJ
 		SQObjectPtrVec *_literals;
 		SQObject _closure;
 		SQObject _generator;
-		//ExceptionsTraps _etraps;
 		int _etraps;
 		int _prevstkbase;
 		int _prevtop;
@@ -66,6 +65,7 @@ public:
 	void StringCat(const SQObjectPtr &str, const SQObjectPtr &obj, SQObjectPtr &dest);
 	void IdxError(SQObject &o);
 	void CompareError(const SQObject &o1, const SQObject &o2);
+	void ParamTypeError(int nparam,int typemask,int type);
 	void RT_Error(const SQChar *s, ...);
 	SQString *PrintObjVal(const SQObject &o);
 	void TypeOf(const SQObjectPtr &obj1, SQObjectPtr &dest);
