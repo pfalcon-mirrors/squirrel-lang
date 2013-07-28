@@ -3,7 +3,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "sqstdsystem.h"
+#include <sqstdsystem.h>
 
 #ifdef SQUNICODE
 #include <wchar.h>

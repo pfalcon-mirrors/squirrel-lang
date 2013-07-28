@@ -72,7 +72,6 @@ enum SQOpcode
 
 struct SQInstructionDesc {
 	const SQChar *name;
-	unsigned char psize[4];
 };
 
 struct SQInstruction 

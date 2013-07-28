@@ -16,6 +16,7 @@
 #include <sqstdio.h>
 #include <sqstdmath.h>	
 #include <sqstdstring.h>
+#include <sqstdaux.h>
 
 #ifdef SQUNICODE
 #define scfprintf fwprintf
@@ -27,7 +28,7 @@
 #define scvprintf vprintf
 #endif
 
-void PrintCallStack(HSQUIRRELVM);
+
 void PrintVersionInfos();
 
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -39,20 +40,6 @@ int MemAllocHook( int allocType, void *userData, size_t size, int blockType,
 }
 #endif
 
-int printerror(HSQUIRRELVM v)
-{
-	const SQChar *sErr=NULL;
-	if(sq_gettop(v)>=1){
-		if(SQ_SUCCEEDED(sq_getstring(v,2,&sErr)))	{
-			scfprintf(stderr,_SC("\nAN ERROR HAS OCCURED [%s]\n"),sErr);
-		}
-		else{
-			scfprintf(stderr,_SC("\nAN ERROR HAS OCCURED [unknown]\n"));
-		}
-		PrintCallStack(v);
-	}
-	return 0;
-}
 
 int quit(HSQUIRRELVM v)
 {
@@ -207,83 +194,6 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 	return _INTERACTIVE;
 }
 
-
-void PrintCallStack(HSQUIRRELVM v)
-{
-	SQStackInfos si;
-	SQInteger i;
-	SQFloat f;
-	const SQChar *s;
-	int level=1; //1 is to skip this function that is level 0
-	const SQChar *name=NULL; 
-	int seq=0;
-	scfprintf(stderr,_SC("\nCALLSTACK\n"));
-	while(SQ_SUCCEEDED(sq_stackinfos(v,level,&si)))
-	{
-		const SQChar *fn=_SC("unknown");
-		const SQChar *src=_SC("unknown");
-		if(si.funcname)fn=si.funcname;
-		if(si.source)src=si.source;
-		scfprintf(stderr,_SC("*FUNCTION [%s()] %s line [%d]\n"),fn,src,si.line);
-		level++;
-	}
-	level=0;
-	scfprintf(stderr,_SC("\nLOCALS\n"));
-	
-	for(level=0;level<10;level++){
-		seq=0;
-		while(name=sq_getlocal(v,level,seq))
-		{
-			seq++;
-			switch(sq_gettype(v,-1))
-			{
-			case OT_NULL:
-				scfprintf(stderr,_SC("[%s] NULL\n"),name);
-				break;
-			case OT_INTEGER:
-				sq_getinteger(v,-1,&i);
-				scfprintf(stderr,_SC("[%s] %d\n"),name,i);
-				break;
-			case OT_FLOAT:
-				sq_getfloat(v,-1,&f);
-				scfprintf(stderr,_SC("[%s] %.14g\n"),name,f);
-				break;
-			case OT_USERPOINTER:
-				scfprintf(stderr,_SC("[%s] USERPOINTER\n"),name);
-				break;
-			case OT_STRING:
-				sq_getstring(v,-1,&s);
-				scfprintf(stderr,_SC("[%s] \"%s\"\n"),name,s);
-				break;
-			case OT_TABLE:
-				scfprintf(stderr,_SC("[%s] TABLE\n"),name);
-				break;
-			case OT_ARRAY:
-				scfprintf(stderr,_SC("[%s] ARRAY\n"),name);
-				break;
-			case OT_CLOSURE:
-				scfprintf(stderr,_SC("[%s] CLOSURE\n"),name);
-				break;
-			case OT_NATIVECLOSURE:
-				scfprintf(stderr,_SC("[%s] NATIVECLOSURE\n"),name);
-				break;
-			case OT_USERDATA:
-				scfprintf(stderr,_SC("[%s] USERDATA\n"),name);
-				break;
-			case OT_THREAD:
-				scfprintf(stderr,_SC("[%s] THREAD\n"),name);
-				break;
-			}
-			sq_pop(v,1);
-		}
-	}
-}
-
-void compiler_error(HSQUIRRELVM v,const SQChar *sErr,const SQChar *sSource,int line,int column)
-{
-	scfprintf(stderr,_SC("ERROR %s line=(%d) column=(%d) [%s]\n"),sErr,line,column,sSource);
-}
-
 void Interactive(HSQUIRRELVM v)
 {
 	
@@ -385,12 +295,10 @@ int main(int argc, char* argv[])
 	sqstd_register_systemlib(v);
 	sqstd_register_mathlib(v);
 	sqstd_register_stringlib(v);
-	
 
+	//aux library
 	//sets error handlers
-	sq_setcompilererrorhandler(v,compiler_error);
-	sq_newclosure(v,printerror,0);
-	sq_seterrorhandler(v);
+	sqstd_seterrorhandlers(v);
 
 	//gets arguments
 	switch(getargs(v,argc,argv))

@@ -3,7 +3,7 @@ SQUIRREL= ..
 
 OUT= $(SQUIRREL)/lib/libsquirrel.a
 INCZ= -I$(SQUIRREL)/include -I. -Iinclude
-DEFS= -DGARBAGE_COLLECTOR
+DEFS= 
 LIB=	stdc++
 
 OBJS= \

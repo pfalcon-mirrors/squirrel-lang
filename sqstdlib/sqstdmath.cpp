@@ -2,7 +2,7 @@
 #include <squirrel.h>
 #include <math.h>
 #include <stdlib.h>
-#include "sqstdmath.h"
+#include <sqstdmath.h>
 
 #define SINGLE_ARG_FUNC(_funcname) static int math_##_funcname(HSQUIRRELVM v){ \
 	SQFloat f; \

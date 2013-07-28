@@ -23,7 +23,6 @@ CFG=sqstdlib - Win32 Release
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
-# PROP Scc_ProjName ""$/squirrel", HAAAAAAA"
 # PROP Scc_LocalPath ".."
 CPP=cl.exe
 RSC=rc.exe
@@ -106,6 +105,10 @@ SOURCE=.\sqstdstream.cpp
 # Begin Source File
 
 SOURCE=.\sqstdstring.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\sqstdaux.cpp
 # End Source File
 # Begin Source File
 

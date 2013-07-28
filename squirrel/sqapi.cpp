@@ -890,6 +890,11 @@ void sq_setprintfunc(HSQUIRRELVM v, SQPRINTFUNCTION printfunc)
 	_ss(v)->_printfunc = printfunc;
 }
 
+SQPRINTFUNCTION sq_getprintfunc(HSQUIRRELVM v)
+{
+	return _ss(v)->_printfunc;
+}
+
 void *sq_malloc(unsigned int size)
 {
 	return SQ_MALLOC(size);

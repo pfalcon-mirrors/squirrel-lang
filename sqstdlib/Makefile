@@ -11,6 +11,7 @@ SRCS= \
 	sqstdmath.cpp \
 	sqstdsystem.cpp \
 	sqstdstring.cpp \
+	sqstdaux.cpp \
 	sqstdrex.c
 	
 	

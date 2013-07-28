@@ -611,7 +611,12 @@ common_call:
 			case _OP_ADD: ARITH_OP( + , temp_reg, STK(arg2), COND_LITERAL); TARGET = temp_reg; continue;
 			case _OP_SUB: ARITH_OP( - , temp_reg, STK(arg2), COND_LITERAL); TARGET = temp_reg; continue;
 			case _OP_MUL: ARITH_OP( * , temp_reg, STK(arg2), COND_LITERAL); TARGET = temp_reg; continue;
-			case _OP_DIV: ARITH_OP( / , temp_reg, STK(arg2), COND_LITERAL); TARGET = temp_reg; continue;
+			case _OP_DIV: {
+				const SQObjectPtr &a = STK(arg2), &b = COND_LITERAL;
+				if(type(a) == OT_INTEGER &&	type(b) == OT_INTEGER && _integer(b) == 0)
+					RT_Error(_SC("division by zero"));
+				ARITH_OP( / , temp_reg, a, b); TARGET = temp_reg; continue;
+						  }
 			case _OP_MODULO: Modulo(STK(arg2), STK(arg1), temp_reg); TARGET = temp_reg; continue;
 			case _OP_BWAND:	 BW_OP( & ); continue;
 			case _OP_BWOR:	 BW_OP( | ); continue;
@@ -965,13 +970,17 @@ bool SQVM::Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,
 			}
 			return true;
 		}
+		if(raw)return false;
 		return _table_ddel->Get(key,dest);
 		break;
 	case OT_ARRAY:
 		if(sq_isnumeric(key)){
 			return _array(self)->Get(tointeger(key),dest);
 		}
-		else return _array_ddel->Get(key,dest);
+		else {
+			if(raw)return false;
+			return _array_ddel->Get(key,dest);
+		}
 		return true;
 	case OT_STRING:
 		if(sq_isnumeric(key)){
@@ -983,7 +992,10 @@ bool SQVM::Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,
 			}
 			return false;
 		}
-		else return _string_ddel->Get(key,dest);
+		else {
+			if(raw)return false;
+			return _string_ddel->Get(key,dest);
+		}
 		break;
 	case OT_USERDATA:{
 		bool gret=false;
@@ -999,10 +1011,18 @@ bool SQVM::Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,
 		return gret;
 		}
 		break;
-	case OT_INTEGER:case OT_FLOAT:	return _number_ddel->Get(key,dest);
-	case OT_GENERATOR:	return _generator_ddel->Get(key,dest);
-	case OT_CLOSURE: case OT_NATIVECLOSURE:	return _closure_ddel->Get(key,dest);
-	case OT_THREAD: return _thread_ddel->Get(key,dest);
+	case OT_INTEGER:case OT_FLOAT: 
+		if(raw)return false;
+		return _number_ddel->Get(key,dest);
+	case OT_GENERATOR: 
+		if(raw)return false;
+		return _generator_ddel->Get(key,dest);
+	case OT_CLOSURE: case OT_NATIVECLOSURE:	
+		if(raw)return false;
+		return _closure_ddel->Get(key,dest);
+	case OT_THREAD:
+		if(raw)return false;
+		return  _thread_ddel->Get(key,dest);
 	default:RT_Error(_SC("indexing a %s"),GetTypeName(self));return false;
 	}
 }
