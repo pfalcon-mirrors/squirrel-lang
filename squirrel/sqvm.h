@@ -70,13 +70,13 @@ public:
 
 	void CallDebugHook(int type,int forcedline=0);
 	void CallErrorHandler(SQObjectPtr &e);
-	bool Get(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &dest, bool raw, bool fetchroot);
+	inline bool Get(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &dest, bool raw, bool fetchroot);
 	bool FallBackGet(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,bool raw);
 	bool Set(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val, bool fetchroot);
 	bool NewSlot(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val);
 	bool DeleteSlot(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &res);
 	bool Clone(const SQObjectPtr &self, SQObjectPtr &target);
-	bool ObjCmp(const SQObjectPtr &o1, const SQObjectPtr &o2,int &res);
+	inline bool ObjCmp(const SQObjectPtr &o1, const SQObjectPtr &o2,int &res);
 	bool StringCat(const SQObjectPtr &str, const SQObjectPtr &obj, SQObjectPtr &dest);
 	bool IsEqual(SQObjectPtr &o1,SQObjectPtr &o2,bool &res);
 	bool IsFalse(SQObjectPtr &o);
@@ -95,19 +95,19 @@ public:
 	//void Modulo(const SQObjectPtr &o1, const SQObjectPtr &o2, SQObjectPtr &dest);
 	bool Return(int _arg0, int _arg1, SQObjectPtr &retval);
 	//new stuff
-	bool ARITH_OP(unsigned int op,SQObjectPtr &trg,const SQObjectPtr &o1,const SQObjectPtr &o2);
-	bool BW_OP(unsigned int op,SQObjectPtr &trg,const SQObjectPtr &o1,const SQObjectPtr &o2);
-	bool NEG_OP(SQObjectPtr &trg,const SQObjectPtr &o1);
-	bool CMP_OP(CmpOP op, const SQObjectPtr &o1,const SQObjectPtr &o2,SQObjectPtr &res);
+	inline bool ARITH_OP(unsigned int op,SQObjectPtr &trg,const SQObjectPtr &o1,const SQObjectPtr &o2);
+	inline bool BW_OP(unsigned int op,SQObjectPtr &trg,const SQObjectPtr &o1,const SQObjectPtr &o2);
+	inline bool NEG_OP(SQObjectPtr &trg,const SQObjectPtr &o1);
+	inline bool CMP_OP(CmpOP op, const SQObjectPtr &o1,const SQObjectPtr &o2,SQObjectPtr &res);
 	bool CLOSURE_OP(SQObjectPtr &target, SQFunctionProto *func);
 	bool GETVARGV_OP(SQObjectPtr &target,SQObjectPtr &idx,CallInfo *ci);
 	bool CLASS_OP(SQObjectPtr &target,int base,int attrs);
 	//return true if the loop is finished
 	bool FOREACH_OP(SQObjectPtr &o1,SQObjectPtr &o2,SQObjectPtr &o3,SQObjectPtr &o4,int arg_2,bool &finished);
 	bool DELEGATE_OP(SQObjectPtr &trg,SQObjectPtr &o1,SQObjectPtr &o2);
-	bool LOCAL_INC(int op,SQObjectPtr &target, SQObjectPtr &a, SQObjectPtr &incr);
-	bool PLOCAL_INC(int op,SQObjectPtr &target, SQObjectPtr &a, SQObjectPtr &incr);
-	bool DerefInc(int op,SQObjectPtr &target, SQObjectPtr &self, SQObjectPtr &key, SQObjectPtr &incr, bool postfix);
+	inline bool LOCAL_INC(int op,SQObjectPtr &target, SQObjectPtr &a, SQObjectPtr &incr);
+	inline bool PLOCAL_INC(int op,SQObjectPtr &target, SQObjectPtr &a, SQObjectPtr &incr);
+	inline bool DerefInc(int op,SQObjectPtr &target, SQObjectPtr &self, SQObjectPtr &key, SQObjectPtr &incr, bool postfix);
 	void PopVarArgs(VarArgs &vargs);
 #ifdef _DEBUG_DUMP
 	void dumpstack(int stackbase=-1, bool dumpall = false);
@@ -122,14 +122,14 @@ public:
 ////////////////////////////////////////////////////////////////////////////
 	//stack functions for the api
 	void Pop();
-	void Pop(int n);
+	inline void Pop(int n);
 	void Remove(int n);
 
-	void Push(const SQObjectPtr &o);
+	inline void Push(const SQObjectPtr &o);
 	SQObjectPtr &Top();
-	SQObjectPtr &PopGet();
-	SQObjectPtr &GetUp(int n);
-	SQObjectPtr &GetAt(int n);
+	inline SQObjectPtr &PopGet();
+	inline SQObjectPtr &GetUp(int n);
+	inline SQObjectPtr &GetAt(int n);
 
 	SQObjectPtrVec _stack;
 	SQObjectPtrVec _vargsstack;

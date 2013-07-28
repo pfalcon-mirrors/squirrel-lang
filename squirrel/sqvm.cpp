@@ -382,7 +382,7 @@ bool SQVM::Return(int _arg0, int _arg1, SQObjectPtr &retval)
 	int oldstackbase = _stackbase;
 	_stackbase -= ci->_prevstkbase;
 	_top = _stackbase + ci->_prevtop;
-	PopVarArgs(ci->_vargs);
+	if(ci->_vargs.size) PopVarArgs(ci->_vargs);
 	POP_CALLINFO(this);
 	if (broot) {
 		if (_arg0 != MAX_FUNC_STACKSIZE) retval = _stack[oldstackbase+_arg1];
@@ -648,7 +648,7 @@ bool SQVM::Execute(SQObjectPtr &closure, int target, int nargs, int stackbase,SQ
 	}
 	
 exception_restore:
-	//SQ_TRY 
+	//
 	{
 		for(;;)
 		{
@@ -666,7 +666,7 @@ exception_restore:
 				temp_reg = STK(arg1);
 				if (type(temp_reg) == OT_CLOSURE){ 
 					ct_tailcall = true;
-					PopVarArgs(ci->_vargs);
+					if(ci->_vargs.size) PopVarArgs(ci->_vargs);
 					for (int i = 0; i < arg3; i++) STK(i) = STK(arg2 + i);
 					ct_target = ci->_target;
 					goto common_call;
@@ -679,7 +679,7 @@ common_call:
 					int last_top = _top;
 					switch (type(temp_reg)) {
 					case OT_CLOSURE:{
-						StartCall(_closure(temp_reg), ct_target, arg3, ct_tailcall?_stackbase:_stackbase+arg2, ct_tailcall);
+						_GUARD(StartCall(_closure(temp_reg), ct_target, arg3, ct_tailcall?_stackbase:_stackbase+arg2, ct_tailcall));
 						if (_funcproto(_closure(temp_reg)->_function)->_bgenerator) {
 							SQGenerator *gen = SQGenerator::Create(_ss(this), _closure(temp_reg));
 							_GUARD(gen->Yield(this));

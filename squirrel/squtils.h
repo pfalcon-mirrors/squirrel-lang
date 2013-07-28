@@ -88,7 +88,7 @@ public:
 	}
 	unsigned int capacity() { return _allocated; }
 	inline T &back() const { return _vals[_size - 1]; }
-	T& operator[](unsigned int pos) const{ return _vals[pos]; }
+	inline T& operator[](unsigned int pos) const{ return _vals[pos]; }
 	T* _vals;
 private:
 	void _realloc(unsigned int newsize)

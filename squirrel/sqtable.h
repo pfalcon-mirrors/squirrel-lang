@@ -58,7 +58,7 @@ public:
 			default:			return hashptr(key._unVal.pRefCounted);
 		}
 	}
-	_HashNode *_Get(const SQObjectPtr &key,unsigned long hash)
+	inline _HashNode *_Get(const SQObjectPtr &key,unsigned long hash)
 	{
 		_HashNode *n = &_nodes[hash];
 		do{

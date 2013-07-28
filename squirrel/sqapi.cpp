@@ -9,8 +9,8 @@
 #include "sqfuncproto.h"
 #include "sqclosure.h"
 #include "squserdata.h"
-#include "sqfuncstate.h"
 #include "sqcompiler.h"
+#include "sqfuncstate.h"
 #include "sqclass.h"
 
 bool sq_aux_gettypedarg(HSQUIRRELVM v,int idx,SQObjectType type,SQObjectPtr **o)

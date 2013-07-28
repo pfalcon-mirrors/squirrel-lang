@@ -8,9 +8,6 @@
 #define SQ_CLOSURESTREAM_PART (('P'<<24)|('A'<<16)|('R'<<8)|('T'))
 #define SQ_CLOSURESTREAM_TAIL (('T'<<24)|('A'<<16)|('I'<<8)|('L'))
 
-#define SQ_TRY try
-#define SQ_CATCH(type, ex) catch(type &ex)
-
 struct SQSharedState;
 
 enum SQMetaMethod{
@@ -229,13 +226,13 @@ struct SQObjectPtr : public SQObject
 	{
 		__Release(_type,_unVal);
 	}
-	void Null()
+	inline void Null()
 	{
 		__Release(_type,_unVal);
 		_type=OT_NULL;
 		_unVal.pUserPointer=NULL;
 	}
-	SQObjectPtr& operator=(const SQObjectPtr& obj)
+	inline SQObjectPtr& operator=(const SQObjectPtr& obj)
 	{ 
 		SQObjectType tOldType;
 		SQObjectValue unOldVal;
@@ -247,7 +244,7 @@ struct SQObjectPtr : public SQObject
 		__Release(tOldType,unOldVal);
 		return *this;
 	}
-	SQObjectPtr& operator=(const SQObject& obj)
+	inline SQObjectPtr& operator=(const SQObject& obj)
 	{ 
 		SQObjectType tOldType;
 		SQObjectValue unOldVal;

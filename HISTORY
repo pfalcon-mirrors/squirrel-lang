@@ -1,4 +1,9 @@
-***2005-04-03		 ***
+***version 2.0.2 stable***
+-performances improvements (expecially for GCC users)
+-removed all dependencies from C++ exception handling
+-various bugfixes
+
+***2005-04-12		 ***
 ***version 2.0.1 stable***
 -various bugfixes
 -sq_setparamscheck() now allows spaces in the typemask
@@ -6,7 +11,7 @@
 ***2005-04-03		 ***
 ***version 2.0 stable***
 -added API sq_gettypetag()
--added built-in function to tha bool type(tointeger, tostring etc...)
+-added built-in function to the bool type(tointeger, tostring etc...)
 
 ***2005-02-27							***
 ***version 2.0 release candidate 1(RC 1)***

@@ -4,7 +4,7 @@ SQUIRREL= ..
 OUT= $(SQUIRREL)/lib/libsquirrel.a
 INCZ= -I$(SQUIRREL)/include -I. -Iinclude
 DEFS= 
-LIB=	stdc++
+LIB=	
 
 OBJS= \
 	sqapi.o \
@@ -37,6 +37,6 @@ SRCS= \
 	
 	
 squirrellib:
-	gcc -O3 -Os -c $(SRCS) $(INCZ) $(DEFS)
+	gcc -O3  -fno-rtti -Os -c $(SRCS) $(INCZ) $(DEFS)
 	ar rc $(OUT) *.o
 	rm *.o
