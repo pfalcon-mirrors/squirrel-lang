@@ -76,7 +76,7 @@ public:
 	bool ObjCmp(const SQObjectPtr &o1, const SQObjectPtr &o2,SQInteger &res);
 	bool StringCat(const SQObjectPtr &str, const SQObjectPtr &obj, SQObjectPtr &dest);
 	static bool IsEqual(const SQObjectPtr &o1,const SQObjectPtr &o2,bool &res);
-	void ToString(const SQObjectPtr &o,SQObjectPtr &res);
+	bool ToString(const SQObjectPtr &o,SQObjectPtr &res);
 	SQString *PrintObjVal(const SQObjectPtr &o);
 
  
@@ -90,8 +90,8 @@ public:
 	void RelocateOuters();
 	void CloseOuters(SQObjectPtr *stackindex);
 
-	void TypeOf(const SQObjectPtr &obj1, SQObjectPtr &dest);
-	bool CallMetaMethod(SQDelegable *del, SQMetaMethod mm, SQInteger nparams, SQObjectPtr &outres);
+	bool TypeOf(const SQObjectPtr &obj1, SQObjectPtr &dest);
+	bool CallMetaMethod(SQObjectPtr &closure, SQMetaMethod mm, SQInteger nparams, SQObjectPtr &outres);
 	bool ArithMetaMethod(SQInteger op, const SQObjectPtr &o1, const SQObjectPtr &o2, SQObjectPtr &dest);
 	bool Return(SQInteger _arg0, SQInteger _arg1, SQObjectPtr &retval);
 	//new stuff

@@ -34,6 +34,7 @@ struct RefTable {
 	~RefTable();
 	void AddRef(SQObject &obj);
 	SQBool Release(SQObject &obj);
+	SQUnsignedInteger GetRefCount(SQObject &obj);
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
 #endif

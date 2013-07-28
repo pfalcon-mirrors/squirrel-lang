@@ -97,7 +97,6 @@ bool SQVM::ARITH_OP(SQUnsignedInteger op,SQObjectPtr &trg,const SQObjectPtr &o1,
 				if(!StringCat(o1, o2, trg)) return false;
 			}
 			else if(!ArithMetaMethod(op,o1,o2,trg)) { 
-				Raise_Error(_SC("arith op %c on between '%s' and '%s'"),op,GetTypeName(o1),GetTypeName(o2)); 
 				return false; 
 			}
 	}
@@ -158,9 +157,14 @@ bool SQVM::ArithMetaMethod(SQInteger op,const SQObjectPtr &o1,const SQObjectPtr 
 		default: mm = MT_ADD; assert(0); break; //shutup compiler
 	}
 	if(is_delegable(o1) && _delegable(o1)->_delegate) {
-		Push(o1);Push(o2);
-		return CallMetaMethod(_delegable(o1),mm,2,dest);
+		
+		SQObjectPtr closure;
+		if(_delegable(o1)->GetMetaMethod(this, mm, closure)) {
+			Push(o1);Push(o2);
+			return CallMetaMethod(closure,mm,2,dest);
+		}
 	}
+	Raise_Error(_SC("arith op %c on between '%s' and '%s'"),op,GetTypeName(o1),GetTypeName(o2)); 
 	return false;
 }
 
@@ -178,11 +182,13 @@ bool SQVM::NEG_OP(SQObjectPtr &trg,const SQObjectPtr &o)
 	case OT_USERDATA:
 	case OT_INSTANCE:
 		if(_delegable(o)->_delegate) {
-			Push(o);
-			if(CallMetaMethod(_delegable(o), MT_UNM, 1, temp_reg)) {
-				//trg = temp_reg;
+			SQObjectPtr closure;
+			if(_delegable(o)->GetMetaMethod(this, MT_UNM, closure)) {
+				Push(o);
+				if(!CallMetaMethod(closure, MT_UNM, 1, temp_reg)) return false;
 				_Swap(trg,temp_reg);
 				return true;
+
 			}
 		}
 	default:break; //shutup compiler
@@ -209,8 +215,12 @@ bool SQVM::ObjCmp(const SQObjectPtr &o1,const SQObjectPtr &o2,SQInteger &result)
 		case OT_USERDATA:
 		case OT_INSTANCE:
 			if(_delegable(o1)->_delegate) {
-				Push(o1);Push(o2);
-				if(CallMetaMethod(_delegable(o1),MT_CMP,2,res)) break;
+				SQObjectPtr closure;
+				if(_delegable(o1)->GetMetaMethod(this, MT_CMP, closure)) {
+					Push(o1);Push(o2);
+					if(!CallMetaMethod(closure,MT_CMP,2,res)) return false;
+				}
+				break;
 			}
 			//continues through (no break needed)
 		default: 
@@ -258,12 +268,12 @@ bool SQVM::CMP_OP(CmpOP op, const SQObjectPtr &o1,const SQObjectPtr &o2,SQObject
 	return false;
 }
 
-void SQVM::ToString(const SQObjectPtr &o,SQObjectPtr &res)
+bool SQVM::ToString(const SQObjectPtr &o,SQObjectPtr &res)
 {
 	switch(type(o)) {
 	case OT_STRING:
 		res = o;
-		return;
+		return true;
 	case OT_FLOAT:
 		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+1)),_SC("%g"),_float(o));
 		break;
@@ -277,25 +287,31 @@ void SQVM::ToString(const SQObjectPtr &o,SQObjectPtr &res)
 	case OT_USERDATA:
 	case OT_INSTANCE:
 		if(_delegable(o)->_delegate) {
-			Push(o);
-			if(CallMetaMethod(_delegable(o),MT_TOSTRING,1,res)) {
-				if(type(res) == OT_STRING)
-					return;
-				//else keeps going to the default
+			SQObjectPtr closure;
+			if(_delegable(o)->GetMetaMethod(this, MT_TOSTRING, closure)) {
+				Push(o);
+				if(CallMetaMethod(closure,MT_TOSTRING,1,res)) {;
+					if(type(res) == OT_STRING)
+						return true;
+				} 
+				else {
+					return false;
+				}
 			}
 		}
 	default:
 		scsprintf(_sp(rsl(sizeof(void*)+20)),_SC("(%s : 0x%p)"),GetTypeName(o),(void*)_rawval(o));
 	}
 	res = SQString::Create(_ss(this),_spval);
+	return true;
 }
 
 
 bool SQVM::StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObjectPtr &dest)
 {
 	SQObjectPtr a, b;
-	ToString(str, a);
-	ToString(obj, b);
+	if(!ToString(str, a)) return false;
+	if(!ToString(obj, b)) return false;
 	SQInteger l = _string(a)->_len , ol = _string(b)->_len;
 	SQChar *s = _sp(rsl(l + ol + 1));
 	memcpy(s, _stringval(a), rsl(l)); 
@@ -304,14 +320,17 @@ bool SQVM::StringCat(const SQObjectPtr &str,const SQObjectPtr &obj,SQObjectPtr &
 	return true;
 }
 
-void SQVM::TypeOf(const SQObjectPtr &obj1,SQObjectPtr &dest)
+bool SQVM::TypeOf(const SQObjectPtr &obj1,SQObjectPtr &dest)
 {
 	if(is_delegable(obj1) && _delegable(obj1)->_delegate) {
-		Push(obj1);
-		if(CallMetaMethod(_delegable(obj1),MT_TYPEOF,1,dest))
-			return;
+		SQObjectPtr closure;
+		if(_delegable(obj1)->GetMetaMethod(this, MT_TYPEOF, closure)) {
+			Push(obj1);
+			return CallMetaMethod(closure,MT_TYPEOF,1,dest);
+		}
 	}
 	dest = SQString::Create(_ss(this),GetTypeName(obj1));
+	return true;
 }
 
 bool SQVM::Init(SQVM *friendvm, SQInteger stacksize)
@@ -496,16 +515,22 @@ bool SQVM::FOREACH_OP(SQObjectPtr &o1,SQObjectPtr &o2,SQObjectPtr
 	case OT_INSTANCE:
 		if(_delegable(o1)->_delegate) {
 			SQObjectPtr itr;
-			Push(o1);
-			Push(o4);
-			if(CallMetaMethod(_delegable(o1), MT_NEXTI, 2, itr)){
-				o4 = o2 = itr;
-				if(type(itr) == OT_NULL) _FINISH(exitpos);
-				if(!Get(o1, itr, o3, false, DONT_FALL_BACK)) {
-					Raise_Error(_SC("_nexti returned an invalid idx")); // cloud be changed
+			SQObjectPtr closure;
+			if(_delegable(o1)->GetMetaMethod(this, MT_NEXTI, closure)) {
+				Push(o1);
+				Push(o4);
+				if(CallMetaMethod(closure, MT_NEXTI, 2, itr)) {
+					o4 = o2 = itr;
+					if(type(itr) == OT_NULL) _FINISH(exitpos);
+					if(!Get(o1, itr, o3, false, DONT_FALL_BACK)) {
+						Raise_Error(_SC("_nexti returned an invalid idx")); // cloud be changed
+						return false;
+					}
+					_FINISH(1);
+				}
+				else {
 					return false;
 				}
-				_FINISH(1);
 			}
 			Raise_Error(_SC("_nexti failed"));
 			return false;
@@ -727,15 +752,17 @@ exception_restore:
 					case OT_TABLE:
 					case OT_USERDATA:
 					case OT_INSTANCE:{
-						Push(clo);
-						for (SQInteger i = 0; i < arg3; i++) Push(STK(arg2 + i));
-						if (_delegable(clo) && CallMetaMethod(_delegable(clo), MT_CALL, arg3+1, clo)){
+						SQObjectPtr closure;
+						if(_delegable(clo)->_delegate && _delegable(clo)->GetMetaMethod(this,MT_CALL,closure)) {
+							Push(clo);
+							for (SQInteger i = 0; i < arg3; i++) Push(STK(arg2 + i));
+							if(!CallMetaMethod(closure, MT_CALL, arg3+1, clo)) SQ_THROW();
 							if(sarg0 != -1) {
 								STK(arg0) = clo;
 							}
-							
 							break;
 						}
+									 
 						Raise_Error(_SC("attempt to call '%s'"), GetTypeName(clo));
 						SQ_THROW();
 					  }
@@ -956,11 +983,8 @@ exception_restore:
 				if(_generator(STK(arg0))->_state == SQGenerator::eDead) 
 					ci->_ip += (sarg1 - 1);
 				continue;
-			case _OP_CLONE:
-				if(!Clone(STK(arg1), TARGET))
-				{ Raise_Error(_SC("cloning a %s"), GetTypeName(STK(arg1))); SQ_THROW();}
-				continue;
-			case _OP_TYPEOF: TypeOf(STK(arg1), TARGET); continue;
+			case _OP_CLONE: _GUARD(Clone(STK(arg1), TARGET)); continue;
+			case _OP_TYPEOF: _GUARD(TypeOf(STK(arg1), TARGET)) continue;
 			case _OP_PUSHTRAP:{
 				SQInstruction *_iv = _closure(ci->_closure)->_function->_instructions;
 				_etraps.push_back(SQExceptionTrap(_top,_stackbase, &_iv[(ci->_ip-_iv)+arg1], arg0)); traps++;
@@ -981,10 +1005,14 @@ exception_restore:
 					if(type(_class(STK(arg1))->_metamethods[MT_NEWMEMBER]) != OT_NULL ) {
 						Push(STK(arg1)); Push(STK(arg2)); Push(STK(arg3));
 						Push((arg0&NEW_SLOT_ATTRIBUTES_FLAG) ? STK(arg2-1) : _null_);
-						int nparams = 4;
+						Push(bstatic);
+						int nparams = 5;
 						if(Call(_class(STK(arg1))->_metamethods[MT_NEWMEMBER], nparams, _top - nparams, temp_reg,SQFalse)) {
 							Pop(nparams);
 							continue;
+						}
+						else {
+							SQ_THROW();
 						}
 					}
 				}
@@ -1327,20 +1355,25 @@ bool SQVM::Clone(const SQObjectPtr &self,SQObjectPtr &target)
 	case OT_TABLE:
 		newobj = _table(self)->Clone();
 		goto cloned_mt;
-	case OT_INSTANCE:
+	case OT_INSTANCE: {
 		newobj = _instance(self)->Clone(_ss(this));
 cloned_mt:
-		if(_delegable(newobj)->_delegate){
+		SQObjectPtr closure;
+		if(_delegable(newobj)->_delegate && _delegable(newobj)->GetMetaMethod(this,MT_CLONED,closure)) {
 			Push(newobj);
 			Push(self);
-			CallMetaMethod(_delegable(newobj),MT_CLONED,2,temp_reg);
+			if(!CallMetaMethod(closure,MT_CLONED,2,temp_reg))
+				return false;
+		}
 		}
 		target = newobj;
 		return true;
 	case OT_ARRAY: 
 		target = _array(self)->Clone();
 		return true;
-	default: return false;
+	default: 
+		Raise_Error(_SC("cloning a %s"), GetTypeName(self));
+		return false;
 	}
 }
 
@@ -1353,8 +1386,17 @@ bool SQVM::NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObject
 		if(_table(self)->_delegate) {
 			SQObjectPtr res;
 			if(!_table(self)->Get(key,res)) {
-				Push(self);Push(key);Push(val);
-				rawcall = !CallMetaMethod(_table(self),MT_NEWSLOT,3,res);
+				SQObjectPtr closure;
+				if(_delegable(self)->_delegate && _delegable(self)->GetMetaMethod(this,MT_NEWSLOT,closure)) {
+					Push(self);Push(key);Push(val);
+					if(!CallMetaMethod(closure,MT_NEWSLOT,3,res)) {
+						return false;
+					}
+					rawcall = false;
+				}
+				else {
+					rawcall = true;
+				}
 			}
 		}
 		if(rawcall) _table(self)->NewSlot(key,val); //cannot fail
@@ -1362,11 +1404,16 @@ bool SQVM::NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObject
 		break;}
 	case OT_INSTANCE: {
 		SQObjectPtr res;
-		Push(self);Push(key);Push(val);
-		if(!CallMetaMethod(_instance(self),MT_NEWSLOT,3,res)) {
-			Raise_Error(_SC("class instances do not support the new slot operator"));
-			return false;
+		SQObjectPtr closure;
+		if(_delegable(self)->_delegate && _delegable(self)->GetMetaMethod(this,MT_NEWSLOT,closure)) {
+			Push(self);Push(key);Push(val);
+			if(!CallMetaMethod(closure,MT_NEWSLOT,3,res)) {
+				return false;
+			}
+			break;
 		}
+		Raise_Error(_SC("class instances do not support the new slot operator"));
+		return false;
 		break;}
 	case OT_CLASS: 
 		if(!_class(self)->NewSlot(_ss(this),key,val,bstatic)) {
@@ -1399,12 +1446,12 @@ bool SQVM::DeleteSlot(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr
 	case OT_USERDATA: {
 		SQObjectPtr t;
 		bool handled = false;
-		if(_delegable(self)->_delegate) {
+		SQObjectPtr closure;
+		if(_delegable(self)->_delegate && _delegable(self)->GetMetaMethod(this,MT_DELSLOT,closure)) {
 			Push(self);Push(key);
-			handled = CallMetaMethod(_delegable(self),MT_DELSLOT,2,t);
+			return CallMetaMethod(closure,MT_DELSLOT,2,res);
 		}
-
-		if(!handled) {
+		else {
 			if(type(self) == OT_TABLE) {
 				if(_table(self)->Get(key,t)) {
 					_table(self)->Remove(key);
@@ -1466,18 +1513,18 @@ SQInteger prevstackbase = _stackbase;
 	return true;
 }
 
-bool SQVM::CallMetaMethod(SQDelegable *del,SQMetaMethod mm,SQInteger nparams,SQObjectPtr &outres)
+bool SQVM::CallMetaMethod(SQObjectPtr &closure,SQMetaMethod mm,SQInteger nparams,SQObjectPtr &outres)
 {
-	SQObjectPtr closure;
-	if(del->GetMetaMethod(this, mm, closure)) {
-		_nmetamethodscall++;
-		if(Call(closure, nparams, _top - nparams, outres, SQFalse)) {
-			_nmetamethodscall--;
-			Pop(nparams);
-			return true;
-		}
+	//SQObjectPtr closure;
+	
+	_nmetamethodscall++;
+	if(Call(closure, nparams, _top - nparams, outres, SQFalse)) {
 		_nmetamethodscall--;
+		Pop(nparams);
+		return true;
 	}
+	_nmetamethodscall--;
+	//}
 	Pop(nparams);
 	return false;
 }

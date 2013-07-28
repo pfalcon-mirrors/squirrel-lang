@@ -510,22 +510,29 @@ public:
 	}
 	void BitwiseAndExp()
 	{
-		CompExp();
+		EqExp();
 		for(;;) if(_token == _SC('&'))
-		{BIN_EXP(_OP_BITW, &SQCompiler::CompExp,BW_AND);
+		{BIN_EXP(_OP_BITW, &SQCompiler::EqExp,BW_AND);
 		}else return;
+	}
+	void EqExp()
+	{
+		CompExp();
+		for(;;) switch(_token) {
+		case TK_EQ: BIN_EXP(_OP_EQ, &SQCompiler::CompExp); break;
+		case TK_NE: BIN_EXP(_OP_NE, &SQCompiler::CompExp); break;
+		case TK_3WAYSCMP: BIN_EXP(_OP_CMP, &SQCompiler::CompExp,CMP_3W); break;
+		default: return;	
+		}
 	}
 	void CompExp()
 	{
 		ShiftExp();
 		for(;;) switch(_token) {
-		case TK_EQ: BIN_EXP(_OP_EQ, &SQCompiler::ShiftExp); break;
-		case TK_3WAYSCMP: BIN_EXP(_OP_CMP, &SQCompiler::ShiftExp,CMP_3W); break;
 		case _SC('>'): BIN_EXP(_OP_CMP, &SQCompiler::ShiftExp,CMP_G); break;
 		case _SC('<'): BIN_EXP(_OP_CMP, &SQCompiler::ShiftExp,CMP_L); break;
 		case TK_GE: BIN_EXP(_OP_CMP, &SQCompiler::ShiftExp,CMP_GE); break;
 		case TK_LE: BIN_EXP(_OP_CMP, &SQCompiler::ShiftExp,CMP_LE); break;
-		case TK_NE: BIN_EXP(_OP_NE, &SQCompiler::ShiftExp); break;
 		default: return;	
 		}
 	}

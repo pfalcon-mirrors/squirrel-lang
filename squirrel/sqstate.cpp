@@ -431,6 +431,15 @@ void RefTable::AddRef(SQObject &obj)
 	ref->refs++;
 }
 
+SQUnsignedInteger RefTable::GetRefCount(SQObject &obj)
+{
+     SQHash mainpos;
+     RefNode *prev;
+     RefNode *ref = Get(obj,mainpos,&prev,true);
+     return ref->refs;
+}
+
+
 SQBool RefTable::Release(SQObject &obj)
 {
 	SQHash mainpos;

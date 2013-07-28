@@ -60,9 +60,9 @@ local base_vec={
 	test_field="nothing"
 }
 
-function vector(_x,_y,_z):(base_vec)
+function vector(_x,_y,_z)
 {
-	return delegate base_vec : {x=_x,y=_y,z=_z }
+	return {x=_x,y=_y,z=_z }.setdelegate(base_vec); 
 }
 ////////////////////////////////////////////////////////////
 

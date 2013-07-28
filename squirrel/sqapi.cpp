@@ -153,12 +153,23 @@ void sq_addref(HSQUIRRELVM v,HSQOBJECT *po)
 #endif
 }
 
+SQBool sq_getrefcount(HSQUIRRELVM v,HSQOBJECT *po)
+{
+	if(!ISREFCOUNTED(type(*po))) return 0;
+#ifdef NO_GARBAGE_COLLECTOR
+   return po->_unVal.pRefCounted->_uiRef; 
+#else
+   return _ss(v)->_refs_table.GetRefCount(*po); 
+#endif 
+}
+
 SQBool sq_release(HSQUIRRELVM v,HSQOBJECT *po)
 {
 	if(!ISREFCOUNTED(type(*po))) return SQTrue;
 #ifdef NO_GARBAGE_COLLECTOR
+	bool ret = (po->_unVal.pRefCounted->_uiRef <= 1) ? SQTrue : SQFalse;
 	__Release(po->_type,po->_unVal);
-	return SQFalse; //the ret val doesn't work(and cannot be fixed)
+	return ret; //the ret val doesn't work(and cannot be fixed)
 #else
 	return _ss(v)->_refs_table.Release(*po);
 #endif
@@ -517,12 +528,15 @@ SQObjectType sq_gettype(HSQUIRRELVM v,SQInteger idx)
 }
 
 
-void sq_tostring(HSQUIRRELVM v,SQInteger idx)
+SQRESULT sq_tostring(HSQUIRRELVM v,SQInteger idx)
 {
 	SQObjectPtr &o = stack_get(v, idx);
 	SQObjectPtr res;
-	v->ToString(o,res);
+	if(!v->ToString(o,res)) {
+		return SQ_ERROR;
+	}
 	v->Push(res);
+	return SQ_OK;
 }
 
 void sq_tobool(HSQUIRRELVM v, SQInteger idx, SQBool *b)
@@ -583,7 +597,7 @@ SQRESULT sq_clone(HSQUIRRELVM v,SQInteger idx)
 	v->PushNull();
 	if(!v->Clone(o, stack_get(v, -1))){
 		v->Pop();
-		return sq_aux_invalidtype(v, type(o));
+		return SQ_ERROR;
 	}
 	return SQ_OK;
 }

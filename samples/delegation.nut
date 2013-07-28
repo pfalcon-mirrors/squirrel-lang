@@ -36,7 +36,9 @@ PPlayer <- {
 
 function PPlayer::new(name,pos)
 {
-	local newplayer=delegate ::PEntity.new(name,pos) : clone ::PPlayer;
+    local p = clone ::PPlayer;
+	local newplayer = ::PEntity.new(name,pos);
+	newplayer.setdelegate(p);
 	return newplayer;
 }
 

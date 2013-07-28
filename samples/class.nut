@@ -3,7 +3,7 @@
 class BaseVector {
 	constructor(...)
 	{
-		if(vargc >= 3) {
+		if(vargv.len() >= 3) {
 			x = vargv[0];
 			y = vargv[1];
 			z = vargv[2];
