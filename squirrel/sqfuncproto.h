@@ -120,6 +120,7 @@ public:
 		this->~SQFunctionProto();
 		sq_vm_free(this,size);
 	}
+	
 	const SQChar* GetLocal(SQVM *v,SQUnsignedInteger stackbase,SQUnsignedInteger nseq,SQUnsignedInteger nop);
 	SQInteger GetLine(SQInstruction *curr);
 	bool Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write);
@@ -130,6 +131,7 @@ public:
 		for(SQInteger i = 0; i < _nliterals; i++)
 			_literals[i].Null();
 	}
+	SQObjectType GetType() {return OT_FUNCPROTO;}
 #endif
 	SQObjectPtr _sourcename;
 	SQObjectPtr _name;

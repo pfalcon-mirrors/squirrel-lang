@@ -1,5 +1,17 @@
+***version 3.0 beta 3***
+-license changed to "MIT license"
+-added sq_resurrectunreachable() and resurrectunreachable()
+-added callee() built in function, returns the current running closure
+-added thread.getstackinfos()
+-added sq_objtouserpointer()
+-added sq_newtableex()
+-various refactoring and optimizations
+-fixed several 64bits issues regarding integer to string conversions
+-fixed some bugs when SQUSEDOUBLE is used in 32bits systems
+
+***2010-08-18          ***
 ***version 3.0 beta 2.1***
--fixed bug in class contructor
+-fixed bug in class constructor
 -fixed bug in compound arith
 
 ***2010-08-12        ***
@@ -201,7 +213,7 @@ will terminate the iteration but will not be returned as foreach iteration
 ***2004-11-01        ***
 ***version 1.0 stable***
 -fixed some minor bug
--improoved operator 'delete' performances
+-improved operator 'delete' performances
 -added scientific notation for float numbers( eg. 2.e16 or 2.e-2)
 
 ***2004-08-30        ***
@@ -305,7 +317,7 @@ will terminate the iteration but will not be returned as foreach iteration
 -fixed a garbage collection bug
 -fixed == operator now can compare correctly different types
 -new built in method getstackinfos(level)
--improoved line informations precision for the debug hook
+-improved line informations precision for the debug hook
 -new api call sq_compilebuffer()
 -new built-in api function compilestring()
 -new syntactic sugar for function declarations inside tables

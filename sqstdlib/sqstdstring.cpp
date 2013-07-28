@@ -65,7 +65,6 @@ static SQInteger validate_format(HSQUIRRELVM v, SQChar *fmt, const SQChar *src, 
 	return n;
 }
 
-
 SQRESULT sqstd_format(HSQUIRRELVM v,SQInteger nformatstringidx,SQInteger *outlen,SQChar **output)
 {
 	const SQChar *format;
@@ -103,7 +102,21 @@ SQRESULT sqstd_format(HSQUIRRELVM v,SQInteger nformatstringidx,SQInteger *outlen
 				addlen = (sq_getsize(v,nparam)*sizeof(SQChar))+((w+1)*sizeof(SQChar));
 				valtype = 's';
 				break;
-			case 'i': case 'd': case 'c':case 'o':  case 'u':  case 'x':  case 'X':
+			case 'i': case 'd': case 'o': case 'u':  case 'x':  case 'X':
+#ifdef _SQ64
+				{
+				size_t flen = scstrlen(fmt);
+				SQInteger fpos = flen - 1;
+				SQChar f = fmt[fpos];
+				SQChar *prec = _PRINT_INT_PREC;
+				while(*prec != _SC('\0')) {
+					fmt[fpos++] = *prec++;
+				}
+				fmt[fpos++] = f;
+				fmt[fpos++] = _SC('\0');
+				}
+#endif
+			case 'c':
 				if(SQ_FAILED(sq_getinteger(v,nparam,&ti))) 
 					return sq_throwerror(v,_SC("integer expected for the specified format"));
 				addlen = (ADDITIONAL_FORMAT_SPACE)+((w+1)*sizeof(SQChar));

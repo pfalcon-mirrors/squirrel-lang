@@ -196,16 +196,24 @@ SQBool sq_objtobool(HSQOBJECT *o)
 	return SQFalse;
 }
 
+SQUserPointer sq_objtouserpointer(HSQOBJECT *o)
+{
+	if(sq_isuserpointer(*o)) {
+		return _userpointer(*o);
+	}
+	return 0;
+}
+
 void sq_pushnull(HSQUIRRELVM v)
 {
-	v->Push(_null_);
+	v->PushNull();
 }
 
 void sq_pushstring(HSQUIRRELVM v,const SQChar *s,SQInteger len)
 {
 	if(s)
 		v->Push(SQObjectPtr(SQString::Create(_ss(v), s, len)));
-	else v->Push(_null_);
+	else v->PushNull();
 }
 
 void sq_pushinteger(HSQUIRRELVM v,SQInteger n)
@@ -238,6 +246,11 @@ SQUserPointer sq_newuserdata(HSQUIRRELVM v,SQUnsignedInteger size)
 void sq_newtable(HSQUIRRELVM v)
 {
 	v->Push(SQTable::Create(_ss(v), 0));	
+}
+
+void sq_newtableex(HSQUIRRELVM v,SQInteger initialcapacity)
+{
+	v->Push(SQTable::Create(_ss(v), initialcapacity));	
 }
 
 void sq_newarray(HSQUIRRELVM v,SQInteger size)
@@ -275,7 +288,7 @@ SQRESULT sq_arrayappend(HSQUIRRELVM v,SQInteger idx)
 	SQObjectPtr *arr;
 	_GETSAFE_OBJ(v, idx, OT_ARRAY,arr);
 	_array(*arr)->Append(v->GetUp(-1));
-	v->Pop(1);
+	v->Pop();
 	return SQ_OK;
 }
 
@@ -515,7 +528,7 @@ void sq_tostring(HSQUIRRELVM v,SQInteger idx)
 void sq_tobool(HSQUIRRELVM v, SQInteger idx, SQBool *b)
 {
 	SQObjectPtr &o = stack_get(v, idx);
-	*b = v->IsFalse(o)?SQFalse:SQTrue;
+	*b = SQVM::IsFalse(o)?SQFalse:SQTrue;
 }
 
 SQRESULT sq_getinteger(HSQUIRRELVM v,SQInteger idx,SQInteger *i)
@@ -567,7 +580,7 @@ SQRESULT sq_getthread(HSQUIRRELVM v,SQInteger idx,HSQUIRRELVM *thread)
 SQRESULT sq_clone(HSQUIRRELVM v,SQInteger idx)
 {
 	SQObjectPtr &o = stack_get(v,idx);
-	v->Push(_null_);
+	v->PushNull();
 	if(!v->Clone(o, stack_get(v, -1))){
 		v->Pop();
 		return sq_aux_invalidtype(v, type(o));
@@ -737,7 +750,7 @@ SQRESULT sq_deleteslot(HSQUIRRELVM v,SQInteger idx,SQBool pushval)
 		return SQ_ERROR;
 	}
 	if(pushval)	v->GetUp(-1) = res;
-	else v->Pop(1);
+	else v->Pop();
 	return SQ_OK;
 }
 
@@ -825,7 +838,7 @@ SQRESULT sq_rawdeleteslot(HSQUIRRELVM v,SQInteger idx,SQBool pushval)
 	if(pushval != 0)
 		v->GetUp(-1) = t;
 	else
-		v->Pop(1);
+		v->Pop();
 	return SQ_OK;
 }
 
@@ -836,7 +849,7 @@ SQRESULT sq_getdelegate(HSQUIRRELVM v,SQInteger idx)
 	case OT_TABLE:
 	case OT_USERDATA:
 		if(!_delegable(self)->_delegate){
-			v->Push(_null_);
+			v->PushNull();
 			break;
 		}
 		v->Push(SQObjectPtr(_delegable(self)->_delegate));
@@ -852,7 +865,7 @@ SQRESULT sq_get(HSQUIRRELVM v,SQInteger idx)
 	SQObjectPtr &self=stack_get(v,idx);
 	if(v->Get(self,v->GetUp(-1),v->GetUp(-1),false,DONT_FALL_BACK))
 		return SQ_OK;
-	v->Pop(1);
+	v->Pop();
 	return SQ_ERROR;
 }
 
@@ -880,16 +893,16 @@ SQRESULT sq_rawget(HSQUIRRELVM v,SQInteger idx)
 			}
 		}
 		else {
-			v->Pop(1);
+			v->Pop();
 			return sq_throwerror(v,_SC("invalid index type for an array"));
 		}
 				  }
 		break;
 	default:
-		v->Pop(1);
+		v->Pop();
 		return sq_throwerror(v,_SC("rawget works only on array/table/instance and class"));
 	}	
-	v->Pop(1);
+	v->Pop();
 	return sq_throwerror(v,_SC("the index doesn't exist"));
 }
 
@@ -942,7 +955,7 @@ SQRESULT sq_throwerror(HSQUIRRELVM v,const SQChar *err)
 
 void sq_reseterror(HSQUIRRELVM v)
 {
-	v->_lasterror = _null_;
+	v->_lasterror.Null();
 }
 
 void sq_getlasterror(HSQUIRRELVM v)
@@ -964,7 +977,7 @@ SQRESULT sq_reservestack(HSQUIRRELVM v,SQInteger nsize)
 SQRESULT sq_resume(HSQUIRRELVM v,SQBool retval,SQBool raiseerror)
 {
 	if(type(v->GetUp(-1))==OT_GENERATOR){
-		v->Push(_null_); //retval
+		v->PushNull(); //retval
 		if(!v->Execute(v->GetUp(-2),0,v->_top,v->GetUp(-1),raiseerror,SQVM::ET_RESUME_GENERATOR))
 		{v->Raise_Error(v->_lasterror); return SQ_ERROR;}
 		if(!retval)
@@ -1005,10 +1018,13 @@ SQRESULT sq_wakeupvm(HSQUIRRELVM v,SQBool wakeupret,SQBool retval,SQBool raiseer
 	SQObjectPtr ret;
 	if(!v->_suspended)
 		return sq_throwerror(v,_SC("cannot resume a vm that is not running any code"));
+	SQInteger target = v->_suspended_target;
 	if(wakeupret) {
-		v->GetAt(v->_stackbase+v->_suspended_target)=v->GetUp(-1); //retval
+		if(target != -1) {
+			v->GetAt(v->_stackbase+v->_suspended_target)=v->GetUp(-1); //retval
+		}
 		v->Pop();
-	} else v->GetAt(v->_stackbase+v->_suspended_target)=_null_;
+	} else if(target != -1) { v->GetAt(v->_stackbase+v->_suspended_target).Null(); }
 	if(!v->Execute(_null_,-1,-1,ret,raiseerror,throwerror?SQVM::ET_RESUME_THROW_VM : SQVM::ET_RESUME_VM)) {
 		return SQ_ERROR;
 	}
@@ -1067,6 +1083,16 @@ SQChar *sq_getscratchpad(HSQUIRRELVM v,SQInteger minsize)
 	return _ss(v)->GetScratchPad(minsize);
 }
 
+SQRESULT sq_resurrectunreachable(HSQUIRRELVM v)
+{
+#ifndef NO_GARBAGE_COLLECTOR
+	_ss(v)->ResurrectUnreachable(v);
+	return SQ_OK;
+#else
+	return sq_throwerror(v,_SC("sq_resurrectunreachable requires a garbage collector build"));
+#endif
+}
+
 SQInteger sq_collectgarbage(HSQUIRRELVM v)
 {
 #ifndef NO_GARBAGE_COLLECTOR
@@ -1114,7 +1140,7 @@ SQRESULT sq_setfreevariable(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger nval)
 	default:
 		return sq_aux_invalidtype(v,type(self));
 	}
-	v->Pop(1);
+	v->Pop();
 	return SQ_OK;
 }
 
@@ -1238,7 +1264,7 @@ SQRESULT sq_getbase(HSQUIRRELVM v,SQInteger idx)
 	if(_class(*o)->_base)
 		v->Push(SQObjectPtr(_class(*o)->_base));
 	else
-		v->Push(_null_);
+		v->PushNull();
 	return SQ_OK;
 }
 

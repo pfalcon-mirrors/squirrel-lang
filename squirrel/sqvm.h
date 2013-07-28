@@ -75,7 +75,7 @@ public:
 	bool Clone(const SQObjectPtr &self, SQObjectPtr &target);
 	bool ObjCmp(const SQObjectPtr &o1, const SQObjectPtr &o2,SQInteger &res);
 	bool StringCat(const SQObjectPtr &str, const SQObjectPtr &obj, SQObjectPtr &dest);
-	bool IsEqual(const SQObjectPtr &o1,const SQObjectPtr &o2,bool &res);
+	static bool IsEqual(const SQObjectPtr &o1,const SQObjectPtr &o2,bool &res);
 	void ToString(const SQObjectPtr &o,SQObjectPtr &res);
 	SQString *PrintObjVal(const SQObjectPtr &o);
 
@@ -112,6 +112,7 @@ public:
 
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
+	SQObjectType GetType() {return OT_THREAD;}
 #endif
 	void Finalize();
 	void GrowCallStack() {
@@ -122,16 +123,17 @@ public:
 	}
 	bool EnterFrame(SQInteger newbase, SQInteger newtop, bool tailcall);
 	void LeaveFrame();
-	void Release(){ sq_delete(this,SQVM); } //does nothing
+	void Release(){ sq_delete(this,SQVM); }
 ////////////////////////////////////////////////////////////////////////////
 	//stack functions for the api
 	void Remove(SQInteger n);
 
-	bool IsFalse(SQObjectPtr &o);
+	static bool IsFalse(SQObjectPtr &o);
 	
 	void Pop();
 	void Pop(SQInteger n);
 	void Push(const SQObjectPtr &o);
+	void PushNull();
 	SQObjectPtr &Top();
 	SQObjectPtr &PopGet();
 	SQObjectPtr &GetUp(SQInteger n);

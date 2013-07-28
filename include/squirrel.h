@@ -1,31 +1,23 @@
 /*
 Copyright (c) 2003-2010 Alberto Demichelis
 
-This software is provided 'as-is', without any 
-express or implied warranty. In no event will the 
-authors be held liable for any damages arising from 
-the use of this software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-Permission is granted to anyone to use this software 
-for any purpose, including commercial applications, 
-and to alter it and redistribute it freely, subject 
-to the following restrictions:
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-		1. The origin of this software must not be 
-		misrepresented; you must not claim that 
-		you wrote the original software. If you 
-		use this software in a product, an 
-		acknowledgment in the product 
-		documentation would be appreciated but is 
-		not required.
-
-		2. Altered source versions must be plainly 
-		marked as such, and must not be 
-		misrepresented as being the original 
-		software.
-
-		3. This notice may not be removed or 
-		altered from any source distribution.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 
 */
 #ifndef _SQUIRREL_H_
@@ -46,6 +38,7 @@ extern "C" {
 #endif
 
 #ifdef _SQ64
+
 #ifdef _MSC_VER
 typedef __int64 SQInteger;
 typedef unsigned __int64 SQUnsignedInteger;
@@ -76,7 +69,7 @@ typedef float SQFloat;
 #ifdef _MSC_VER
 typedef __int64 SQRawObjectVal; //must be 64bits
 #else
-typedef long SQRawObjectVal; //must be 64bits
+typedef long long SQRawObjectVal; //must be 64bits
 #endif
 #define SQ_OBJECT_RAWINIT() { _unVal.raw = 0; }
 #else
@@ -127,7 +120,11 @@ typedef wchar_t SQChar;
 #define scsprintf	swprintf
 #define scstrlen	wcslen
 #define scstrtod	wcstod
+#ifdef _SQ64
+#define scstrtol	_wcstoi64
+#else
 #define scstrtol	wcstol
+#endif
 #define scatoi		_wtoi
 #define scstrtoul	wcstoul
 #define scvsprintf	vswprintf
@@ -147,7 +144,15 @@ typedef char SQChar;
 #define scsprintf	sprintf
 #define scstrlen	strlen
 #define scstrtod	strtod
+#ifdef _SQ64
+#ifdef _MSC_VER
+#define scstrtol	_strtoi64
+#else
+#define scstrtol	strtoll
+#endif
+#else
 #define scstrtol	strtol
+#endif
 #define scatoi		atoi
 #define scstrtoul	strtoul
 #define scvsprintf	vsprintf
@@ -162,7 +167,14 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 3.0 beta 2.1")
+#ifdef _SQ64
+#define _PRINT_INT_PREC _SC("ll")
+#define _PRINT_INT_FMT _SC("%lld")
+#else
+#define _PRINT_INT_FMT _SC("%d")
+#endif
+
+#define SQUIRREL_VERSION	_SC("Squirrel 3.0 beta 3")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2010 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
@@ -328,6 +340,7 @@ SQUIRREL_API void sq_move(HSQUIRRELVM dest,HSQUIRRELVM src,SQInteger idx);
 /*object creation handling*/
 SQUIRREL_API SQUserPointer sq_newuserdata(HSQUIRRELVM v,SQUnsignedInteger size);
 SQUIRREL_API void sq_newtable(HSQUIRRELVM v);
+SQUIRREL_API void sq_newtableex(HSQUIRRELVM v,SQInteger initialcapacity);
 SQUIRREL_API void sq_newarray(HSQUIRRELVM v,SQInteger size);
 SQUIRREL_API void sq_newclosure(HSQUIRRELVM v,SQFUNCTION func,SQUnsignedInteger nfreevars);
 SQUIRREL_API SQRESULT sq_setparamscheck(HSQUIRRELVM v,SQInteger nparamscheck,const SQChar *typemask);
@@ -418,10 +431,12 @@ SQUIRREL_API const SQChar *sq_objtostring(HSQOBJECT *o);
 SQUIRREL_API SQBool sq_objtobool(HSQOBJECT *o);
 SQUIRREL_API SQInteger sq_objtointeger(HSQOBJECT *o);
 SQUIRREL_API SQFloat sq_objtofloat(HSQOBJECT *o);
+SQUIRREL_API SQUserPointer sq_objtouserpointer(HSQOBJECT *o);
 SQUIRREL_API SQRESULT sq_getobjtypetag(HSQOBJECT *o,SQUserPointer * typetag);
 
 /*GC*/
 SQUIRREL_API SQInteger sq_collectgarbage(HSQUIRRELVM v);
+SQUIRREL_API SQRESULT sq_resurrectunreachable(HSQUIRRELVM v);
 
 /*serialization*/
 SQUIRREL_API SQRESULT sq_writeclosure(HSQUIRRELVM vm,SQWRITEFUNC writef,SQUserPointer up);
@@ -435,6 +450,7 @@ SQUIRREL_API void sq_free(void *p,SQUnsignedInteger size);
 /*debug*/
 SQUIRREL_API SQRESULT sq_stackinfos(HSQUIRRELVM v,SQInteger level,SQStackInfos *si);
 SQUIRREL_API void sq_setdebughook(HSQUIRRELVM v);
+SQUIRREL_API void sq_setnativedebughook(HSQUIRRELVM v,SQDEBUGHOOK hook);
 
 /*UTILITY MACRO*/
 #define sq_isnumeric(o) ((o)._type&SQOBJECT_NUMERIC)
@@ -455,7 +471,7 @@ SQUIRREL_API void sq_setdebughook(HSQUIRRELVM v);
 #define sq_isinstance(o) ((o)._type==OT_INSTANCE)
 #define sq_isbool(o) ((o)._type==OT_BOOL)
 #define sq_isweakref(o) ((o)._type==OT_WEAKREF)
-#define sq_isouter(o) ((o)._type==OT_OUTER)
+//#define sq_isouter(o) ((o)._type==OT_OUTER)
 #define sq_type(o) ((o)._type)
 
 /* deprecated */

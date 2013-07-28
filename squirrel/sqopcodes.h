@@ -28,6 +28,14 @@ enum NewObjectType {
 	NOT_CLASS = 2
 };
 
+enum AppendArrayType {
+	AAT_STACK = 0,
+	AAT_LITERAL = 1,
+	AAT_INT = 2,
+	AAT_FLOAT = 3,
+	AAT_BOOL = 4
+};
+
 enum SQOpcode
 {
 	_OP_LINE=				0x00,	
@@ -59,7 +67,8 @@ enum SQOpcode
 	_OP_LOADBOOL=			0x1A,
 	_OP_DMOVE=				0x1B,	
 	_OP_JMP=				0x1C,	
-	_OP_JNZ=				0x1D,	
+	//_OP_JNZ=				0x1D,
+	_OP_JCMP=				0x1D,
 	_OP_JZ=					0x1E,	
 	_OP_SETOUTER=			0x1F,	
 	_OP_GETOUTER=			0x20,	

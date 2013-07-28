@@ -32,7 +32,7 @@ SQClass::SQClass(SQSharedState *ss,SQClass *base)
 }
 
 void SQClass::Finalize() { 
-	_attributes = _null_;
+	_attributes.Null();
 	_defaultvalues.resize(0);
 	_methods.resize(0);
 	_metamethods.resize(0);
@@ -74,7 +74,7 @@ bool SQClass::NewSlot(SQSharedState *ss,const SQObjectPtr &key,const SQObjectPtr
 			}
 			if(type(temp) == OT_NULL) {
 				bool isconstructor;
-				_thread(ss->_root_vm)->IsEqual(ss->_constructoridx, key, isconstructor);
+				SQVM::IsEqual(ss->_constructoridx, key, isconstructor);
 				if(isconstructor) {
 					_constructoridx = (SQInteger)_methods.size();
 				}
@@ -179,7 +179,7 @@ void SQInstance::Finalize()
 	SQUnsignedInteger nvalues = _class->_defaultvalues.size();
 	__ObjRelease(_class);
 	for(SQUnsignedInteger i = 0; i < nvalues; i++) {
-		_values[i] = _null_;
+		_values[i].Null();
 	}
 }
 

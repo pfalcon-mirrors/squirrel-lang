@@ -31,6 +31,7 @@ public:
 		this->~SQClosure();
 		sq_vm_free(this,size);
 	}
+	
 	SQClosure *Clone()
 	{
 		SQFunctionProto *f = _function;
@@ -56,6 +57,7 @@ public:
 		for(SQInteger j = 0; j < f-> _ndefaultparams; j++)
 			_defaultparams[j].Null();
 	}
+	SQObjectType GetType() {return OT_CLOSURE;}
 #endif
 	SQWeakRef *_env;
 	SQClass *_base;
@@ -69,7 +71,7 @@ struct SQOuter : public CHAINABLE_OBJ
 {
 
 private:
-	SQOuter(SQSharedState *ss, SQObjectPtr *outer){_valptr = outer; _value  = _null_; _next   = NULL; INIT_CHAIN(); ADD_TO_CHAIN(&_ss(this)->_gc_chain,this); }
+	SQOuter(SQSharedState *ss, SQObjectPtr *outer){_valptr = outer; /*_value  = _null_;*/ _next   = NULL; INIT_CHAIN(); ADD_TO_CHAIN(&_ss(this)->_gc_chain,this); }
 
 public:
 	static SQOuter *Create(SQSharedState *ss, SQObjectPtr *outer)
@@ -85,10 +87,11 @@ public:
 		this->~SQOuter();
 		sq_vm_free(this,sizeof(SQOuter));
 	}
-
+	
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
 	void Finalize() { _value.Null(); }
+	SQObjectType GetType() {return OT_OUTER;}
 #endif
 
 	SQObjectPtr *_valptr;  /* pointer to value on stack, or _value below */
@@ -120,11 +123,13 @@ public:
 	void Release(){
 		sq_delete(this,SQGenerator);
 	}
+	
 	bool Yield(SQVM *v,SQInteger target);
 	bool Resume(SQVM *v,SQObjectPtr &dest);
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
-	void Finalize(){_stack.resize(0);_closure=_null_;}
+	void Finalize(){_stack.resize(0);_closure.Null();}
+	SQObjectType GetType() {return OT_GENERATOR;}
 #endif
 	SQObjectPtr _closure;
 	SQObjectPtrVec _stack;
@@ -164,9 +169,11 @@ public:
 	void Release(){
 		sq_delete(this,SQNativeClosure);
 	}
+	
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
 	void Finalize(){_outervalues.resize(0);}
+	SQObjectType GetType() {return OT_NATIVECLOSURE;}
 #endif
 	SQInteger _nparamscheck;
 	SQIntVec _typecheck;

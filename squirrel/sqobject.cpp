@@ -142,7 +142,7 @@ bool SQGenerator::Yield(SQVM *v,SQInteger target)
 	}
 	for(SQInteger j =0; j < size; j++)
 	{
-		v->_stack[v->_stackbase+j] = _null_;
+		v->_stack[v->_stackbase+j].Null();
 	}
 
 	_ci = *v->ci;
@@ -183,7 +183,7 @@ bool SQGenerator::Resume(SQVM *v,SQObjectPtr &dest)
 	//_stack._vals[0] = _null_; // shouldn't do this(better caching the weak ref)
 	for(SQInteger n = 1; n<size; n++) {
 		v->_stack[v->_stackbase+n] = _stack._vals[n];
-		_stack._vals[n] = _null_;
+		_stack._vals[n].Null();
 	}
 
 	_state=eRunning;
@@ -316,7 +316,7 @@ bool ReadObject(HSQUIRRELVM v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &o)
 		_CHECK_IO(SafeRead(v,read,up,&f,sizeof(SQFloat))); o = f; break;
 				  }
 	case OT_NULL:
-		o=_null_;
+		o.Null();
 		break;
 	default:
 		v->Raise_Error(_SC("cannot serialize a %s"),IdType2Name(t));
@@ -585,7 +585,7 @@ void SQFunctionProto::Mark(SQCollectable **chain)
 {
 	START_MARK()
 		for(SQInteger i = 0; i < _nliterals; i++) SQSharedState::MarkObject(_literals[i], chain);
-		for(SQInteger i = 0; i < _nfunctions; i++) SQSharedState::MarkObject(_functions[i], chain);
+		for(SQInteger k = 0; k < _nfunctions; k++) SQSharedState::MarkObject(_functions[k], chain);
 	END_MARK()
 }
 
@@ -596,7 +596,7 @@ void SQClosure::Mark(SQCollectable **chain)
 		SQFunctionProto *fp = _function;
 		fp->Mark(chain);
 		for(SQInteger i = 0; i < fp->_noutervalues; i++) SQSharedState::MarkObject(_outervalues[i], chain);
-		for(SQInteger i = 0; i < fp->_ndefaultparams; i++) SQSharedState::MarkObject(_defaultparams[i], chain);
+		for(SQInteger k = 0; k < fp->_ndefaultparams; k++) SQSharedState::MarkObject(_defaultparams[k], chain);
 	END_MARK()
 }
 
@@ -609,15 +609,12 @@ void SQNativeClosure::Mark(SQCollectable **chain)
 
 void SQOuter::Mark(SQCollectable **chain)
 {
-  if(!(_uiRef & MARK_FLAG)) {
-		_uiRef |= MARK_FLAG;
+	START_MARK()
     /* If the valptr points to a closed value, that value is alive */
     if(_valptr == &_value) {
       SQSharedState::MarkObject(_value, chain);
     }
-    RemoveFromChain(&_sharedstate->_gc_chain, this);
-		AddToChain(chain, this);
-  }
+	END_MARK()
 }
 
 void SQUserData::Mark(SQCollectable **chain){

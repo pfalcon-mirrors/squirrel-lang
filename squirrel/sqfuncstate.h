@@ -44,6 +44,7 @@ struct SQFuncState
 	SQInteger PopTarget();
 	SQInteger TopTarget();
 	SQInteger GetUpTarget(SQInteger n);
+	void DiscardTarget();
 	bool IsLocal(SQUnsignedInteger stkpos);
 	SQObject CreateString(const SQChar *s,SQInteger len = -1);
 	SQObject CreateTable();

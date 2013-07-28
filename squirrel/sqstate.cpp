@@ -163,29 +163,29 @@ void SQSharedState::Init()
 
 SQSharedState::~SQSharedState()
 {
-	_constructoridx = _null_;
+	_constructoridx.Null();
 	_table(_registry)->Finalize();
 	_table(_consts)->Finalize();
 	_table(_metamethodsmap)->Finalize();
-	_registry = _null_;
-	_consts = _null_;
-	_metamethodsmap = _null_;
+	_registry.Null();
+	_consts.Null();
+	_metamethodsmap.Null();
 	while(!_systemstrings->empty()) {
-		_systemstrings->back()=_null_;
+		_systemstrings->back().Null();
 		_systemstrings->pop_back();
 	}
 	_thread(_root_vm)->Finalize();
-	_root_vm = _null_;
-	_table_default_delegate = _null_;
-	_array_default_delegate = _null_;
-	_string_default_delegate = _null_;
-	_number_default_delegate = _null_;
-	_closure_default_delegate = _null_;
-	_generator_default_delegate = _null_;
-	_thread_default_delegate = _null_;
-	_class_default_delegate = _null_;
-	_instance_default_delegate = _null_;
-	_weakref_default_delegate = _null_;
+	_root_vm.Null();
+	_table_default_delegate.Null();
+	_array_default_delegate.Null();
+	_string_default_delegate.Null();
+	_number_default_delegate.Null();
+	_closure_default_delegate.Null();
+	_generator_default_delegate.Null();
+	_thread_default_delegate.Null();
+	_class_default_delegate.Null();
+	_instance_default_delegate.Null();
+	_weakref_default_delegate.Null();
 	_refs_table.Finalize();
 #ifndef NO_GARBAGE_COLLECTOR
 	SQCollectable *t = _gc_chain;
@@ -245,29 +245,91 @@ void SQSharedState::MarkObject(SQObjectPtr &o,SQCollectable **chain)
 }
 
 
+void SQSharedState::RunMark(SQVM *vm,SQCollectable **tchain)
+{
+	SQVM *vms = _thread(_root_vm);
+	
+	vms->Mark(tchain);
+	
+	_refs_table.Mark(tchain);
+	MarkObject(_registry,tchain);
+	MarkObject(_consts,tchain);
+	MarkObject(_metamethodsmap,tchain);
+	MarkObject(_table_default_delegate,tchain);
+	MarkObject(_array_default_delegate,tchain);
+	MarkObject(_string_default_delegate,tchain);
+	MarkObject(_number_default_delegate,tchain);
+	MarkObject(_generator_default_delegate,tchain);
+	MarkObject(_thread_default_delegate,tchain);
+	MarkObject(_closure_default_delegate,tchain);
+	MarkObject(_class_default_delegate,tchain);
+	MarkObject(_instance_default_delegate,tchain);
+	MarkObject(_weakref_default_delegate,tchain);
+
+}
+
+SQInteger SQSharedState::ResurrectUnreachable(SQVM *vm)
+{
+	SQInteger n=0;
+	SQCollectable *tchain=NULL;
+
+	RunMark(vm,&tchain);
+
+	SQCollectable *resurrected = _gc_chain;
+	SQCollectable *t = resurrected;
+	SQCollectable *nx = NULL;
+
+	_gc_chain = tchain;
+
+	SQArray *ret = NULL;
+	if(resurrected) {
+		ret = SQArray::Create(this,0);
+		SQCollectable *rlast = NULL;
+		while(t) {
+			rlast = t;
+			SQObjectType type = t->GetType();
+			if(type != OT_FUNCPROTO && type != OT_OUTER) {
+				SQObject sqo;
+				sqo._type = type;
+				sqo._unVal.pRefCounted = t;
+				ret->Append(sqo);
+			}
+			t = t->_next;
+			n++;
+		}
+
+		assert(rlast->_next == NULL);
+		rlast->_next = _gc_chain;
+		if(_gc_chain)
+		{
+			_gc_chain->_prev = rlast;
+		}
+		_gc_chain = resurrected;
+	}
+
+	t = _gc_chain;
+	while(t) {
+		t->UnMark();
+		t = t->_next;
+	}
+
+	if(ret) {
+		SQObjectPtr temp = ret;
+		vm->Push(temp);
+	}
+	else {
+		vm->PushNull();
+	}
+	return n;
+}
+
 SQInteger SQSharedState::CollectGarbage(SQVM *vm)
 {
 	SQInteger n=0;
 	SQCollectable *tchain=NULL;
-	SQVM *vms = _thread(_root_vm);
-	
-	vms->Mark(&tchain);
-	SQInteger x = _table(_thread(_root_vm)->_roottable)->CountUsed();
-	_refs_table.Mark(&tchain);
-	MarkObject(_registry,&tchain);
-	MarkObject(_consts,&tchain);
-	MarkObject(_metamethodsmap,&tchain);
-	MarkObject(_table_default_delegate,&tchain);
-	MarkObject(_array_default_delegate,&tchain);
-	MarkObject(_string_default_delegate,&tchain);
-	MarkObject(_number_default_delegate,&tchain);
-	MarkObject(_generator_default_delegate,&tchain);
-	MarkObject(_thread_default_delegate,&tchain);
-	MarkObject(_closure_default_delegate,&tchain);
-	MarkObject(_class_default_delegate,&tchain);
-	MarkObject(_instance_default_delegate,&tchain);
-	MarkObject(_weakref_default_delegate,&tchain);
-	
+
+	RunMark(vm,&tchain);
+
 	SQCollectable *t = _gc_chain;
 	SQCollectable *nx = NULL;
 	while(t) {
@@ -286,8 +348,7 @@ SQInteger SQSharedState::CollectGarbage(SQVM *vm)
 		t = t->_next;
 	}
 	_gc_chain = tchain;
-	SQInteger z = _table(_thread(_root_vm)->_roottable)->CountUsed();
-	assert(z == x);
+	
 	return n;
 }
 #endif
@@ -387,7 +448,7 @@ SQBool RefTable::Release(SQObject &obj)
 			ref->next = _freelist;
 			_freelist = ref;
 			_slotused--;
-			ref->obj = _null_;
+			ref->obj.Null();
 			//<<FIXME>>test for shrink?
 			return SQTrue;
 		}
@@ -412,7 +473,7 @@ void RefTable::Resize(SQUnsignedInteger size)
 			assert(t->refs != 0);
 			RefNode *nn = Add(::HashObj(t->obj)&(_numofslots-1),t->obj);
 			nn->refs = t->refs; 
-			t->obj = _null_;
+			t->obj.Null();
 			nfound++;
 		}
 		t++;

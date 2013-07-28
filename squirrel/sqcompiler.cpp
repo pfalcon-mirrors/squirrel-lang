@@ -170,7 +170,7 @@ public:
 		_fs = &funcstate;
 		_fs->AddParameter(_fs->CreateString(_SC("this")));
 		_fs->AddParameter(_fs->CreateString(_SC("vargv")));
-		_fs->_varparams = 1;
+		_fs->_varparams = true;
 		_fs->_sourcename = _sourcename;
 		SQInteger stacksize = _fs->GetStackSize();
 		if(setjmp(_errorjmp) == 0) {
@@ -308,7 +308,8 @@ public:
 			break;
 		default:
 			CommaExpr();
-			_fs->PopTarget();
+			_fs->DiscardTarget();
+			//_fs->PopTarget();
 			break;
 		}
 		_fs->SnoozeOpt();
@@ -353,11 +354,8 @@ public:
 				SQInteger val = _fs->TopTarget();
 				SQInteger tmp = _fs->PushTarget();
 				_fs->AddInstruction(_OP_GETOUTER,   tmp, pos);
-				//EmitCompArithLocal(tok,tmp,val, tmp);
 				_fs->AddInstruction(ChooseArithOpByToken(tok), tmp, val, tmp, 0);
 				_fs->AddInstruction(_OP_SETOUTER, tmp, pos, tmp);
-				//_fs->PopTarget();
-				//_fs->PushTarget(tmp);
 			}
 			break;
 		}
@@ -448,7 +446,7 @@ public:
 		}
 		_es = es;
 	}
-	void BIN_EXP(SQOpcode op, void (SQCompiler::*f)(void),SQInteger op3 = 0)
+	template<typename T> void BIN_EXP(SQOpcode op, T f,SQInteger op3 = 0)
 	{
 		Lex(); (this->*f)();
 		SQInteger op1 = _fs->PopTarget();SQInteger op2 = _fs->PopTarget();
@@ -668,7 +666,7 @@ public:
 						}
 						break;
 					case BASE:
-						Emit2ArgsOP(_OP_GET);
+						//Emit2ArgsOP(_OP_GET);
 						_fs->AddInstruction(_OP_MOVE, _fs->PushTarget(), 0);
 						break;
 					case OUTER:
@@ -755,15 +753,10 @@ public:
 
 					/* generate direct or literal function depending on size */
 					SQObjectType ctype = type(constval);
-					if(ctype == OT_INTEGER && (_integer(constval) & (~0x7FFFFFFF)) == 0) {
-						_fs->AddInstruction(_OP_LOADINT,   _es.epos, _integer(constval));
-					}
-					else if(ctype == OT_FLOAT && sizeof(SQFloat)==sizeof(SQInt32) ) {
-						SQFloat f = _float(constval);
-						_fs->AddInstruction(_OP_LOADFLOAT, _es.epos, *((SQInt32 *)&f));
-					}
-					else {
-						_fs->AddInstruction(_OP_LOAD,      _es.epos, _fs->GetConstant(constval));
+					switch(ctype) {
+						case OT_INTEGER: EmitLoadConstInt(_integer(constval),_es.epos); break;
+						case OT_FLOAT: EmitLoadConstFloat(_float(constval),_es.epos); break;
+						default: _fs->AddInstruction(_OP_LOAD,_es.epos,_fs->GetConstant(constval)); break;
 					}
 					_es.etype = EXPR;
 				}
@@ -795,8 +788,8 @@ public:
 			_fs->AddInstruction(_OP_LOADNULLS, _fs->PushTarget(),1);
 			Lex();
 			break;
-		case TK_INTEGER: EmitLoadConstInt(_lex._nvalue); Lex();	break;
-		case TK_FLOAT: EmitLoadConstFloat(_lex._fvalue); Lex(); break;
+		case TK_INTEGER: EmitLoadConstInt(_lex._nvalue,-1); Lex();	break;
+		case TK_FLOAT: EmitLoadConstFloat(_lex._fvalue,-1); Lex(); break;
 		case TK_TRUE: case TK_FALSE:
 			_fs->AddInstruction(_OP_LOADBOOL, _fs->PushTarget(),_token == TK_TRUE?1:0);
 			Lex();
@@ -810,7 +803,7 @@ public:
 					if(_token == _SC(',')) Lex();
 					SQInteger val = _fs->PopTarget();
 					SQInteger array = _fs->TopTarget();
-					_fs->AddInstruction(_OP_APPENDARRAY, array, val);
+					_fs->AddInstruction(_OP_APPENDARRAY, array, val, AAT_STACK);
 					key++;
 				}
 				_fs->SetIntructionParam(apos, 1, key);
@@ -819,7 +812,7 @@ public:
 			break;
 		case _SC('{'):
 			_fs->AddInstruction(_OP_NEWOBJ, _fs->PushTarget(),0,NOT_TABLE);
-			Lex();ParseTableOrClass(_SC(','));
+			Lex();ParseTableOrClass(_SC(','),_SC('}'));
 			break;
 		case TK_FUNCTION: FunctionExp(_token);break;
 		case _SC('@'): FunctionExp(_token,true);break;
@@ -827,15 +820,15 @@ public:
 		case _SC('-'): 
 			Lex(); 
 			switch(_token) {
-			case TK_INTEGER: EmitLoadConstInt(-_lex._nvalue); Lex(); break;
-			case TK_FLOAT: EmitLoadConstFloat(-_lex._fvalue); Lex(); break;
+			case TK_INTEGER: EmitLoadConstInt(-_lex._nvalue,-1); Lex(); break;
+			case TK_FLOAT: EmitLoadConstFloat(-_lex._fvalue,-1); Lex(); break;
 			default: UnaryOP(_OP_NEG);
 			}
 			break;
 		case _SC('!'): Lex(); UnaryOP(_OP_NOT); break;
 		case _SC('~'): 
 			Lex(); 
-			if(_token == TK_INTEGER)  { EmitLoadConstInt(~_lex._nvalue); Lex(); break; }
+			if(_token == TK_INTEGER)  { EmitLoadConstInt(~_lex._nvalue,-1); Lex(); break; }
 			UnaryOP(_OP_BWNOT); 
 			break;
 		case TK_TYPEOF : Lex() ;UnaryOP(_OP_TYPEOF); break;
@@ -850,22 +843,28 @@ public:
 		}
 		return -1;
 	}
-	void EmitLoadConstInt(SQInteger value)
+	void EmitLoadConstInt(SQInteger value,SQInteger target)
 	{
+		if(target < 0) {
+			target = _fs->PushTarget();
+		}
 		if((value & (~((SQInteger)0xFFFFFFFF))) == 0) { //does it fit in 32 bits?
-			_fs->AddInstruction(_OP_LOADINT, _fs->PushTarget(),value);
+			_fs->AddInstruction(_OP_LOADINT, target,value);
 		}
 		else {
-			_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetNumericConstant(value));
+			_fs->AddInstruction(_OP_LOAD, target, _fs->GetNumericConstant(value));
 		}
 	}
-	void EmitLoadConstFloat(SQFloat value)
+	void EmitLoadConstFloat(SQFloat value,SQInteger target)
 	{
+		if(target < 0) {
+			target = _fs->PushTarget();
+		}
 		if(sizeof(SQFloat) == sizeof(SQInt32)) {
-			_fs->AddInstruction(_OP_LOADFLOAT, _fs->PushTarget(),*((SQInt32 *)&value));
+			_fs->AddInstruction(_OP_LOADFLOAT, target,*((SQInt32 *)&value));
 		}
 		else {
-			_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetNumericConstant(value));
+			_fs->AddInstruction(_OP_LOAD, target, _fs->GetNumericConstant(value));
 		}
 	}
 	void UnaryOP(SQOpcode op)
@@ -901,7 +900,7 @@ public:
 		 SQInteger closure = _fs->PopTarget();
          _fs->AddInstruction(_OP_CALL, _fs->PushTarget(), closure, stackbase, nargs);
 	}
-	void ParseTableOrClass(SQInteger separator,SQInteger terminator = '}')
+	void ParseTableOrClass(SQInteger separator,SQInteger terminator)
 	{
 		SQInteger tpos = _fs->GetCurrentPos(),nkeys = 0;
 		while(_token != terminator) {
@@ -920,30 +919,30 @@ public:
 				}
 			}
 			switch(_token) {
-				case TK_FUNCTION:
-				case TK_CONSTRUCTOR:{
-					SQInteger tk = _token;
-					Lex();
-					SQObject id = tk == TK_FUNCTION ? Expect(TK_IDENTIFIER) : _fs->CreateString(_SC("constructor"));
-					Expect(_SC('('));
-					_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(id));
-					CreateFunction(id);
-					_fs->AddInstruction(_OP_CLOSURE, _fs->PushTarget(), _fs->_functions.size() - 1, 0);
-								  }
-								  break;
-				case _SC('['):
-					Lex(); CommaExpr(); Expect(_SC(']'));
-					Expect(_SC('=')); Expression();
+			case TK_FUNCTION:
+			case TK_CONSTRUCTOR:{
+				SQInteger tk = _token;
+				Lex();
+				SQObject id = tk == TK_FUNCTION ? Expect(TK_IDENTIFIER) : _fs->CreateString(_SC("constructor"));
+				Expect(_SC('('));
+				_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(id));
+				CreateFunction(id);
+				_fs->AddInstruction(_OP_CLOSURE, _fs->PushTarget(), _fs->_functions.size() - 1, 0);
+								}
+								break;
+			case _SC('['):
+				Lex(); CommaExpr(); Expect(_SC(']'));
+				Expect(_SC('=')); Expression();
+				break;
+			case TK_STRING_LITERAL: //JSON
+				if(separator == ',') { //only works for tables
+					_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(Expect(TK_STRING_LITERAL)));
+					Expect(_SC(':')); Expression();
 					break;
-				case TK_STRING_LITERAL: //JSON
-					if(separator == ',') { //only works for classes
-						_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(Expect(TK_STRING_LITERAL)));
-						Expect(_SC(':')); Expression();
-						break;
-					}
-				default :
-					_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(Expect(TK_IDENTIFIER)));
-					Expect(_SC('=')); Expression();
+				}
+			default :
+				_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(Expect(TK_IDENTIFIER)));
+				Expect(_SC('=')); Expression();
 			}
 			if(_token == separator) Lex();//optional comma/semicolon
 			nkeys++;
@@ -953,7 +952,12 @@ public:
 			assert(hasattrs && attrs == key-1 || !hasattrs);
 			unsigned char flags = (hasattrs?NEW_SLOT_ATTRIBUTES_FLAG:0)|(isstatic?NEW_SLOT_STATIC_FLAG:0);
 			SQInteger table = _fs->TopTarget(); //<<BECAUSE OF THIS NO COMMON EMIT FUNC IS POSSIBLE
-			_fs->AddInstruction(_OP_NEWSLOTA, flags, table, key, val);
+			if(separator == _SC(',')) { //hack recognizes a table from the separator
+				_fs->AddInstruction(_OP_NEWSLOT, 0xFF, table, key, val);
+			}
+			else {
+				_fs->AddInstruction(_OP_NEWSLOTA, flags, table, key, val); //this for classes only as it invokes _newmember
+			}
 		}
 		if(separator == _SC(',')) //hack recognizes a table from the separator
 			_fs->SetIntructionParam(tpos, 1, nkeys);
@@ -1039,7 +1043,7 @@ public:
 	void DoWhileStatement()
 	{
 		Lex();
-		SQInteger jzpos = _fs->GetCurrentPos();
+		SQInteger jmptrg = _fs->GetCurrentPos();
 		BEGIN_BREAKBLE_BLOCK()
 		BEGIN_SCOPE();
 		Statement();
@@ -1047,7 +1051,8 @@ public:
 		Expect(TK_WHILE);
 		SQInteger continuetrg = _fs->GetCurrentPos();
 		Expect(_SC('(')); CommaExpr(); Expect(_SC(')'));
-		_fs->AddInstruction(_OP_JNZ, _fs->PopTarget(), jzpos - _fs->GetCurrentPos() - 1);
+		_fs->AddInstruction(_OP_JZ, _fs->PopTarget(), 1);
+		_fs->AddInstruction(_OP_JMP, 0, jmptrg - _fs->GetCurrentPos() - 1);
 		END_BREAKBLE_BLOCK(continuetrg);
 	}
 	void ForStatement()
@@ -1341,7 +1346,7 @@ public:
 		if(attrs != -1) _fs->PopTarget();
 		if(base != -1) _fs->PopTarget();
 		_fs->AddInstruction(_OP_NEWOBJ, _fs->PushTarget(), base, attrs,NOT_CLASS);
-		ParseTableOrClass(_SC(';'));
+		ParseTableOrClass(_SC(';'),_SC('}'));
 	}
 	void DeleteExpr()
 	{
@@ -1398,7 +1403,7 @@ public:
 			if(_token == TK_VARPARAMS) {
 				if(defparams > 0) Error(_SC("function with default parameters cannot have variable number of parameters"));
 				funcstate->AddParameter(_fs->CreateString(_SC("vargv")));
-				funcstate->_varparams = 1;
+				funcstate->_varparams = true;
 				Lex();
 				if(_token != _SC(')')) Error(_SC("expected ')'"));
 				break;
