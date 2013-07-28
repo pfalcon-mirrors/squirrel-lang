@@ -8,6 +8,7 @@
 #define MIN_STACK_OVERHEAD 10
 
 #define SQ_SUSPEND_FLAG -666
+#define DONT_FALL_BACK 666
 //base lib
 void sq_base_register(HSQUIRRELVM v);
 
@@ -64,9 +65,11 @@ public:
 
 	void CallDebugHook(SQInteger type,SQInteger forcedline=0);
 	void CallErrorHandler(SQObjectPtr &e);
-	bool Get(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &dest, bool raw, bool fetchroot);
-	bool FallBackGet(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,bool raw);
-	bool Set(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val, bool fetchroot);
+	bool Get(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &dest, bool raw, SQInteger selfidx);
+	SQInteger FallBackGet(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest);
+	bool InvokeDefaultDelegate(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest);
+	bool Set(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val, SQInteger selfidx);
+	SQInteger FallBackSet(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr &val);
 	bool NewSlot(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val,bool bstatic);
 	bool DeleteSlot(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &res);
 	bool Clone(const SQObjectPtr &self, SQObjectPtr &target);
@@ -74,12 +77,12 @@ public:
 	bool StringCat(const SQObjectPtr &str, const SQObjectPtr &obj, SQObjectPtr &dest);
 	bool IsEqual(SQObjectPtr &o1,SQObjectPtr &o2,bool &res);
 	void ToString(const SQObjectPtr &o,SQObjectPtr &res);
-	SQString *PrintObjVal(const SQObject &o);
+	SQString *PrintObjVal(const SQObjectPtr &o);
 
  
 	void Raise_Error(const SQChar *s, ...);
-	void Raise_Error(SQObjectPtr &desc);
-	void Raise_IdxError(SQObject &o);
+	void Raise_Error(const SQObjectPtr &desc);
+	void Raise_IdxError(const SQObjectPtr &o);
 	void Raise_CompareError(const SQObject &o1, const SQObject &o2);
 	void Raise_ParamTypeError(SQInteger nparam,SQInteger typemask,SQInteger type);
 
@@ -100,9 +103,9 @@ public:
 	bool CLASS_OP(SQObjectPtr &target,SQInteger base,SQInteger attrs);
 	//return true if the loop is finished
 	bool FOREACH_OP(SQObjectPtr &o1,SQObjectPtr &o2,SQObjectPtr &o3,SQObjectPtr &o4,SQInteger arg_2,int exitpos,int &jump);
-	_INLINE bool LOCAL_INC(SQInteger op,SQObjectPtr &target, SQObjectPtr &a, SQObjectPtr &incr);
+	//_INLINE bool LOCAL_INC(SQInteger op,SQObjectPtr &target, SQObjectPtr &a, SQObjectPtr &incr);
 	_INLINE bool PLOCAL_INC(SQInteger op,SQObjectPtr &target, SQObjectPtr &a, SQObjectPtr &incr);
-	_INLINE bool DerefInc(SQInteger op,SQObjectPtr &target, SQObjectPtr &self, SQObjectPtr &key, SQObjectPtr &incr, bool postfix);
+	_INLINE bool DerefInc(SQInteger op,SQObjectPtr &target, SQObjectPtr &self, SQObjectPtr &key, SQObjectPtr &incr, bool postfix,SQInteger arg0);
 #ifdef _DEBUG_DUMP
 	void dumpstack(SQInteger stackbase=-1, bool dumpall = false);
 #endif

@@ -199,7 +199,7 @@ static SQInteger base_compilestring(HSQUIRRELVM v)
 static SQInteger base_newthread(HSQUIRRELVM v)
 {
 	SQObjectPtr &func = stack_get(v,2);
-	SQInteger stksize = (_funcproto(_closure(func)->_function)->_stacksize << 1) +2;
+	SQInteger stksize = (_closure(func)->_function->_stacksize << 1) +2;
 	HSQUIRRELVM newv = sq_newthread(v, (stksize < MIN_STACK_OVERHEAD + 2)? MIN_STACK_OVERHEAD + 2 : stksize);
 	sq_move(newv,v,-2);
 	return 1;
@@ -833,7 +833,7 @@ static SQInteger closure_getinfos(HSQUIRRELVM v) {
 	SQObject o = stack_get(v,1);
 	SQTable *res = SQTable::Create(_ss(v),4);
 	if(type(o) == OT_CLOSURE) {
-		SQFunctionProto *f = _funcproto(_closure(o)->_function);
+		SQFunctionProto *f = _closure(o)->_function;
 		SQInteger nparams = f->_nparameters + (f->_varparams?1:0);
 		SQObjectPtr params = SQArray::Create(_ss(v),nparams);
 		for(SQInteger n = 0; n<f->_nparameters; n++) {

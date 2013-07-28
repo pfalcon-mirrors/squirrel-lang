@@ -28,7 +28,11 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_GET")},
 	{_SC("_OP_EQ")},
 	{_SC("_OP_NE")},
-	{_SC("_OP_ARITH")},
+	{_SC("_OP_ADD")},
+	{_SC("_OP_SUB")},
+	{_SC("_OP_MUL")},
+	{_SC("_OP_DIV")},
+	{_SC("_OP_MOD")},
 	{_SC("_OP_BITW")},
 	{_SC("_OP_RETURN")},
 	{_SC("_OP_LOADNULLS")},
@@ -43,7 +47,6 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_NEWOBJ")},
 	{_SC("_OP_APPENDARRAY")},
 	{_SC("_OP_COMPARITH")},
-	{_SC("_OP_COMPARITHL")},
 	{_SC("_OP_INC")},
 	{_SC("_OP_INCL")},
 	{_SC("_OP_PINC")},
@@ -78,7 +81,7 @@ void DumpLiteral(SQObjectPtr &o)
 		case OT_FLOAT: scprintf(_SC("{%f}"),_float(o));break;
 		case OT_INTEGER: scprintf(_SC("{%d}"),_integer(o));break;
 		case OT_BOOL: scprintf(_SC("%s"),_integer(o)?_SC("true"):_SC("false"));break;
-		default: scprintf(_SC("(%s %p)"),GetTypeName(o),_rawval(o));break; break; //shut up compiler
+		default: scprintf(_SC("(%s %p)"),GetTypeName(o),(void*)_rawval(o));break; break; //shut up compiler
 	}
 }
 
@@ -193,9 +196,9 @@ void SQFuncState::Dump(SQFunctionProto *func)
 		else if(inst.op==_OP_LOADFLOAT) {
 			scprintf(_SC("[%03d] %15s %d %f %d %d\n"),n,g_InstrDesc[inst.op].name,inst._arg0,*((SQFloat*)&inst._arg1),inst._arg2,inst._arg3);
 		}
-		else if(inst.op==_OP_ARITH){
+	/*	else if(inst.op==_OP_ARITH){
 			scprintf(_SC("[%03d] %15s %d %d %d %c\n"),n,g_InstrDesc[inst.op].name,inst._arg0,inst._arg1,inst._arg2,inst._arg3);
-		}
+		}*/
 		else 
 			scprintf(_SC("[%03d] %15s %d %d %d %d\n"),n,g_InstrDesc[inst.op].name,inst._arg0,inst._arg1,inst._arg2,inst._arg3);
 		n++;
@@ -302,7 +305,7 @@ SQInteger SQFuncState::CountOuters(SQInteger stacksize)
 	while(k >= stacksize) {
 		SQLocalVarInfo &lvi = _vlocals[k];
 		k--;
-		if(lvi._end_op == -1) { //this means is an outer
+		if(lvi._end_op == UINT_MINUS_ONE) { //this means is an outer
 			outers++;
 		}
 	}
@@ -316,7 +319,7 @@ void SQFuncState::SetStackSize(SQInteger n)
 		size--;
 		SQLocalVarInfo lvi = _vlocals.back();
 		if(type(lvi._name)!=OT_NULL){
-			if(lvi._end_op == -1) { //this means is an outer
+			if(lvi._end_op == UINT_MINUS_ONE) { //this means is an outer
 				_outers--;
 			}
 			lvi._end_op = GetCurrentPos();
@@ -372,7 +375,7 @@ SQInteger SQFuncState::GetLocalVariable(const SQObject &name)
 void SQFuncState::MarkLocalAsOuter(SQInteger pos)
 {
 	SQLocalVarInfo &lvi = _vlocals[pos];
-	lvi._end_op = -1;
+	lvi._end_op = UINT_MINUS_ONE;
 	_outers++;
 }
 
@@ -465,12 +468,15 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 				return;
 			}
 			break;
-		case _OP_MOVE: 
-			if((pi.op == _OP_GET || pi.op == _OP_ARITH || pi.op == _OP_BITW) && (pi._arg0 == i._arg1))
-			{
-				pi._arg0 = i._arg0;
-				_optimization = false;
-				return;
+		case _OP_MOVE:
+			switch(pi.op) {
+			case _OP_GET: case _OP_ADD: case _OP_SUB: case _OP_MUL: case _OP_DIV: case _OP_MOD: case _OP_BITW:
+				if(pi._arg0 == i._arg1)
+				{
+					pi._arg0 = i._arg0;
+					_optimization = false;
+					return;
+				}
 			}
 
 			if(pi.op == _OP_MOVE)

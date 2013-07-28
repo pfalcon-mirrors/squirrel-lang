@@ -13,10 +13,10 @@
 #include "sqclass.h"
 
 SQObjectPtr _null_;
-SQObjectPtr _true_(true);
-SQObjectPtr _false_(false);
-SQObjectPtr _one_((SQInteger)1);
-SQObjectPtr _minusone_((SQInteger)-1);
+//SQObjectPtr _true_(true);
+//SQObjectPtr _false_(false);
+//SQObjectPtr _one_((SQInteger)1);
+//SQObjectPtr _minusone_((SQInteger)-1);
 
 SQSharedState::SQSharedState()
 {
@@ -338,7 +338,7 @@ void RefTable::Finalize()
 {
 	RefNode *nodes = _nodes;
 	for(SQUnsignedInteger n = 0; n < _numofslots; n++) {
-		nodes->obj = _null_;
+		nodes->obj.Null();
 		nodes++;
 	}
 }

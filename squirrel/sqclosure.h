@@ -10,7 +10,7 @@ struct SQClass;
 struct SQClosure : public CHAINABLE_OBJ
 {
 private:
-	SQClosure(SQSharedState *ss,SQFunctionProto *func){_function=func; _base = NULL; INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);}
+	SQClosure(SQSharedState *ss,SQFunctionProto *func){_function = func; __ObjAddRef(_function); _base = NULL; INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this); _env = NULL;}
 public:
 	static SQClosure *Create(SQSharedState *ss,SQFunctionProto *func){
 		SQInteger size = _CALC_CLOSURE_SIZE(func);
@@ -23,18 +23,20 @@ public:
 		return nc;
 	}
 	void Release(){
-		SQFunctionProto *f = _funcproto(_function);
+		SQFunctionProto *f = _function;
 		SQInteger size = _CALC_CLOSURE_SIZE(f);
 		_DESTRUCT_VECTOR(SQObjectPtr,f->_noutervalues,_outervalues);
 		_DESTRUCT_VECTOR(SQObjectPtr,f->_ndefaultparams,_defaultparams);
+		__ObjRelease(_function);
 		this->~SQClosure();
 		sq_vm_free(this,size);
 	}
 	SQClosure *Clone()
 	{
-		SQFunctionProto *f = _funcproto(_function);
+		SQFunctionProto *f = _function;
 		SQClosure * ret = SQClosure::Create(_opt_ss(this),f);
 		ret->_env = _env;
+		if(ret->_env) __ObjAddRef(ret->_env);
 		for(SQInteger i = 0; i < f->_noutervalues; i++)
 			ret->_outervalues[i] = _outervalues[i];
 		for(SQInteger j = 0; j < f->_ndefaultparams; j++)
@@ -48,16 +50,16 @@ public:
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
 	void Finalize(){
-		SQFunctionProto *f = _funcproto(_function);
+		SQFunctionProto *f = _function;
 		for(SQInteger i = 0; i < f-> _noutervalues; i++)
 			_outervalues[i].Null();
 		for(SQInteger j = 0; j < f-> _ndefaultparams; j++)
 			_defaultparams[j].Null();
 	}
 #endif
-	SQObjectPtr _env;
+	SQWeakRef *_env;
 	SQClass *_base;
-	SQObjectPtr _function;
+	SQFunctionProto *_function;
 	SQObjectPtr *_outervalues;
 	SQObjectPtr *_defaultparams;
 };
@@ -114,7 +116,7 @@ public:
     void Kill(){
 		_state=eDead;
 		_stack.resize(0);
-		_closure=_null_;}
+		_closure.Null();}
 	void Release(){
 		sq_delete(this,SQGenerator);
 	}
@@ -135,7 +137,7 @@ public:
 struct SQNativeClosure : public CHAINABLE_OBJ
 {
 private:
-	SQNativeClosure(SQSharedState *ss,SQFUNCTION func){_function=func;INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);	}
+	SQNativeClosure(SQSharedState *ss,SQFUNCTION func){_function=func;INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this); _env = NULL;}
 public:
 	static SQNativeClosure *Create(SQSharedState *ss,SQFUNCTION func)
 	{
@@ -147,6 +149,7 @@ public:
 	{
 		SQNativeClosure * ret = SQNativeClosure::Create(_opt_ss(this),_function);
 		ret->_env = _env;
+		if(ret->_env) __ObjAddRef(ret->_env);
 		ret->_name = _name;
 		ret->_outervalues.copy(_outervalues);
 		ret->_typecheck.copy(_typecheck);
@@ -155,6 +158,7 @@ public:
 	}
 	~SQNativeClosure()
 	{
+		__ObjRelease(_env);
 		REMOVE_FROM_CHAIN(&_ss(this)->_gc_chain,this);
 	}
 	void Release(){
@@ -167,7 +171,7 @@ public:
 	SQInteger _nparamscheck;
 	SQIntVec _typecheck;
 	SQObjectPtrVec _outervalues;
-	SQObjectPtr _env;
+	SQWeakRef *_env;
 	SQFUNCTION _function;
 	SQObjectPtr _name;
 };

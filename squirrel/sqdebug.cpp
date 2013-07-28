@@ -15,7 +15,7 @@ SQRESULT sq_getfunctioninfo(HSQUIRRELVM v,SQInteger level,SQFunctionInfo *fi)
 		SQVM::CallInfo &ci = v->_callsstack[cssize-level-1];
 		if(sq_isclosure(ci._closure)) {
 			SQClosure *c = _closure(ci._closure);
-			SQFunctionProto *proto = _funcproto(c->_function);
+			SQFunctionProto *proto = c->_function;
 			fi->funcid = proto;
 			fi->name = type(proto->_name) == OT_STRING?_stringval(proto->_name):_SC("unknown");
 			fi->source = type(proto->_name) == OT_STRING?_stringval(proto->_sourcename):_SC("unknown");
@@ -33,7 +33,7 @@ SQRESULT sq_stackinfos(HSQUIRRELVM v, SQInteger level, SQStackInfos *si)
 		SQVM::CallInfo &ci = v->_callsstack[cssize-level-1];
 		switch (type(ci._closure)) {
 		case OT_CLOSURE:{
-			SQFunctionProto *func = _funcproto(_closure(ci._closure)->_function);
+			SQFunctionProto *func = _closure(ci._closure)->_function;
 			if (type(func->_name) == OT_STRING)
 				si->funcname = _stringval(func->_name);
 			if (type(func->_sourcename) == OT_STRING)
@@ -64,12 +64,12 @@ void SQVM::Raise_Error(const SQChar *s, ...)
 	_lasterror = SQString::Create(_ss(this),_spval,-1);
 }
 
-void SQVM::Raise_Error(SQObjectPtr &desc)
+void SQVM::Raise_Error(const SQObjectPtr &desc)
 {
 	_lasterror = desc;
 }
 
-SQString *SQVM::PrintObjVal(const SQObject &o)
+SQString *SQVM::PrintObjVal(const SQObjectPtr &o)
 {
 	switch(type(o)) {
 	case OT_STRING: return _string(o);
@@ -86,7 +86,7 @@ SQString *SQVM::PrintObjVal(const SQObject &o)
 	}
 }
 
-void SQVM::Raise_IdxError(SQObject &o)
+void SQVM::Raise_IdxError(const SQObjectPtr &o)
 {
 	SQObjectPtr oval = PrintObjVal(o);
 	Raise_Error(_SC("the index '%.50s' does not exist"), _stringval(oval));

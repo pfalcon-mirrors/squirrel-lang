@@ -165,7 +165,7 @@ bool SQGenerator::Resume(SQVM *v,SQObjectPtr &dest)
 	assert(target>=0 && target<=255);
 	v->EnterFrame(v->_top, v->_top + size, false);
 	v->ci->_generator   = this;
-	v->ci->_target      = target;
+	v->ci->_target      = (SQInt32)target;
 	v->ci->_closure     = _ci._closure;
 	v->ci->_ip          = _ci._ip;
 	v->ci->_literals    = _ci._literals;
@@ -331,7 +331,7 @@ bool SQClosure::Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write)
 {
 	_CHECK_IO(WriteTag(v,write,up,SQ_CLOSURESTREAM_HEAD));
 	_CHECK_IO(WriteTag(v,write,up,sizeof(SQChar)));
-	_CHECK_IO(_funcproto(_function)->Save(v,up,write));
+	_CHECK_IO(_function->Save(v,up,write));
 	_CHECK_IO(WriteTag(v,write,up,SQ_CLOSURESTREAM_TAIL));
 	return true;
 }
@@ -575,7 +575,7 @@ void SQClosure::Mark(SQCollectable **chain)
 {
 	START_MARK()
 		if(_base) _base->Mark(chain);
-		SQFunctionProto *fp = _funcproto(_function);
+		SQFunctionProto *fp = _function;
 		for(SQInteger i = 0; i < fp->_noutervalues; i++) SQSharedState::MarkObject(_outervalues[i], chain);
 		for(SQInteger i = 0; i < fp->_ndefaultparams; i++) SQSharedState::MarkObject(_defaultparams[i], chain);
 	END_MARK()

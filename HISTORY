@@ -1,3 +1,12 @@
+***version 3.0 beta 1***
+-various refactoring and optimizations
+-fixed bug in free variables (thx mokehehe)
+-fixed bug in functions with default parameters (thx ara & Yexo)
+-fixed bug in exception handling
+-improved error propagation in _set and _get metamethods ( and 'throw null' for clean failure)
+-added sq_getmemberhandle, sq_getbyhandle, sq_setbyhandle to set and get value from classes
+
+***2009-06-30         ***
 ***version 3.0 alpha 2***
 -added real free variables(thx Paul Ruizendaal)
 -added refactored function call implementation and compiler(thx Paul Ruizendaal)
