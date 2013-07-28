@@ -137,6 +137,7 @@ int sqstd_register_systemlib(HSQUIRRELVM v)
 		sq_pushstring(v,systemlib_funcs[i].name,-1);
 		sq_newclosure(v,systemlib_funcs[i].f,0);
 		sq_setparamscheck(v,systemlib_funcs[i].nparamscheck,systemlib_funcs[i].typemask);
+		sq_setnativeclosurename(v,-1,systemlib_funcs[i].name);
 		sq_createslot(v,-3);
 		i++;
 	}

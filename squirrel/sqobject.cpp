@@ -8,7 +8,7 @@
 #include "sqtable.h"
 #include "squserdata.h"
 #include "sqfuncproto.h"
-
+#include "sqclass.h"
 #include "sqclosure.h"
 
 SQString *SQString::Create(SQSharedState *ss,const SQChar *s,int len)
@@ -35,6 +35,13 @@ unsigned int TranslateIndex(const SQObjectPtr &idx)
 	return 0;
 }
 
+bool SQDelegable::GetMetaMethod(SQMetaMethod mm,SQObjectPtr &res) {
+	if(_delegate) {
+		return _delegate->Get((*_ss(this)->_metamethods)[mm],res);
+	}
+	return false;
+}
+
 int SQGenerator::Yield(SQVM *v)
 {
 	if(_state==eSuspended)v->RT_Error(_SC("internal vm error, yielding dead generator"));
@@ -42,9 +49,15 @@ int SQGenerator::Yield(SQVM *v)
 	int size=v->_top-v->_stackbase;
 	_ci=*v->ci;
 	_stack.resize(size);
-	int bytesize=sizeof(SQObjectPtr)*size;
-	memcpy(&_stack._vals[0],&v->_stack[v->_stackbase],bytesize);
-	memset(&v->_stack[v->_stackbase],0,bytesize);
+	for(int n =0; n<size; n++) {
+		_stack._vals[n] = v->_stack[v->_stackbase+n];
+		v->_stack[v->_stackbase+n] = _null_;
+	}
+	int nvargs = v->ci->_vargs.size;
+	int vargsbase = v->ci->_vargs.base;
+	for(int n = nvargs - 1; n >= 0; n--) {
+		_vargsstack.push_back(v->_vargsstack[vargsbase+n]);
+	}
 	_ci._generator=_null_;
 	for(int i=0;i<_ci._etraps;i++) {
 		_etraps.push_back(v->_etraps.top());
@@ -65,13 +78,21 @@ void SQGenerator::Resume(SQVM *v,int target)
 	v->_stackbase=v->_top;
 	v->ci->_target=target;
 	v->ci->_generator=SQObjectPtr(this);
+	v->ci->_vargs.size = _vargsstack.size();
+	
 	for(int i=0;i<_ci._etraps;i++) {
 		v->_etraps.push_back(_etraps.top());
 		_etraps.pop_back();
 	}
-    int bytesize=sizeof(SQObjectPtr)*size;
-	memcpy(&v->_stack[v->_stackbase],&_stack._vals[0],bytesize);
-	memset(&_stack._vals[0],0,bytesize);
+	for(int n =0; n<size; n++) {
+		v->_stack[v->_stackbase+n] = _stack._vals[n];
+		_stack._vals[0] = _null_;
+	}
+	while(_vargsstack.size()) {
+		v->_vargsstack.push_back(_vargsstack.back());
+		_vargsstack.pop_back();
+	}
+	v->ci->_vargs.base = v->_vargsstack.size() - v->ci->_vargs.size;
 	v->_top=v->_stackbase+size;
 	v->ci->_prevtop=prevtop;
 	v->ci->_prevstkbase=v->_stackbase-oldstackbase;
@@ -232,6 +253,7 @@ void SQFunctionProto::Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write)
 	for(i=0;i<nsize;i++){
 		SafeWrite(v,write,up,&_outervalues[i]._blocal,sizeof(bool));
 		WriteObject(v,up,write,_outervalues[i]._src);
+		WriteObject(v,up,write,_outervalues[i]._name);
 	}
 	WriteTag(v,write,up,SQ_CLOSURESTREAM_PART);
 	nsize=_localvarinfos.size();
@@ -259,6 +281,7 @@ void SQFunctionProto::Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write)
 	}
 	SafeWrite(v,write,up,&_stacksize,sizeof(_stacksize));
 	SafeWrite(v,write,up,&_bgenerator,sizeof(_bgenerator));
+	SafeWrite(v,write,up,&_varparams,sizeof(_varparams));
 }
 
 void SQFunctionProto::Load(SQVM *v,SQUserPointer up,SQREADFUNC read)
@@ -284,9 +307,11 @@ void SQFunctionProto::Load(SQVM *v,SQUserPointer up,SQREADFUNC read)
 	SafeRead(v,read,up,&nsize,sizeof(nsize));
 	for(i = 0; i < nsize; i++){
 		bool bl;
+		SQObjectPtr name;
 		SafeRead(v,read,up, &bl, sizeof(bool));
 		ReadObject(v, up, read, o);
-		_outervalues.push_back(SQOuterVar(o, bl));
+		ReadObject(v, up, read, name);
+		_outervalues.push_back(SQOuterVar(name,o, bl));
 	}
 	CheckTag(v,read,up,SQ_CLOSURESTREAM_PART);
 	SafeRead(v,read,up,&nsize, sizeof(nsize));
@@ -315,6 +340,7 @@ void SQFunctionProto::Load(SQVM *v,SQUserPointer up,SQREADFUNC read)
 	}
 	SafeRead(v,read,up, &_stacksize, sizeof(_stacksize));
 	SafeRead(v,read,up, &_bgenerator, sizeof(_bgenerator));
+	SafeRead(v,read,up, &_varparams, sizeof(_varparams));
 }
 
 #ifndef NO_GARBAGE_COLLECTOR
@@ -334,6 +360,7 @@ void SQVM::Mark(SQCollectable **chain)
 		SQSharedState::MarkObject(_roottable, chain);
 		SQSharedState::MarkObject(temp_reg, chain);
 		for(unsigned int i = 0; i < _stack.size(); i++) SQSharedState::MarkObject(_stack[i], chain);
+		for(unsigned int i = 0; i < _vargsstack.size(); i++) SQSharedState::MarkObject(_vargsstack[i], chain);
 	END_MARK()
 }
 
@@ -356,10 +383,41 @@ void SQTable::Mark(SQCollectable **chain)
 	END_MARK()
 }
 
+void SQClass::Mark(SQCollectable **chain)
+{
+	START_MARK()
+		_members->Mark(chain);
+		if(_base) _base->Mark(chain);
+		SQSharedState::MarkObject(_attributes, chain);
+		for(unsigned int i =0; i< _defaultvalues.size(); i++) {
+			SQSharedState::MarkObject(_defaultvalues[i].val, chain);
+			SQSharedState::MarkObject(_defaultvalues[i].attrs, chain);
+		}
+		for(unsigned int i =0; i< _methods.size(); i++) {
+			SQSharedState::MarkObject(_methods[i].val, chain);
+			SQSharedState::MarkObject(_methods[i].attrs, chain);
+		}
+		for(unsigned int i =0; i< _metamethods.size(); i++) {
+			SQSharedState::MarkObject(_metamethods[i], chain);
+		}
+	END_MARK()
+}
+
+void SQInstance::Mark(SQCollectable **chain)
+{
+	START_MARK()
+		_class->Mark(chain);
+		for(unsigned int i =0; i< _values.size(); i++) {
+			SQSharedState::MarkObject(_values[i], chain);
+		}
+	END_MARK()
+}
+
 void SQGenerator::Mark(SQCollectable **chain)
 {
 	START_MARK()
 		for(unsigned int i = 0; i < _stack.size(); i++) SQSharedState::MarkObject(_stack[i], chain);
+		for(unsigned int i = 0; i < _vargsstack.size(); i++) SQSharedState::MarkObject(_vargsstack[i], chain);
 		SQSharedState::MarkObject(_closure, chain);
 	END_MARK()
 }
@@ -387,3 +445,4 @@ void SQUserData::Mark(SQCollectable **chain){
 void SQCollectable::UnMark() { _uiRef&=~MARK_FLAG; }
 
 #endif
+

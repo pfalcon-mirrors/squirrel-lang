@@ -114,35 +114,52 @@ static int _file__typeof(HSQUIRRELVM v)
 	return 1;
 }
 
-
-//bindings
-#define _DECL_FILE_FUNC(name,nparams,typecheck) {_SC(#name),_file_##name,nparams,typecheck}
-static SQRegFunction _file_delegate[] = {
-	_DECL_STREAM_FUNC(readstr,-2,_SC("unn")),
-	_DECL_STREAM_FUNC(readblob,2,_SC("un")),
-	_DECL_STREAM_FUNC(readn,2,_SC("un")),
-	_DECL_STREAM_FUNC(writestr,-2,_SC("usn")),
-	_DECL_STREAM_FUNC(writeblob,-2,_SC("uu")),
-	_DECL_STREAM_FUNC(writen,3,_SC("unn")),
-	_DECL_STREAM_FUNC(seek,-2,_SC("unn")),
-	_DECL_STREAM_FUNC(tell,1,_SC("u")),
-	_DECL_STREAM_FUNC(len,1,_SC("u")),
-	_DECL_STREAM_FUNC(eos,1,_SC("u")),
-	_DECL_STREAM_FUNC(flush,1,_SC("u")),
-	_DECL_FILE_FUNC(_typeof,1,_SC("u")),
-	{0,0,0,0},
-};
-
 static int _file_releasehook(SQUserPointer p, int size)
 {
-	SQFile *self = (SQFile *)p;
-	self->~SQFile();
+	SQFile *self = (SQFile*)p;
+	delete self;
 	return 1;
 }
 
+static int _file_constructor(HSQUIRRELVM v)
+{
+	const SQChar *filename,*mode;
+	bool owns = true;
+	SQFile *f;
+	SQFILE newf;
+	if(sq_gettype(v,2) == OT_STRING && sq_gettype(v,3) == OT_STRING) {
+		sq_getstring(v, 2, &filename);
+		sq_getstring(v, 3, &mode);
+		newf = sqstd_fopen(filename, mode);
+		if(!newf) return sq_throwerror(v, _SC("cannot open file"));
+	} else if(sq_gettype(v,2) == OT_USERPOINTER) {
+		owns = !(sq_gettype(v,3) == OT_NULL);
+		sq_getuserpointer(v,2,&newf);
+	} else {
+		return sq_throwerror(v,_SC("wrong parameter"));
+	}
+	f = new SQFile(newf,owns);
+	if(SQ_FAILED(sq_setinstanceup(v,1,f))) {
+		delete f;
+		return sq_throwerror(v, _SC("cannot create blob with negative size"));
+	}
+	sq_setreleasehook(v,1,_file_releasehook);
+	return 0;
+}
+
+//bindings
+#define _DECL_FILE_FUNC(name,nparams,typecheck) {_SC(#name),_file_##name,nparams,typecheck}
+static SQRegFunction _file_methods[] = {
+	_DECL_FILE_FUNC(constructor,3,_SC("x")),
+	_DECL_FILE_FUNC(_typeof,1,_SC("x")),
+	{0,0,0,0},
+};
+
+
+
 SQRESULT sqstd_createfile(HSQUIRRELVM v, SQFILE file,int own)
 {
-	SQUserPointer p = sq_newuserdata(v, sizeof(SQFile));
+	/*SQUserPointer p = sq_newuserdata(v, sizeof(SQFile));
 	sq_setreleasehook(v,-1,_file_releasehook);
 	sq_settypetag(v,-1,SQSTD_FILE_TYPE_TAG);
 	new (p) SQFile(file, own?true:false);
@@ -151,34 +168,38 @@ SQRESULT sqstd_createfile(HSQUIRRELVM v, SQFILE file,int own)
 	if(SQ_FAILED(sq_rawget(v,-2)))
 		return sq_throwerror(v,_SC("io lib not initialized"));
 	sq_setdelegate(v,-3);
-	sq_pop(v,1);
+	sq_pop(v,1);*/
+	int top = sq_gettop(v);
+	sq_pushregistrytable(v);
+	sq_pushstring(v,_SC("std_file"),-1);
+	if(SQ_SUCCEEDED(sq_get(v,-2))) {
+		sq_remove(v,-2); //removes the registry
+		sq_pushroottable(v); // push the this
+		sq_pushuserpointer(v,file); //file
+		if(own){
+			sq_pushinteger(v,1); //true
+		}
+		else{
+			sq_pushnull(v); //false
+		}
+		if(SQ_SUCCEEDED( sq_call(v,3,1) )) {
+			return SQ_OK;
+		}
+	}
+	sq_settop(v,top);
 	return SQ_OK;
 }
 
 SQRESULT sqstd_getfile(HSQUIRRELVM v, int idx, SQFILE *file)
 {
 	SQFile *fileobj = NULL;
-	unsigned int typetag;
-	if(SQ_SUCCEEDED(sq_getuserdata(v,idx,(SQUserPointer*)&fileobj,&typetag))
-		&& (typetag == SQSTD_FILE_TYPE_TAG)) {
-			*file = fileobj->GetHandle();
-			return SQ_OK;
-		}
+	if(SQ_SUCCEEDED(sq_getinstanceup(v,idx,(SQUserPointer*)&fileobj,SQSTD_FILE_TYPE_TAG))) {
+		*file = fileobj->GetHandle();
+		return SQ_OK;
+	}
 	return sq_throwerror(v,_SC("not a file"));
 }
 
-
-static int _g_io_fopen(HSQUIRRELVM v)
-{
-	const SQChar *filename,*mode;
-	sq_getstring(v, 2, &filename);
-	sq_getstring(v, 3, &mode);
-	SQFILE newf = sqstd_fopen(filename, mode);
-	if(!newf) return sq_throwerror(v, _SC("cannot open file"));
-	if(SQ_FAILED(sqstd_createfile(v,newf,1)))
-		return SQ_ERROR;
-	return 1;
-}
 
 static SQInteger _io_file_lexfeedASCII(SQUserPointer file)
 {
@@ -249,6 +270,7 @@ SQRESULT sqstd_dofile(HSQUIRRELVM v,const SQChar *filename,int retval,int printe
 {
 	if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,printerror))) {
 		sq_push(v,-2);
+		int ntop = sq_gettop(v);
 		if(SQ_SUCCEEDED(sq_call(v,1,retval))) {
 			sq_remove(v,retval?-2:-1); //removes the closure
 			return 1;
@@ -291,7 +313,6 @@ int _g_io_dofile(HSQUIRRELVM v)
 
 #define _DECL_GLOBALIO_FUNC(name,nparams,typecheck) {_SC(#name),_g_io_##name,nparams,typecheck}
 static SQRegFunction iolib_funcs[]={
-	_DECL_GLOBALIO_FUNC(fopen,3,_SC(".ss")),
 	_DECL_GLOBALIO_FUNC(loadfile,2,_SC(".s")),
 	_DECL_GLOBALIO_FUNC(dofile,2,_SC(".s")),
 	{0,0}
@@ -299,32 +320,9 @@ static SQRegFunction iolib_funcs[]={
 
 SQRESULT sqstd_register_iolib(HSQUIRRELVM v)
 {
+	int top = sq_gettop(v);
 	//create delegate
-	sq_pushregistrytable(v);
-	sq_pushstring(v,_SC("std_io"),-1);
-	sq_newtable(v);
-	int i = 0;
-	while(_file_delegate[i].name != 0) {
-		SQRegFunction &f = _file_delegate[i];
-		sq_pushstring(v,f.name,-1);
-		sq_newclosure(v,f.f,0);
-		sq_setparamscheck(v,f.nparamscheck,f.typemask);
-		sq_createslot(v,-3);
-		i++;
-	}
-	sq_createslot(v,-3);
-	sq_pop(v,1); //pops registry
-
-		i = 0;
-	while(iolib_funcs[i].name!=0)
-	{
-		SQRegFunction &f = iolib_funcs[i];
-		sq_pushstring(v,f.name,-1);
-		sq_newclosure(v,f.f,0);
-		sq_setparamscheck(v,f.nparamscheck,f.typemask);
-		sq_createslot(v,-3);
-		i++;
-	}
+	declare_stream(v,_SC("file"),SQSTD_FILE_TYPE_TAG,_SC("std_file"),_file_methods,iolib_funcs);
 	sq_pushstring(v,_SC("stdout"),-1);
 	sqstd_createfile(v,stdout,0);
 	sq_createslot(v,-3);
@@ -334,6 +332,6 @@ SQRESULT sqstd_register_iolib(HSQUIRRELVM v)
 	sq_pushstring(v,_SC("stderr"),-1);
 	sqstd_createfile(v,stderr,0);
 	sq_createslot(v,-3);
-
+	sq_settop(v,top);
 	return SQ_OK;
 }

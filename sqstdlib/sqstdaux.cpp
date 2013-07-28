@@ -69,6 +69,12 @@ void sqstd_printcallstack(HSQUIRRELVM v)
 				case OT_THREAD:
 					pf(v,_SC("[%s] THREAD\n"),name);
 					break;
+				case OT_CLASS:
+					pf(v,_SC("[%s] CLASS\n"),name);
+					break;
+				case OT_INSTANCE:
+					pf(v,_SC("[%s] INSTANCE\n"),name);
+					break;
 				}
 				sq_pop(v,1);
 			}

@@ -8,6 +8,7 @@
 #include "sqarray.h"
 #include "sqfuncproto.h"
 #include "sqclosure.h"
+#include "sqclass.h"
 #include <stdlib.h>
 #include <stdarg.h>
 #include <ctype.h>
@@ -238,7 +239,7 @@ void sq_base_register(HSQUIRRELVM v)
 		sq_pushstring(v,base_funcs[i].name,-1);
 		sq_newclosure(v,base_funcs[i].f,0);
 		sq_setnativeclosurename(v,-1,base_funcs[i].name);
-		sq_setparamscheck(v,base_funcs[i].nparamscheck,NULL);
+		sq_setparamscheck(v,base_funcs[i].nparamscheck,base_funcs[i].typemask);
 		sq_createslot(v,-3);
 		i++;
 	}
@@ -679,23 +680,20 @@ static int thread_wakeup(HSQUIRRELVM v)
 static int thread_getstatus(HSQUIRRELVM v)
 {
 	SQObjectPtr &o = stack_get(v,1);
-	if(type(o) == OT_THREAD) {
-		switch(sq_getvmstate(_thread(o))) {
-			case SQ_VMSTATE_IDLE:
-				sq_pushstring(v,_SC("idle"),-1);
-			break;
-			case SQ_VMSTATE_RUNNING:
-				sq_pushstring(v,_SC("running"),-1);
-			break;
-			case SQ_VMSTATE_SUSPENDED:
-				sq_pushstring(v,_SC("suspended"),-1);
-			break;
-			default:
-				return sq_throwerror(v,_SC("internal VM error"));
-		}
-		return 1;
+	switch(sq_getvmstate(_thread(o))) {
+		case SQ_VMSTATE_IDLE:
+			sq_pushstring(v,_SC("idle"),-1);
+		break;
+		case SQ_VMSTATE_RUNNING:
+			sq_pushstring(v,_SC("running"),-1);
+		break;
+		case SQ_VMSTATE_SUSPENDED:
+			sq_pushstring(v,_SC("suspended"),-1);
+		break;
+		default:
+			return sq_throwerror(v,_SC("internal VM error"));
 	}
-	return sq_throwerror(v,_SC("wrong parameter"));
+	return 1;
 }
 
 SQRegFunction SQSharedState::_thread_default_delegate_funcz[] = {
@@ -704,3 +702,36 @@ SQRegFunction SQSharedState::_thread_default_delegate_funcz[] = {
 	{_SC("getstatus"), thread_getstatus, 1, _SC("v")},
 	{0,0},
 };
+
+static int class_getattributes(HSQUIRRELVM v)
+{
+	if(SQ_SUCCEEDED(sq_getattributes(v,-2)))
+		return 1;
+	return SQ_ERROR;
+}
+
+static int class_setattributes(HSQUIRRELVM v)
+{
+	if(SQ_SUCCEEDED(sq_setattributes(v,-3)))
+		return 1;
+	return SQ_ERROR;
+}
+
+SQRegFunction SQSharedState::_class_default_delegate_funcz[] = {
+	{_SC("getattributes"), class_getattributes, 2, _SC("y.")},
+	{_SC("setattributes"), class_setattributes, 3, _SC("y..")},
+	{0,0},
+};
+
+static int instance_getclass(HSQUIRRELVM v)
+{
+	if(SQ_SUCCEEDED(sq_getclass(v,1)))
+		return 1;
+	return SQ_ERROR;
+}
+
+SQRegFunction SQSharedState::_instance_default_delegate_funcz[] = {
+	{_SC("getclass"), instance_getclass, 1, _SC("x")},
+	{0,0},
+};
+

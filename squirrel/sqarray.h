@@ -59,12 +59,12 @@ public:
 	void Extend(const SQArray *a);
 	SQObjectPtr &Top(){return _values.top();}
 	void Pop(){_values.pop_back(); ShrinkIfNeeded(); }
-	inline void Insert(const SQObject& idx,const SQObject &val){_values.insert((unsigned int)tointeger(idx),val);}
-	inline void ShrinkIfNeeded() {
+	void Insert(const SQObject& idx,const SQObject &val){_values.insert((unsigned int)tointeger(idx),val);}
+	void ShrinkIfNeeded() {
 		if(_values.size() <= _values.capacity()>>2) //shrink the array
 			_values.shrinktofit();
 	}
-	inline void Remove(unsigned int idx){
+	void Remove(unsigned int idx){
 		_values.remove(idx);
 		ShrinkIfNeeded();
 	}

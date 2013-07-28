@@ -10,6 +10,7 @@
 #include "sqtable.h"
 #include "sqarray.h"
 #include "squserdata.h"
+#include "sqclass.h"
 
 SQObjectPtr _null_;
 SQObjectPtr _notnull_(1);
@@ -29,6 +30,7 @@ SQSharedState::SQSharedState()
 
 #define newmetamethod(s) {	\
 	_metamethods->push_back(SQString::Create(this,s));	\
+	_table(_metamethodsmap)->NewSlot(_metamethods->back(),(SQInteger)(_metamethods->size()-1)); \
 	}
 
 bool CompileTypemask(SQIntVec &res,const SQChar *typemask)
@@ -51,6 +53,8 @@ bool CompileTypemask(SQIntVec &res,const SQChar *typemask)
 				case 'g': mask |= _RT_GENERATOR; break;
 				case 'p': mask |= _RT_USERPOINTER; break;
 				case 'v': mask |= _RT_THREAD; break;
+				case 'x': mask |= _RT_INSTANCE; break;
+				case 'y': mask |= _RT_CLASS; break;
 				case '.': mask = -1; res.push_back(mask); i++; mask = 0; continue;
 				default:
 					return false;
@@ -96,6 +100,7 @@ void SQSharedState::Init()
 	sq_new(_metamethods,SQObjectPtrVec);
 	sq_new(_systemstrings,SQObjectPtrVec);
 	sq_new(_types,SQObjectPtrVec);
+	_metamethodsmap = SQTable::Create(this,MT_LAST-1);
 	//adding type strings to avoid memory trashing
 	//types names
 	newsysstring(_SC("null"));
@@ -110,6 +115,8 @@ void SQSharedState::Init()
 	newsysstring(_SC("function"));
 	newsysstring(_SC("generator"));
 	newsysstring(_SC("thread"));
+	newsysstring(_SC("class"));
+	newsysstring(_SC("instance"));
 	//meta methods
 	newmetamethod(MM_ADD);
 	newmetamethod(MM_SUB);
@@ -127,6 +134,7 @@ void SQSharedState::Init()
 	newmetamethod(MM_NEWSLOT);
 	newmetamethod(MM_DELSLOT);
 
+	_constructoridx = SQString::Create(this,_SC("constructor"));
 	_refs_table = SQTable::Create(this,0);
 	_registry = SQTable::Create(this,0);
 	_table_default_delegate=CreateDefaultDelegate(this,_table_default_delegate_funcz);
@@ -136,15 +144,20 @@ void SQSharedState::Init()
 	_closure_default_delegate=CreateDefaultDelegate(this,_closure_default_delegate_funcz);
 	_generator_default_delegate=CreateDefaultDelegate(this,_generator_default_delegate_funcz);
 	_thread_default_delegate=CreateDefaultDelegate(this,_thread_default_delegate_funcz);
+	_class_default_delegate=CreateDefaultDelegate(this,_class_default_delegate_funcz);
+	_instance_default_delegate=CreateDefaultDelegate(this,_instance_default_delegate_funcz);
 
 }
 
 SQSharedState::~SQSharedState()
 {
+	_constructoridx = _null_;
 	_table(_refs_table)->Finalize();
 	_table(_registry)->Finalize();
+	_table(_metamethodsmap)->Finalize();
 	_refs_table = _null_;
 	_registry = _null_;
+	_metamethodsmap = _null_;
 	while(!_systemstrings->empty()){
 		_systemstrings->back()=_null_;
 		_systemstrings->pop_back();
@@ -158,6 +171,8 @@ SQSharedState::~SQSharedState()
 	_closure_default_delegate=_null_;
 	_generator_default_delegate=_null_;
 	_thread_default_delegate=_null_;
+	_class_default_delegate=_null_;
+	_instance_default_delegate=_null_;
 	
 #ifndef NO_GARBAGE_COLLECTOR
 	
@@ -185,6 +200,18 @@ SQSharedState::~SQSharedState()
 	if(_scratchpad)SQ_FREE(_scratchpad,_scratchpadsize);
 }
 
+
+SQInteger SQSharedState::GetMetaMethodIdxByName(const SQObjectPtr &name)
+{
+	if(type(name) != OT_STRING)
+		return -1;
+	SQObjectPtr ret;
+	if(_table(_metamethodsmap)->Get(name,ret)) {
+		return _integer(ret);
+	}
+	return -1;
+}
+
 #ifndef NO_GARBAGE_COLLECTOR
 
 void SQSharedState::MarkObject(SQObjectPtr &o,SQCollectable **chain)
@@ -197,6 +224,8 @@ void SQSharedState::MarkObject(SQObjectPtr &o,SQCollectable **chain)
 	case OT_NATIVECLOSURE:_nativeclosure(o)->Mark(chain);break;
 	case OT_GENERATOR:_generator(o)->Mark(chain);break;
 	case OT_THREAD:_thread(o)->Mark(chain);break;
+	case OT_CLASS:_class(o)->Mark(chain);break;
+	case OT_INSTANCE:_instance(o)->Mark(chain);break;
 	}
 }
 
@@ -211,6 +240,7 @@ int SQSharedState::CollectGarbage(SQVM *vm)
 	int x = _table(_thread(_root_vm)->_roottable)->CountUsed();
 	MarkObject(_refs_table,&tchain);
 	MarkObject(_registry,&tchain);
+	MarkObject(_metamethodsmap,&tchain);
 	MarkObject(_table_default_delegate,&tchain);
 	MarkObject(_array_default_delegate,&tchain);
 	MarkObject(_string_default_delegate,&tchain);
@@ -218,6 +248,8 @@ int SQSharedState::CollectGarbage(SQVM *vm)
 	MarkObject(_generator_default_delegate,&tchain);
 	MarkObject(_thread_default_delegate,&tchain);
 	MarkObject(_closure_default_delegate,&tchain);
+	MarkObject(_class_default_delegate,&tchain);
+	MarkObject(_instance_default_delegate,&tchain);
 	
 	SQCollectable *t=_gc_chain;
 	SQCollectable *nx=NULL;
@@ -289,6 +321,18 @@ SQChar* SQSharedState::GetScratchPad(int size)
 * http://www.lua.org/source/4.0.1/src_lstring.c.html
 */
 
+int SQString::Next(const SQObjectPtr &refpos, SQObjectPtr &outkey, SQObjectPtr &outval)
+{
+	int idx = (int)TranslateIndex(refpos);
+	while(idx < _len){
+		outkey = (SQInteger)idx;
+		outval = SQInteger(_val[idx]);
+		//return idx for the next iteration
+		return ++idx;
+	}
+	//nothing to iterate anymore
+	return -1;
+}
 
 StringTable::StringTable()
 {

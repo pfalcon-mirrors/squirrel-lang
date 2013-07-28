@@ -13,68 +13,65 @@
 SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_LINE")},
 	{_SC("_OP_LOAD")},
-	{_SC("_OP_LOADNULL")},
+	{_SC("_OP_TAILCALL")},
+	{_SC("_OP_CALL")},
+	{_SC("_OP_PREPCALL")},
+	{_SC("_OP_PREPCALLK")},
+	{_SC("_OP_GETK")},
+	{_SC("_OP_MOVE")},
 	{_SC("_OP_NEWSLOT")},
+	{_SC("_OP_DELETE")},
 	{_SC("_OP_SET")},
 	{_SC("_OP_GET")},
-	{_SC("_OP_LOADROOTTABLE")},
-	{_SC("_OP_PREPCALL")},
-	{_SC("_OP_CALL")},
-	{_SC("_OP_MOVE")},
-	{_SC("_OP_ADD")},
-	{_SC("_OP_SUB")},
-	{_SC("_OP_MUL")},
-	{_SC("_OP_DIV")},
-	{_SC("_OP_MODULO")},
-	{_SC("_OP_YIELD")},
 	{_SC("_OP_EQ")},
 	{_SC("_OP_NE")},
+	{_SC("_OP_ARITH")},
+	{_SC("_OP_BITW")},
+	{_SC("_OP_RETURN")},
+	{_SC("_OP_LOADNULL")},
+	{_SC("_OP_LOADNULLS")},
+	{_SC("_OP_LOADROOTTABLE")},
+	{_SC("_OP_DMOVE")},
+	{_SC("_OP_JMP")},
+	{_SC("_OP_JNZ")},
+	{_SC("_OP_JZ")},
+	{_SC("_OP_LOADFREEVAR")},
+	{_SC("_OP_VARGC")},
+	{_SC("_OP_GETVARGV")},
+	{_SC("_OP_NEWTABLE")},
+	{_SC("_OP_NEWARRAY")},
+	{_SC("_OP_APPENDARRAY")},
+	{_SC("_OP_GETPARENT")},
+	{_SC("_OP_MINUSEQ")},
+	{_SC("_OP_PLUSEQ")},
+	{_SC("_OP_INC")},
+	{_SC("_OP_INCL")},
+	{_SC("_OP_PINC")},
+	{_SC("_OP_PINCL")},
 	{_SC("_OP_G")},
 	{_SC("_OP_GE")},
 	{_SC("_OP_L")},
 	{_SC("_OP_LE")},
 	{_SC("_OP_EXISTS")},
-	{_SC("_OP_NEWTABLE")},
-	{_SC("_OP_JMP")},
-	{_SC("_OP_JNZ")},
-	{_SC("_OP_JZ")},
-	{_SC("_OP_RETURN")},
-	{_SC("_OP_CLOSURE")},
-	{_SC("_OP_FOREACH")},
-	{_SC("_OP_DELEGATE")},
-	{_SC("_OP_TYPEOF")},
-	{_SC("_OP_PUSHTRAP")},
-	{_SC("_OP_POPTRAP")},
-	{_SC("_OP_THROW")},
-	{_SC("_OP_NEWARRAY")},
-	{_SC("_OP_APPENDARRAY")},
+	{_SC("_OP_INSTANCEOF")},
 	{_SC("_OP_AND")},
 	{_SC("_OP_OR")},
 	{_SC("_OP_NEG")},
 	{_SC("_OP_NOT")},
-	{_SC("_OP_DELETE")},
 	{_SC("_OP_BWNOT")},
-	{_SC("_OP_BWAND")},
-	{_SC("_OP_BWOR")},
-	{_SC("_OP_BWXOR")},
-	{_SC("_OP_MINUSEQ")},
-	{_SC("_OP_PLUSEQ")},
-	{_SC("_OP_TAILCALL")},
-	{_SC("_OP_SHIFTL")},
-	{_SC("_OP_SHIFTR")},
+	{_SC("_OP_CLOSURE")},
+	{_SC("_OP_YIELD")},
 	{_SC("_OP_RESUME")},
+	{_SC("_OP_FOREACH")},
+	{_SC("_OP_DELEGATE")},
 	{_SC("_OP_CLONE")},
-	{_SC("_OP_INC")},
-	{_SC("_OP_DEC")},
-	{_SC("_OP_PINC")},
-	{_SC("_OP_PDEC")},
-	//optimiz
-	{_SC("_OP_GETK")},
-	{_SC("_OP_PREPCALLK")},
-	{_SC("_OP_DMOVE")},
-	{_SC("_OP_GETPARENT")},
-	{_SC("_OP_LOADNULLS")},
-	{_SC("_OP_USHIFTR")},
+	{_SC("_OP_TYPEOF")},
+	{_SC("_OP_PUSHTRAP")},
+	{_SC("_OP_POPTRAP")},
+	{_SC("_OP_THROW")},
+	{_SC("_OP_CLASS")},
+	{_SC("_OP_NEWSLOTA")}
+	
 };
 #endif
 void DumpLiteral(SQObjectPtr &o)
@@ -98,6 +95,7 @@ SQFuncState::SQFuncState(SQSharedState *ss,SQFunctionProto *func,SQFuncState *pa
 		_stacksize = 0;
 		_traps = 0;
 		_returnexp = 0;
+		_varparams = false;
 }
 
 #ifdef _DEBUG_DUMP
@@ -125,6 +123,8 @@ void SQFuncState::Dump()
 		n++;
 	}
 	scprintf(_SC("-----PARAMS\n"));
+	if(_varparams)
+		scprintf(_SC("<<VARPARAMS>>\n"));
 	n=0;
 	for(i=0;i<_parameters.size();i++){
 		scprintf(_SC("[%d] "),n);
@@ -148,9 +148,7 @@ void SQFuncState::Dump()
 	n=0;
 	for(i=0;i<_instructions.size();i++){
 		SQInstruction &inst=_instructions[i];
-		if(inst.op==_OP_LOAD || inst.op==_OP_PREPCALLK || inst.op==_OP_GETK
-			|| ((inst.op==_OP_ADD || inst.op==_OP_SUB || inst.op==_OP_MUL || inst.op==_OP_DIV) 
-				&& inst._arg3==0xFF)){
+		if(inst.op==_OP_LOAD || inst.op==_OP_PREPCALLK || inst.op==_OP_GETK ){
 			
 			scprintf(_SC("[%03d] %15s %d "),n,g_InstrDesc[inst.op].name,inst._arg0);
 			if(inst._arg1==0xFFFF)
@@ -164,6 +162,9 @@ void SQFuncState::Dump()
 				DumpLiteral(key);
 			}
 			scprintf(_SC(" %d %d \n"),inst._arg2,inst._arg3);
+		}
+		else if(inst.op==_OP_ARITH){
+			scprintf(_SC("[%03d] %15s %d %d %d %c\n"),n,g_InstrDesc[inst.op].name,inst._arg0,inst._arg1,inst._arg2,inst._arg3);
 		}
 		else 
 			scprintf(_SC("[%03d] %15s %d %d %d %d\n"),n,g_InstrDesc[inst.op].name,inst._arg0,inst._arg1,inst._arg2,inst._arg3);
@@ -243,6 +244,10 @@ int SQFuncState::PushTarget(int n)
 	return n;
 }
 
+int SQFuncState::GetUpTarget(int n){
+	return _targetstack[((_targetstack.size()-1)-n)];
+}
+
 int SQFuncState::TopTarget(){
 	return _targetstack.back();
 }
@@ -308,15 +313,25 @@ int SQFuncState::GetLocalVariable(const SQObjectPtr &name)
 	return -1;
 }
 
+int SQFuncState::GetOuterVariable(const SQObjectPtr &name)
+{
+	int outers = _outervalues.size();
+	for(int i = 0; i<outers; i++) {
+		if(_string(_outervalues[i]._name) == _string(name))
+			return i;
+	}
+	return -1;
+}
+
 void SQFuncState::AddOuterValue(const SQObjectPtr &name)
 {
-	AddParameter(name);
+	//AddParameter(name);
 	int pos=-1;
-	if(_parent)pos=_parent->GetLocalVariable(name);
+	if(_parent) pos = _parent->GetLocalVariable(name);
 	if(pos!=-1)
-		_outervalues.push_back(SQOuterVar(SQObjectPtr(SQInteger(pos)),true)); //local
+		_outervalues.push_back(SQOuterVar(name,SQObjectPtr(SQInteger(pos)),true)); //local
 	else
-		_outervalues.push_back(SQOuterVar(name,false)); //global
+		_outervalues.push_back(SQOuterVar(name,name,false)); //global
 }
 
 void SQFuncState::AddParameter(const SQObjectPtr &name)
@@ -340,7 +355,7 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 {
 	int size = _instructions.size();
 	if(size > 0 && _optimization){ //simple optimizer
-		SQInstruction &pi = _instructions[size-1];//previous intruction
+		SQInstruction &pi = _instructions[size-1];//previous instruction
 		switch(i.op) {
 		case _OP_RETURN:
 			if( _parent && i._arg0 != 0xFF && pi.op == _OP_CALL && _returnexp < size-1) {
@@ -370,14 +385,15 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 				pi._arg0 = i._arg0;
 				pi._arg1 = pi._arg1;
 				pi._arg2 = 0xFF;
+				pi._arg3 = 0xFF;
 				return;
 			}
 			break;
 		case _OP_MOVE: 
-			if((pi.op == _OP_GET || pi.op == _OP_ADD || pi.op == _OP_SUB
+			if((pi.op == _OP_GET || pi.op == _OP_ARITH || pi.op == _OP_BITW/*
 				|| pi.op == _OP_MUL || pi.op == _OP_DIV || pi.op == _OP_SHIFTL
 				|| pi.op == _OP_SHIFTR || pi.op == _OP_BWOR	|| pi.op == _OP_BWXOR
-				|| pi.op == _OP_BWAND) && (pi._arg0 == i._arg1))
+				|| pi.op == _OP_BWAND*/) && (pi._arg0 == i._arg1))
 			{
 				pi._arg0 = i._arg0;
 				_optimization = false;
@@ -393,7 +409,7 @@ void SQFuncState::AddInstruction(SQInstruction &i)
 			}
 			break;
 
-		case _OP_ADD:case _OP_SUB:case _OP_MUL:case _OP_DIV:
+		//case _OP_ADD:case _OP_SUB:case _OP_MUL:case _OP_DIV:
 		case _OP_EQ:case _OP_NE:case _OP_G:case _OP_GE:case _OP_L:case _OP_LE:
 			if(pi.op == _OP_LOAD && pi._arg0 == i._arg1 && (!IsLocal(pi._arg0) ))
 			{
@@ -449,4 +465,5 @@ void SQFuncState::Finalize()
 	f->_localvarinfos.copy(_localvarinfos);
 	f->_lineinfos.resize(_lineinfos.size());
 	f->_lineinfos.copy(_lineinfos);
+	f->_varparams = _varparams;
 }

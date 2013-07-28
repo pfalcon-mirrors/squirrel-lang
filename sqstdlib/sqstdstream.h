@@ -29,5 +29,5 @@ int _stream_eos(HSQUIRRELVM v);
 int _stream_flush(HSQUIRRELVM v);
 
 #define _DECL_STREAM_FUNC(name,nparams,typecheck) {_SC(#name),_stream_##name,nparams,typecheck}
-
+SQRESULT declare_stream(HSQUIRRELVM v,SQChar* name,int typetag,SQChar* reg_name,SQRegFunction *methods,SQRegFunction *globals);
 #endif /*_SQSTD_STREAM_H_*/

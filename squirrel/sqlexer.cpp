@@ -55,6 +55,12 @@ void SQLexer::Init(SQSharedState *ss, SQLEXREADFUNC rg, SQUserPointer up)
 	ADD_KEYWORD(default, TK_DEFAULT);
 	ADD_KEYWORD(this, TK_THIS);
 	ADD_KEYWORD(parent,TK_PARENT);
+	ADD_KEYWORD(class,TK_CLASS);
+	ADD_KEYWORD(extends,TK_EXTENDS);
+	ADD_KEYWORD(constructor,TK_CONSTRUCTOR);
+	ADD_KEYWORD(instanceof,TK_INSTANCEOF);
+	ADD_KEYWORD(vargc,TK_VARGC);
+	ADD_KEYWORD(vargv,TK_VARGV);
 
 	_readf = rg;
 	_up = up;
@@ -174,9 +180,16 @@ int SQLexer::Lex()
 			}
 		case _SC('{'): case _SC('}'): case _SC('('): case _SC(')'): case _SC('['): case _SC(']'):
 		case _SC(';'): case _SC(','): case _SC('%'): case _SC('?'): case _SC('^'): case _SC('~'):
-		case _SC('*'): case _SC('.'):
+		case _SC('*'):
 			{int ret = CUR_CHAR;
 			NEXT(); RETURN_TOKEN(ret); }
+		case _SC('.'):
+			NEXT();
+			if (CUR_CHAR != _SC('.')){ RETURN_TOKEN('.') }
+			NEXT();
+			if (CUR_CHAR != _SC('.')){ throw ParserException(_SC("invalid token '..'")); }
+			NEXT();
+			RETURN_TOKEN(TK_VARPARAMS);
 		case _SC('&'):
 			NEXT();
 			if (CUR_CHAR != _SC('&')){ RETURN_TOKEN('&') }

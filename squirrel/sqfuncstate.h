@@ -29,6 +29,7 @@ struct SQFuncState
 	void AddParameter(const SQObjectPtr &name);
 	void AddOuterValue(const SQObjectPtr &name);
 	int GetLocalVariable(const SQObjectPtr &name);
+	int GetOuterVariable(const SQObjectPtr &name);
 	int GenerateCode();
 	int GetStackSize();
 	int CalcStackFrameSize();
@@ -38,12 +39,14 @@ struct SQFuncState
 	int PushTarget(int n=-1);
 	int PopTarget();
 	int TopTarget();
+	int GetUpTarget(int n);
 	bool IsLocal(unsigned int stkpos);
 
 	int _returnexp;
 	SQLocalVarInfoVec _vlocals;
 	SQIntVec _targetstack;
 	int _stacksize;
+	bool _varparams;
 	SQIntVec _unresolvedbreaks;
 	SQIntVec _unresolvedcontinues;
 	SQObjectPtrVec _functions;

@@ -53,6 +53,14 @@ struct SQVM;
 #define TK_MINUSMINUS 304
 #define TK_PARENT 305
 #define TK_USHIFTR 306
+#define TK_CLASS 307
+#define TK_EXTENDS 308
+#define TK_CONSTRUCTOR 310
+#define TK_INSTANCEOF 311
+#define TK_VARPARAMS 312
+#define TK_VARGC 313
+#define TK_VARGV 314
+
 
 struct ParserException{ SQChar *desc; ParserException(SQChar *err):desc(err) {} };
 bool Compile(SQVM *vm, SQLEXREADFUNC rg, SQUserPointer up, const SQChar *sourcename, SQObjectPtr &out, bool raiseerror, bool lineinfo);

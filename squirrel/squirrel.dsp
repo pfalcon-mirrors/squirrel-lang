@@ -205,6 +205,19 @@ SOURCE=.\sqtable.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\sqclass.cpp
+
+!IF  "$(CFG)" == "squirrel - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "squirrel - Win32 Debug"
+
+# ADD CPP /YX"stdafx.h"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
 SOURCE=.\sqvm.cpp
 
 !IF  "$(CFG)" == "squirrel - Win32 Release"
@@ -275,6 +288,10 @@ SOURCE=.\squserdata.h
 # Begin Source File
 
 SOURCE=.\squtils.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\sqclass.h
 # End Source File
 # Begin Source File
 

@@ -1,3 +1,12 @@
+***version 2.0 alpha 1***
+-codebase branch from version 1.x
+-added classes
+-added functions with variable number of parameters(vargc & vargv and the ...)
+-0 and 0.0 are now considered 'false' by all conditional statements(if,while,for,?,do-while)
+-added new api functions sq_newclass() sq_setinstanceup() sq_getinstanceup() sq_getattributes() sq_setattributes()
+-modified api sq_settypetag()
+
+***2004-11-01        ***
 ***version 1.0 stable***
 -fixed some minor bug
 -improoved operator 'delete' performances

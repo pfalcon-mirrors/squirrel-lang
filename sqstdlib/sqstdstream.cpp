@@ -11,9 +11,10 @@
 
 #define SETUP_STREAM(v) \
 	SQStream *self = NULL; \
-	sq_getuserdata(v,1,(SQUserPointer *)&self,NULL); \
+	if(SQ_FAILED(sq_getinstanceup(v,1,(SQUserPointer*)&self,SQSTD_STREAM_TYPE_TAG))) \
+		return sq_throwerror(v,_SC("invalid type tag")); \
 	if(!self->IsValid())  \
-		return sq_throwerror(v,_SC("the file was closed"));
+		return sq_throwerror(v,_SC("the stream is invalid"));
 
 int _stream_readstr(HSQUIRRELVM v)
 {
@@ -300,4 +301,96 @@ int _stream_eos(HSQUIRRELVM v)
 	else
 		sq_pushnull(v);
 	return 1;
+}
+
+static SQRegFunction _stream_methods[] = {
+	_DECL_STREAM_FUNC(readstr,-2,_SC("xnn")),
+	_DECL_STREAM_FUNC(readblob,2,_SC("xn")),
+	_DECL_STREAM_FUNC(readn,2,_SC("xn")),
+	_DECL_STREAM_FUNC(writestr,-2,_SC("xsn")),
+	_DECL_STREAM_FUNC(writeblob,-2,_SC("xx")),
+	_DECL_STREAM_FUNC(writen,3,_SC("xnn")),
+	_DECL_STREAM_FUNC(seek,-2,_SC("xnn")),
+	_DECL_STREAM_FUNC(tell,1,_SC("x")),
+	_DECL_STREAM_FUNC(len,1,_SC("x")),
+	_DECL_STREAM_FUNC(eos,1,_SC("x")),
+	_DECL_STREAM_FUNC(flush,1,_SC("x")),
+	{0,0}
+};
+
+void init_streamclass(HSQUIRRELVM v)
+{
+	sq_pushregistrytable(v);
+	sq_pushstring(v,_SC("std_stream"),-1);
+	if(SQ_FAILED(sq_get(v,-2))) {
+		sq_pushstring(v,_SC("std_stream"),-1);
+		sq_newclass(v,0);
+		sq_settypetag(v,-1,SQSTD_STREAM_TYPE_TAG);
+		int i = 0;
+		while(_stream_methods[i].name != 0) {
+			SQRegFunction &f = _stream_methods[i];
+			sq_pushstring(v,f.name,-1);
+			sq_newclosure(v,f.f,0);
+			sq_setparamscheck(v,f.nparamscheck,f.typemask);
+			sq_createslot(v,-3);
+			i++;
+		}
+		sq_createslot(v,-3);
+	}
+	else {
+		sq_pop(v,1); //result
+	}
+	sq_pop(v,1);
+}
+
+SQRESULT declare_stream(HSQUIRRELVM v,SQChar* name,int typetag,SQChar* reg_name,SQRegFunction *methods,SQRegFunction *globals)
+{
+	if(sq_gettype(v,-1) != OT_TABLE)
+		return sq_throwerror(v,_SC("table expected"));
+	int top = sq_gettop(v);
+	//create delegate
+    init_streamclass(v);
+	sq_pushregistrytable(v);
+	sq_pushstring(v,reg_name,-1);
+	sq_pushstring(v,_SC("std_stream"),-1);
+	if(SQ_SUCCEEDED(sq_get(v,-3))) {
+		sq_newclass(v,1);
+		sq_settypetag(v,-1,typetag);
+		int i = 0;
+		while(methods[i].name != 0) {
+			SQRegFunction &f = methods[i];
+			sq_pushstring(v,f.name,-1);
+			sq_newclosure(v,f.f,0);
+			sq_setparamscheck(v,f.nparamscheck,f.typemask);
+			sq_setnativeclosurename(v,-1,f.name);
+			sq_createslot(v,-3);
+			i++;
+		}
+		sq_createslot(v,-3);
+		sq_pop(v,1);
+		
+		i = 0;
+		while(globals[i].name!=0)
+		{
+			SQRegFunction &f = globals[i];
+			sq_pushstring(v,f.name,-1);
+			sq_newclosure(v,f.f,0);
+			sq_setparamscheck(v,f.nparamscheck,f.typemask);
+			sq_setnativeclosurename(v,-1,f.name);
+			sq_createslot(v,-3);
+			i++;
+		}
+		//register the class in the target table
+		sq_pushstring(v,name,-1);
+		sq_pushregistrytable(v);
+		sq_pushstring(v,reg_name,-1);
+		sq_get(v,-2);
+		sq_remove(v,-2);
+		sq_createslot(v,-3);
+
+		sq_settop(v,top);
+		return SQ_OK;
+	}
+	sq_settop(v,top);
+	return SQ_ERROR;
 }

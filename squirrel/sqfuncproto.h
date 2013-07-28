@@ -7,8 +7,9 @@
 struct SQOuterVar
 {
 	SQOuterVar(){}
-	SQOuterVar(const SQObjectPtr &src,bool blocal)
+	SQOuterVar(const SQObjectPtr &name,const SQObjectPtr &src,bool blocal)
 	{
+		_name = name;
 		_src=src;
 		_blocal=blocal;
 	}
@@ -16,8 +17,10 @@ struct SQOuterVar
 	{
 		_blocal=ov._blocal;
 		_src=ov._src;
+		_name=ov._name;
 	}
 	bool _blocal;
+	SQObjectPtr _name;
 	SQObjectPtr _src;
 };
 
@@ -73,6 +76,7 @@ public:
 	SQLineInfoVec _lineinfos;
     int _stacksize;
 	bool _bgenerator;
+	bool _varparams;
 };
 
 #endif //_SQFUNCTION_H_

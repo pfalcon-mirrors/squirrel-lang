@@ -54,6 +54,9 @@ struct SQNativeClosure;
 struct SQUserData;
 struct SQFunctionProto;
 struct SQRefCounted;
+struct SQClass;
+struct SQInstance;
+struct SQDelegable;
 
 #ifdef _UNICODE
 #define SQUNICODE
@@ -97,7 +100,7 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 1.0 stable")
+#define SQUIRREL_VERSION	_SC("Squirrel 2.0 alpha 1")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2004 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
@@ -110,41 +113,48 @@ typedef char SQChar;
 
 #define SQOBJECT_REF_COUNTED	0x00800000
 #define SQOBJECT_NUMERIC		0x00080000
+#define SQOBJECT_DELEGABLE		0x08000000
+#define SQOBJECT_CANBEFALSE		0x80000000
 typedef unsigned int SQObjectType;
 
 #define _RT_MASK 0x0000FFFF
 #define _RAW_TYPE(type) (type&_RT_MASK)
 
-#define _RT_NULL			0x0000
-#define _RT_INTEGER			0x0001
-#define _RT_FLOAT			0x0002
-#define _RT_STRING			0x0004
-#define _RT_TABLE			0x0008
-#define _RT_ARRAY			0x0010
-#define _RT_USERDATA		0x0020
-#define _RT_CLOSURE			0x0040
-#define _RT_NATIVECLOSURE	0x0080
-#define _RT_GENERATOR		0x0100
-#define _RT_USERPOINTER		0x0200
-#define _RT_THREAD			0x0400
-#define _RT_FUNCPROTO		0x0800
+#define _RT_NULL			0x00000000
+#define _RT_INTEGER			0x00000001
+#define _RT_FLOAT			0x00000002
+#define _RT_STRING			0x00000004
+#define _RT_TABLE			0x00000008
+#define _RT_ARRAY			0x00000010
+#define _RT_USERDATA		0x00000020
+#define _RT_CLOSURE			0x00000040
+#define _RT_NATIVECLOSURE	0x00000080
+#define _RT_GENERATOR		0x00000100
+#define _RT_USERPOINTER		0x00000200
+#define _RT_THREAD			0x00000400
+#define _RT_FUNCPROTO		0x00000800
+#define _RT_CLASS			0x00001000
+#define _RT_INSTANCE		0x00002000
 
-#define OT_NULL				_RT_NULL
-#define OT_INTEGER			(_RT_INTEGER|SQOBJECT_NUMERIC)
-#define OT_FLOAT			(_RT_FLOAT|SQOBJECT_NUMERIC)
+#define OT_NULL				(_RT_NULL|SQOBJECT_CANBEFALSE)
+#define OT_INTEGER			(_RT_INTEGER|SQOBJECT_NUMERIC|SQOBJECT_CANBEFALSE)
+#define OT_FLOAT			(_RT_FLOAT|SQOBJECT_NUMERIC|SQOBJECT_CANBEFALSE)
 #define OT_STRING			(_RT_STRING|SQOBJECT_REF_COUNTED)
-#define OT_TABLE			(_RT_TABLE|SQOBJECT_REF_COUNTED)
+#define OT_TABLE			(_RT_TABLE|SQOBJECT_REF_COUNTED|SQOBJECT_DELEGABLE)
 #define OT_ARRAY			(_RT_ARRAY|SQOBJECT_REF_COUNTED)
-#define OT_USERDATA			(_RT_USERDATA|SQOBJECT_REF_COUNTED)
+#define OT_USERDATA			(_RT_USERDATA|SQOBJECT_REF_COUNTED|SQOBJECT_DELEGABLE)
 #define OT_CLOSURE			(_RT_CLOSURE|SQOBJECT_REF_COUNTED)
 #define OT_NATIVECLOSURE	(_RT_NATIVECLOSURE|SQOBJECT_REF_COUNTED)
 #define OT_GENERATOR		(_RT_GENERATOR|SQOBJECT_REF_COUNTED)
 #define OT_USERPOINTER		_RT_USERPOINTER
 #define OT_THREAD			(_RT_THREAD|SQOBJECT_REF_COUNTED) 
 #define OT_FUNCPROTO		(_RT_FUNCPROTO|SQOBJECT_REF_COUNTED) //internal usage only
+#define OT_CLASS			(_RT_CLASS|SQOBJECT_REF_COUNTED)
+#define OT_INSTANCE			(_RT_INSTANCE|SQOBJECT_REF_COUNTED|SQOBJECT_DELEGABLE)
 
 
 #define ISREFCOUNTED(t) (t&SQOBJECT_REF_COUNTED)
+
 
 typedef union tagSQObjectValue
 {
@@ -160,7 +170,10 @@ typedef union tagSQObjectValue
 	SQUserPointer pUserPointer;
 	struct SQFunctionProto *pFunctionProto;
 	struct SQRefCounted *pRefCounted;
+	struct SQDelegable *pDelegable;
 	struct SQVM *pThread;
+	struct SQClass *pClass;
+	struct SQInstance *pInstance;
 }SQObjectValue;
 
 
@@ -179,7 +192,7 @@ typedef struct tagSQStackInfos{
 typedef struct SQVM* HSQUIRRELVM;
 typedef SQObject HSQOBJECT;
 typedef int (*SQFUNCTION)(HSQUIRRELVM);
-typedef int (*SQUSERDATARELEASE)(SQUserPointer,int size);
+typedef int (*SQRELEASEHOOK)(SQUserPointer,int size);
 typedef void (*SQCOMPILERERROR)(HSQUIRRELVM,const SQChar * /*desc*/,const SQChar * /*source*/,int /*line*/,int /*column*/);
 typedef void (*SQPRINTFUNCTION)(HSQUIRRELVM,const SQChar * ,...);
 
@@ -244,10 +257,16 @@ SQUIRREL_API SQRESULT sq_getthread(HSQUIRRELVM v,int idx,HSQUIRRELVM *thread);
 SQUIRREL_API SQRESULT sq_getuserpointer(HSQUIRRELVM v,int idx,SQUserPointer *p);
 SQUIRREL_API SQRESULT sq_getuserdata(HSQUIRRELVM v,int idx,SQUserPointer *p,unsigned int *typetag);
 SQUIRREL_API SQRESULT sq_settypetag(HSQUIRRELVM v,int idx,unsigned int typetag);
-SQUIRREL_API void sq_setreleasehook(HSQUIRRELVM v,int idx,SQUSERDATARELEASE hook);
+SQUIRREL_API void sq_setreleasehook(HSQUIRRELVM v,int idx,SQRELEASEHOOK hook);
 SQUIRREL_API SQChar *sq_getscratchpad(HSQUIRRELVM v,int minsize);
 SQUIRREL_API SQRESULT sq_getclosureinfo(HSQUIRRELVM v,int idx,unsigned int *nparams,unsigned int *nfreevars);
 SQUIRREL_API SQRESULT sq_setnativeclosurename(HSQUIRRELVM v,int idx,const SQChar *name);
+SQUIRREL_API SQRESULT sq_setinstanceup(HSQUIRRELVM v, int idx, SQUserPointer p);
+SQUIRREL_API SQRESULT sq_getinstanceup(HSQUIRRELVM v, int idx, SQUserPointer *p,unsigned int typetag);
+SQUIRREL_API SQRESULT sq_newclass(HSQUIRRELVM v,int hasbase);
+SQUIRREL_API SQRESULT sq_setattributes(HSQUIRRELVM v,int idx);
+SQUIRREL_API SQRESULT sq_getattributes(HSQUIRRELVM v,int idx);
+SQUIRREL_API SQRESULT sq_getclass(HSQUIRRELVM v,int idx);
 
 /*object manipulation*/
 SQUIRREL_API void sq_pushroottable(HSQUIRRELVM v);
@@ -317,6 +336,8 @@ SQUIRREL_API void sq_setdebughook(HSQUIRRELVM v);
 #define sq_isuserdata(o) ((o)._type==OT_USERDATA)
 #define sq_isthread(o) ((o)._type==OT_THREAD)
 #define sq_isnull(o) ((o)._type==OT_NULL)
+#define sq_isclass(o) ((o)._type==OT_CLASS)
+#define sq_isinstance(o) ((o)._type==OT_INSTANCE)
 #define sq_type(o) ((o)._type)
 
 #define SQ_OK (0)

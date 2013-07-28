@@ -17,7 +17,8 @@ OBJS= \
 	sqstate.o \
 	sqtable.o \
 	sqvm.o \
-	sqmem.o 
+	sqmem.o \
+	sqclass.o
 	
 SRCS= \
 	sqapi.cpp \
@@ -30,7 +31,8 @@ SRCS= \
 	sqstate.cpp \
 	sqtable.cpp \
 	sqmem.cpp \
-	sqvm.cpp
+	sqvm.cpp \
+	sqclass.cpp
 
 	
 	

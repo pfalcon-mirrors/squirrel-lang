@@ -21,12 +21,19 @@ struct SQExceptionTrap{
 	int _extarget;
 };
 
+
 typedef sqvector<SQExceptionTrap> ExceptionsTraps;
 struct SQVM : public CHAINABLE_OBJ
 {
+	struct VarArgs {
+		VarArgs() { size = 0; base = 0; }
+		int size;
+		int base;
+	};
+
 	struct CallInfo{
-		CallInfo() {}
-		CallInfo(const CallInfo& ci) { (*this) = ci; }
+		//CallInfo() {}
+		//CallInfo(const CallInfo& ci) {  }
 		SQInstructionVec *_iv;
 		SQObjectPtrVec *_literals;
 		SQObject _closure;
@@ -38,6 +45,7 @@ struct SQVM : public CHAINABLE_OBJ
 		SQInstruction *_ip;
 		int _ncalls;
 		bool _root;
+		VarArgs _vargs;
 	};
 
 typedef sqvector<CallInfo> CallInfoVec;
@@ -51,13 +59,15 @@ public:
 	bool CallNative(SQNativeClosure *nclosure, int nargs, int stackbase, bool tailcall, SQObjectPtr &retval);
 	//start a SQUIRREL call in the same "Execution loop"
 	void StartCall(SQClosure *closure, int target, int nargs, int stackbase, bool tailcall);
+	void CreateClassInstance(SQClass *theclass, int nargs, int stackbase, SQObjectPtr &retval);
 	//call a generic closure pure SQUIRREL or NATIVE
 	bool Call(SQObjectPtr &closure, int nparams, int stackbase, SQObjectPtr &outres);
 	SQRESULT Suspend();
 
 	void CallDebugHook(int type,int forcedline=0);
 	void CallErrorHandler(SQException &e);
-	bool Get(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &dest, bool raw, bool root = true);
+	bool Get(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &dest, bool raw);
+	bool FallBackGet(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,bool raw);
 	bool Set(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val);
 	void NewSlot(const SQObjectPtr &self, const SQObjectPtr &key, const SQObjectPtr &val);
 	void DeleteSlot(const SQObjectPtr &self, const SQObjectPtr &key, SQObjectPtr &res);
@@ -71,12 +81,21 @@ public:
 	void RT_Error(SQObjectPtr &desc);
 	SQString *PrintObjVal(const SQObject &o);
 	void TypeOf(const SQObjectPtr &obj1, SQObjectPtr &dest);
-	bool CallMetaMethod(SQTable *mt, SQMetaMethod mm, int nparams, SQObjectPtr &outres);
+	bool CallMetaMethod(SQDelegable *del, SQMetaMethod mm, int nparams, SQObjectPtr &outres);
 	bool ArithMetaMethod(int op, const SQObjectPtr &o1, const SQObjectPtr &o2, SQObjectPtr &dest);
-	void Modulo(const SQObjectPtr &o1, const SQObjectPtr &o2, SQObjectPtr &dest);
+	//void Modulo(const SQObjectPtr &o1, const SQObjectPtr &o2, SQObjectPtr &dest);
 	bool Return(int _arg0, int _arg1, SQObjectPtr &retval);
-	
-	void DerefInc(SQObjectPtr &target, SQObjectPtr &self, SQObjectPtr &key, SQObjectPtr &incr, bool postfix);
+	//new stuff
+	void ARITH_OP(unsigned int op,SQObjectPtr &trg,const SQObjectPtr &o1,const SQObjectPtr &o2);
+	void BW_OP(unsigned int op,SQObjectPtr &trg,const SQObjectPtr &o1,const SQObjectPtr &o2);
+	void NEG_OP(SQObjectPtr &trg,const SQObjectPtr &o1);
+	//return true if the loop is finished
+	bool FOREACH_OP(SQObjectPtr &o1,SQObjectPtr &o2,SQObjectPtr &o3,SQObjectPtr &o4,int arg_2);
+	void DELEGATE_OP(SQObjectPtr &trg,SQObjectPtr &o1,SQObjectPtr &o2);
+	void LOCAL_INC(int op,SQObjectPtr &target, SQObjectPtr &a, SQObjectPtr &incr);
+	void PLOCAL_INC(int op,SQObjectPtr &target, SQObjectPtr &a, SQObjectPtr &incr);
+	void DerefInc(int op,SQObjectPtr &target, SQObjectPtr &self, SQObjectPtr &key, SQObjectPtr &incr, bool postfix);
+	void PopVarArgs(VarArgs &vargs);
 #ifdef _DEBUG_DUMP
 	void dumpstack(int stackbase=-1, bool dumpall = false);
 #endif
@@ -89,30 +108,18 @@ public:
 	void Release(){ sq_delete(this,SQVM); } //does nothing
 ////////////////////////////////////////////////////////////////////////////
 	//stack functions for the api
-	void Pop() {
-		_stack[--_top] = _null_;
-	}
-	void Pop(int n) {
-		for(int i = 0; i < n; i++){
-			_stack[--_top] = _null_;
-		}
-	}
-	void Remove(int n) {
-		n = (n >= 0)?n + _stackbase - 1:_top + n;
-		for(int i = n; i < _top; i++){
-			_stack[i] = _stack[i+1];
-		}
-		_stack[_top] = _null_;
-		_top--;
-	}
+	void Pop();
+	void Pop(int n);
+	void Remove(int n);
 
-	void Push(const SQObjectPtr &o) { _stack[_top++] = o; }
-	SQObjectPtr &Top() { return _stack[_top-1]; }
-	SQObjectPtr &PopGet() { return _stack[--_top]; }
-	SQObjectPtr &GetUp(int n) { return _stack[_top+n]; }
-	SQObjectPtr &GetAt(int n) { return _stack[n]; }
+	void Push(const SQObjectPtr &o);
+	SQObjectPtr &Top();
+	SQObjectPtr &PopGet();
+	SQObjectPtr &GetUp(int n);
+	SQObjectPtr &GetAt(int n);
 
 	SQObjectPtrVec _stack;
+	SQObjectPtrVec _vargsstack;
 	int _top;
 	int _stackbase;
 	SQObjectPtr _roottable;

@@ -17,18 +17,7 @@ struct SQString : public SQRefCounted
 	~SQString(){}
 public:
 	static SQString *Create(SQSharedState *ss, const SQChar *, int len = -1 );
-	int Next(const SQObjectPtr &refpos, SQObjectPtr &outkey, SQObjectPtr &outval)
-	{
-		int idx = (int)TranslateIndex(refpos);
-		while(idx < _len){
-			outkey = (SQInteger)idx;
-			outval = SQInteger(_val[idx]);
-			//return idx for the next iteration
-			return ++idx;
-		}
-		//nothing to iterate anymore
-		return -1;
-	}
+	int Next(const SQObjectPtr &refpos, SQObjectPtr &outkey, SQObjectPtr &outval);
 	void Release();
 	SQSharedState *_sharedstate;
 	SQString *_next; //chain for the string table

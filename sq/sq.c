@@ -35,7 +35,7 @@ void PrintVersionInfos();
 int MemAllocHook( int allocType, void *userData, size_t size, int blockType, 
    long requestNumber, const unsigned char *filename, int lineNumber)
 {
-	//if(requestNumber==2822)_asm int 3;
+//	if(requestNumber==585)_asm int 3;
 	return 1;
 }
 #endif

@@ -29,6 +29,7 @@ enum SQMetaMethod{
 	MT_CLONED=12,
 	MT_NEWSLOT=13,
 	MT_DELSLOT=14,
+	MT_LAST = 15,
 };
 
 #define MM_ADD		_SC("_add")
@@ -65,24 +66,41 @@ struct SQObjectPtr;
 #define __Release(type,unval) if(ISREFCOUNTED(type) && ((--unval.pRefCounted->_uiRef)<=0))	\
 		{	\
 			unval.pRefCounted->Release();	\
-		}	
+		}
+
+#define __ObjRelease(obj) { \
+	if((obj)) {	\
+		(obj)->_uiRef--; \
+		if((obj)->_uiRef == 0) \
+			(obj)->Release(); \
+		(obj) = NULL;	\
+	} \
+}
+
+#define __ObjAddRef(obj) { \
+	(obj)->_uiRef++; \
+}
 
 #define type(obj) ((obj)._type)
+#define is_delegable(t) (type(t)&SQOBJECT_DELEGABLE)
 #define raw_type(obj) _RAW_TYPE((obj)._type)
 
-#define _integer(obj) (obj)._unVal.nInteger
-#define _float(obj) (obj)._unVal.fFloat
-#define _string(obj) (obj)._unVal.pString
-#define _table(obj) (obj)._unVal.pTable
-#define _array(obj) (obj)._unVal.pArray
-#define _closure(obj) (obj)._unVal.pClosure
-#define _generator(obj) (obj)._unVal.pGenerator
-#define _nativeclosure(obj) (obj)._unVal.pNativeClosure
-#define _userdata(obj) (obj)._unVal.pUserData
-#define _userpointer(obj) (obj)._unVal.pUserPointer
-#define _thread(obj) (obj)._unVal.pThread
-#define _funcproto(obj) (obj)._unVal.pFunctionProto
-#define _rawval(obj) (obj)._unVal.pRefCounted
+#define _integer(obj) ((obj)._unVal.nInteger)
+#define _float(obj) ((obj)._unVal.fFloat)
+#define _string(obj) ((obj)._unVal.pString)
+#define _table(obj) ((obj)._unVal.pTable)
+#define _array(obj) ((obj)._unVal.pArray)
+#define _closure(obj) ((obj)._unVal.pClosure)
+#define _generator(obj) ((obj)._unVal.pGenerator)
+#define _nativeclosure(obj) ((obj)._unVal.pNativeClosure)
+#define _userdata(obj) ((obj)._unVal.pUserData)
+#define _userpointer(obj) ((obj)._unVal.pUserPointer)
+#define _thread(obj) ((obj)._unVal.pThread)
+#define _funcproto(obj) ((obj)._unVal.pFunctionProto)
+#define _class(obj) ((obj)._unVal.pClass)
+#define _instance(obj) ((obj)._unVal.pInstance)
+#define _delegable(obj) ((SQDelegable *)(obj)._unVal.pDelegable)
+#define _rawval(obj) ((obj)._unVal.pRefCounted)
 
 #define _stringval(obj) (obj)._unVal.pString->_val
 #define _userdataval(obj) (obj)._unVal.pUserData->_val
@@ -115,6 +133,20 @@ struct SQObjectPtr : public SQObject
 		_type=OT_TABLE;
 		_unVal.pTable=pTable;
 		assert(_unVal.pTable);
+		__AddRef(_type,_unVal);
+	}
+	SQObjectPtr(SQClass *pClass)
+	{
+		_type=OT_CLASS;
+		_unVal.pClass=pClass;
+		assert(_unVal.pClass);
+		__AddRef(_type,_unVal);
+	}
+	SQObjectPtr(SQInstance *pInstance)
+	{
+		_type=OT_INSTANCE;
+		_unVal.pInstance=pInstance;
+		assert(_unVal.pInstance);
 		__AddRef(_type,_unVal);
 	}
 	SQObjectPtr(SQArray *pArray)
@@ -192,7 +224,7 @@ struct SQObjectPtr : public SQObject
 	{
 		__Release(_type,_unVal);
 	}
-	inline SQObjectPtr& operator=(const SQObjectPtr& obj)
+	SQObjectPtr& operator=(const SQObjectPtr& obj)
 	{ 
 		SQObjectType tOldType;
 		SQObjectValue unOldVal;
@@ -204,7 +236,7 @@ struct SQObjectPtr : public SQObject
 		__Release(tOldType,unOldVal);
 		return *this;
 	}
-	inline SQObjectPtr& operator=(const SQObject& obj)
+	SQObjectPtr& operator=(const SQObject& obj)
 	{ 
 		SQObjectType tOldType;
 		SQObjectValue unOldVal;
@@ -254,6 +286,11 @@ struct SQCollectable : public SQRefCounted {
 #define CHAINABLE_OBJ SQRefCounted
 #define INIT_CHAIN() ((void)0)
 #endif
+
+struct SQDelegable : public CHAINABLE_OBJ {
+	virtual bool GetMetaMethod(SQMetaMethod mm,SQObjectPtr &res);
+	SQTable *_delegate;
+};
 
 unsigned int TranslateIndex(const SQObjectPtr &idx);
 typedef sqvector<SQObjectPtr> SQObjectPtrVec;

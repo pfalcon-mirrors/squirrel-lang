@@ -3,6 +3,7 @@
 #define _SQCLOSURE_H_
 
 struct SQFunctionProto;
+
 struct SQClosure : public CHAINABLE_OBJ
 {
 private:
@@ -11,7 +12,6 @@ public:
 	static SQClosure *Create(SQSharedState *ss,SQFunctionProto *func){
 		SQClosure *nc=(SQClosure*)SQ_MALLOC(sizeof(SQClosure));
 		new (nc) SQClosure(ss,func);
-		
 		return nc;
 	}
 	void Release(){
@@ -25,7 +25,7 @@ public:
 	void Load(SQVM *v,SQUserPointer up,SQREADFUNC read);
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
-	void Finalize(){_outervalues.resize(0);}
+	void Finalize(){_outervalues.resize(0); }
 #endif
 	SQObjectPtr _function;
 	SQObjectPtrVec _outervalues;
@@ -61,6 +61,7 @@ public:
 #endif
 	SQObjectPtr _closure;
 	SQObjectPtrVec _stack;
+	SQObjectPtrVec _vargsstack;
 	SQVM::CallInfo _ci;
 	ExceptionsTraps _etraps;
 	SQGEneratorState _state;

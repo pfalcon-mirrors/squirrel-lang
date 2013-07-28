@@ -11,6 +11,7 @@
 #include "squserdata.h"
 #include "sqfuncstate.h"
 #include "sqcompiler.h"
+#include "sqclass.h"
 
 SQObjectPtr &sq_aux_gettypedarg(HSQUIRRELVM v,int idx,SQObjectType type)
 {
@@ -221,6 +222,29 @@ void sq_newarray(HSQUIRRELVM v,int size)
 	v->Push(SQArray::Create(_ss(v), size));	
 }
 
+SQRESULT sq_newclass(HSQUIRRELVM v,int hasbase)
+{
+	SQClass *baseclass = NULL;
+	if(hasbase) {
+		SQObjectPtr &base = stack_get(v,-1);
+		if(type(base) != OT_CLASS)
+			return sq_throwerror(v,_SC("invalid base type"));
+		baseclass = _class(base);
+	}
+	SQClass *newclass = SQClass::Create(_ss(v), baseclass);
+	if(baseclass) v->Pop();
+	v->Push(newclass);	
+	return SQ_OK;
+}
+
+int sq_instanceof(HSQUIRRELVM v)
+{
+	SQObjectPtr &inst = stack_get(v,-1);
+	SQObjectPtr &cl = stack_get(v,-2);
+	if(type(inst) != OT_INSTANCE || type(cl) != OT_CLASS)
+		return sq_throwerror(v,_SC("invalid param type"));
+	return _instance(inst)->InstanceOf(_class(cl))?1:0;
+}
 
 SQRESULT sq_arrayappend(HSQUIRRELVM v,int idx)
 {
@@ -457,10 +481,17 @@ SQRESULT sq_getuserdata(HSQUIRRELVM v,int idx,SQUserPointer *p,unsigned int *typ
 
 SQRESULT sq_settypetag(HSQUIRRELVM v,int idx,unsigned int typetag)
 {
-	SQ_TRY {
-		SQObjectPtr &o = sq_aux_gettypedarg(v, idx, OT_USERDATA);
-		_userdata(o)->_typetag = typetag;
-	} SQ_CATCH(SQException,e) { sq_aux_throwobject(v, e); return SQ_ERROR; }
+	SQObjectPtr &o = stack_get(v,idx);
+	switch(type(o)) {
+		case OT_USERDATA:
+			_userdata(o)->_typetag = typetag;
+			break;
+		case OT_CLASS:
+			_class(o)->_typetag = typetag;
+			break;
+		default:
+			return sq_throwerror(v,_SC("invalid object type"));
+	}
 	return SQ_OK;
 }
 
@@ -470,6 +501,31 @@ SQRESULT sq_getuserpointer(HSQUIRRELVM v, int idx, SQUserPointer *p)
 		SQObjectPtr &o = sq_aux_gettypedarg(v, idx, OT_USERPOINTER);
 		(*p) = _userpointer(o);
 	} SQ_CATCH(SQException,e) { sq_aux_throwobject(v, e); return SQ_ERROR; }
+	return SQ_OK;
+}
+
+SQRESULT sq_setinstanceup(HSQUIRRELVM v, int idx, SQUserPointer p)
+{
+	SQObjectPtr &o = stack_get(v,idx);
+	if(type(o) != OT_INSTANCE) return sq_throwerror(v,_SC("the object is not a class instance"));
+	_instance(o)->_userpointer = p;
+	return SQ_OK;
+}
+
+SQRESULT sq_getinstanceup(HSQUIRRELVM v, int idx, SQUserPointer *p,unsigned int typetag)
+{
+	SQObjectPtr &o = stack_get(v,idx);
+	if(type(o) != OT_INSTANCE) return sq_throwerror(v,_SC("the object is not a class instance"));
+	(*p) = _instance(o)->_userpointer;
+	if(typetag != 0) {
+		SQClass *cl = _instance(o)->_class;
+		do{
+			if(cl->_typetag == typetag)
+				return SQ_OK;
+			cl = cl->_base;
+		}while(cl != NULL);
+		return sq_throwerror(v,_SC("invalid type tag"));
+	}
 	return SQ_OK;
 }
 
@@ -507,11 +563,13 @@ SQRESULT sq_createslot(HSQUIRRELVM v, int idx)
 {
 	SQ_TRY {
 		sq_aux_paramscheck(v, 3);
-		SQObjectPtr &self = sq_aux_gettypedarg(v, idx, OT_TABLE);
-		SQObjectPtr &key = v->GetUp(-2);
-		if(type(key) == OT_NULL) return sq_throwerror(v, _SC("null is not a valid key"));
-		v->NewSlot(self, key, v->GetUp(-1));
-		v->Pop(2);
+		SQObjectPtr &self = stack_get(v, idx); //sq_aux_gettypedarg(v, idx, OT_TABLE);
+		if(type(self) == OT_TABLE || type(self) == OT_CLASS) {
+			SQObjectPtr &key = v->GetUp(-2);
+			if(type(key) == OT_NULL) return sq_throwerror(v, _SC("null is not a valid key"));
+			v->NewSlot(self, key, v->GetUp(-1));
+			v->Pop(2);
+		}
 		return SQ_OK;
 	} SQ_CATCH(SQException, e) { return sq_aux_throwobject(v, e); }
 }
@@ -747,7 +805,7 @@ SQRESULT sq_call(HSQUIRRELVM v,int params,int retval)
 			v->Pop(params);
 		return sq_throwerror(v,_SC("call failed"));
 	}
-	SQ_CATCH(SQException,e){v->Pop(params+1); return sq_aux_throwobject(v,e);}
+	SQ_CATCH(SQException,e){v->Pop(params); return sq_aux_throwobject(v,e);}
 }
 
 SQRESULT sq_suspendvm(HSQUIRRELVM v)
@@ -776,18 +834,24 @@ SQRESULT sq_wakeupvm(HSQUIRRELVM v,int wakeupret,int retval)
 	SQ_CATCH(SQException,e){return sq_aux_throwobject(v,e);}
 }
 
-void sq_setreleasehook(HSQUIRRELVM v,int idx,SQUSERDATARELEASE hook)
+void sq_setreleasehook(HSQUIRRELVM v,int idx,SQRELEASEHOOK hook)
 {
 	if(sq_gettop(v)>=2){
 		SQObjectPtr &ud=stack_get(v,idx);
-		if(type(ud)!=OT_USERDATA)return;
-		_userdata(ud)->_hook=hook;
+		switch( type(ud) ) {
+		case OT_USERDATA:
+			_userdata(ud)->_hook = hook;
+			break;
+		case OT_INSTANCE:
+			_instance(ud)->_hook = hook;
+			break;
+		}
 	}
 }
 
 void sq_setcompilererrorhandler(HSQUIRRELVM v,SQCOMPILERERROR f)
 {
-	_ss(v)->_compilererrorhandler=f;
+	_ss(v)->_compilererrorhandler = f;
 }
 
 SQRESULT sq_writeclosure(HSQUIRRELVM v,SQWRITEFUNC w,SQUserPointer up)
@@ -859,25 +923,66 @@ SQRESULT sq_setfreevariable(HSQUIRRELVM v,int idx,unsigned int nval)
 	return SQ_OK;
 }
 
+SQRESULT sq_setattributes(HSQUIRRELVM v,int idx)
+{
+	SQ_TRY {
+		SQObjectPtr o = sq_aux_gettypedarg(v,idx,OT_CLASS);
+		SQObjectPtr &key = stack_get(v,-2);
+		SQObjectPtr &val = stack_get(v,-1);
+		SQObjectPtr attrs;
+		if(_class(o)->GetAttributes(key,attrs)) {
+			_class(o)->SetAttributes(key,val);
+			v->Pop(2);
+			v->Push(attrs);
+			return SQ_OK;
+		}
+	}
+	SQ_CATCH(SQException, e) { return sq_aux_throwobject(v, e); }
+	return sq_throwerror(v,_SC("wrong index"));
+}
+
+SQRESULT sq_getattributes(HSQUIRRELVM v,int idx)
+{
+	SQ_TRY {
+		SQObjectPtr o = sq_aux_gettypedarg(v,idx,OT_CLASS);
+		SQObjectPtr &key = stack_get(v,-1);
+		SQObjectPtr attrs;
+		if(_class(o)->GetAttributes(key,attrs)) {
+			v->Pop();
+			v->Push(attrs);
+			return SQ_OK;
+		}
+	}
+	SQ_CATCH(SQException, e) { return sq_aux_throwobject(v, e); }
+	return sq_throwerror(v,_SC("wrong index"));
+}
+
+SQRESULT sq_getclass(HSQUIRRELVM v,int idx)
+{
+	SQ_TRY {
+		SQObjectPtr o=sq_aux_gettypedarg(v,idx,OT_INSTANCE);
+		v->Push(SQObjectPtr(_instance(o)->_class));
+	}
+	SQ_CATCH(SQException, e) { return sq_aux_throwobject(v, e); }
+	return SQ_OK;
+}
+
 SQRESULT sq_next(HSQUIRRELVM v,int idx)
 {
-	SQObjectPtr o=stack_get(v,idx),key=stack_get(v,-1),realkey,val;
-	int nrefidx;
-	switch(type(stack_get(v,idx))){
-		case OT_TABLE:
-			if((nrefidx=_table(o)->Next(key,realkey,val))==-1)return SQ_ERROR;
-			break;
-		case OT_ARRAY:
-			if((nrefidx=_array(o)->Next(key,realkey,val))==-1)return SQ_ERROR;
-			break;
-		case OT_STRING:
-			if((nrefidx=_string(o)->Next(key,realkey,val))==-1)return SQ_ERROR;
-			break;
-		default:
-			return sq_aux_invalidtype(v,type(o));
+	SQ_TRY {
+		SQObjectPtr o=stack_get(v,idx),&refpos = stack_get(v,-1),realkey,val;
+		if(type(o) == OT_GENERATOR) {
+			return sq_throwerror(v,_SC("cannot iterate a generator"));
+		}
+		if(!v->FOREACH_OP(o,realkey,val,refpos,0)) {
+			v->Push(realkey);
+			v->Push(val);
+			return SQ_OK;
+		}
+		return SQ_ERROR;
 	}
-	stack_get(v,-1)=(SQInteger)nrefidx;
-	v->Push(realkey);v->Push(val);
+	SQ_CATCH(SQException, e) { return sq_aux_throwobject(v, e); }
+	
 	return SQ_OK;
 }
 
