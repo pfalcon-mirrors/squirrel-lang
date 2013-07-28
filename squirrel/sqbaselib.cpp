@@ -50,7 +50,7 @@ bool str2num(const SQChar *s,SQObjectPtr &res)
 #ifdef GARBAGE_COLLECTOR
 static int base_collect_garbage(HSQUIRRELVM v)
 {
-	sq_pushinteger(v,_ss(v)->CollectGarbage(v));
+	sq_pushinteger(v,sq_collectgarbage(v));
 	return 1;
 }
 #endif

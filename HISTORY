@@ -1,3 +1,9 @@
+***varsion 0.6 alpha***
+-fixed switch statement(was executing the default case after a break)
+-sq_call() doesn't pop the closure (just the params)
+-the vm execution can be suspended from the C API anytime (micro-threads)
+-new api calls sq_suspendvm() sq_wakeupvm() sq_getvmstate() and sq_reservestack()
+
 ***version 0.5 alpha***
 -fixed some minor bug
 -tested with non ASCII identifiers in unicode mode(I've tried chinese chars)

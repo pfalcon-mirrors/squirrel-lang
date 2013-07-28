@@ -33,15 +33,31 @@
 		const SQObjectPtr &o1=STK(arg2),&o2=STK(arg1); \
 		if((type(o1)==OT_INTEGER) && (type(o2)==OT_INTEGER)) { \
 			TARGET=(SQInteger)(_integer(o1) op _integer(o2)); \
-		} else RT_Error(_SC("bitwise op between '%s' and '%s'"),GetTypeName(o1)); \
+		} else RT_Error(_SC("bitwise op between '%s' and '%s'"),GetTypeName(o1),GetTypeName(o2)); \
 	}
 
 
 SQObjectPtr &stack_get(HSQUIRRELVM v,int idx){return ((idx>=0)?(v->GetAt(idx+v->_stackbase-1)):(v->GetUp(idx)));}
 
+SQVM::SQVM(SQSharedState *ss)
+{
+	_sharedstate=ss;
+	_suspended=false;
+	_suspended_target=-1;
+	_suspended_root=false;
+	_suspended_traps=-1;
+	_foreignptr=NULL;
+	_nnativecalls=0;
+	_prev=NULL;
+	_next=_sharedstate->_vms_chain;
+	if(_sharedstate->_vms_chain) (_sharedstate->_vms_chain)->_prev=this;
+	_sharedstate->_vms_chain=this;
+}
+
 SQVM::~SQVM()
 {
 	_table(_roottable)->Clear();
+	_table(_refs_table)->Clear();
 	int size=_stack.size();
 	for(int i=0;i<size;i++)
 		_stack[i]=_null_;
@@ -254,16 +270,7 @@ void SQVM::TypeOf(const SQObjectPtr &obj1,SQObjectPtr &dest)
 	dest=SQString::Create(_ss(this),GetTypeName(obj1));
 }
 
-SQVM::SQVM(SQSharedState *ss)
-{
-	this->_sharedstate=ss;
-	_foreignptr=NULL;
-	_nnativecalls=0;
-	_prev=NULL;
-	_next=_sharedstate->_vms_chain;
-	if(_sharedstate->_vms_chain) (_sharedstate->_vms_chain)->_prev=this;
-	_sharedstate->_vms_chain=this;
-}
+
 
 bool SQVM::Init(int stacksize)
 {
@@ -387,7 +394,16 @@ void SQVM::DerefInc(SQObjectPtr &target,SQObjectPtr &self,SQObjectPtr &key,SQObj
 #define arg3 (_i_._arg3)
 #define sarg3 (*((char *)&(_i_._arg3)))
 
-SQObjectPtr SQVM::Execute(SQObjectPtr &closure,int target,int nargs,int stackbase,bool bresume)
+SQRESULT SQVM::Suspend()
+{
+	if(_suspended)
+		return sq_throwerror(this,"cannot suspend an already suspended vm");
+	if(_nnativecalls!=2)
+		return sq_throwerror(this,"cannot suspend through native calls/metamethods");
+	return SQ_SUSPEND_FLAG;
+}
+
+SQObjectPtr SQVM::Execute(SQObjectPtr &closure,int target,int nargs,int stackbase,ExecutionType et)
 {
 	if(_nnativecalls+1>MAX_NATIVE_CALLS)RT_Error(_SC("Native stack overflow"));
 	_nnativecalls++;
@@ -396,12 +412,19 @@ SQObjectPtr SQVM::Execute(SQObjectPtr &closure,int target,int nargs,int stackbas
 	//temp vars for OP_CALL
 	int ct_target;
 	bool ct_tailcall;
-	if(!bresume)
-		StartCall(closure,_top-nargs,nargs,stackbase,false);
-	else
-		_generator(closure)->Resume(this,target);
 	
-	ci->_root=true;
+
+	switch(et){
+		case ET_CALL:StartCall(closure,_top-nargs,nargs,stackbase,false);ci->_root=true; break;
+		case ET_RESUME_GENERATOR:_generator(closure)->Resume(this,target);ci->_root=true; break;
+		case ET_RESUME_VM:
+			traps=_suspended_traps;
+			ci->_root=_suspended_root;
+			_suspended=false;
+			break;
+	}
+
+	
 
 exception_restore:
 	try{
@@ -525,8 +548,14 @@ common_call:
 						}
 						break;
 					case OT_NATIVECLOSURE:
-						temp=CallNative(temp,arg3,ct_tailcall?_stackbase:_stackbase+arg2,ct_tailcall);
-						STK(ct_target)=temp;
+						if(CallNative(temp,arg3,ct_tailcall?_stackbase:_stackbase+arg2,ct_tailcall,STK(ct_target))){
+							_suspended=true;
+							_suspended_target=ct_target;
+							_suspended_root=ci->_root;
+							_suspended_traps=traps;
+							//SQObjectPtr testy=STK(ct_target);
+							return STK(ct_target);
+						}
 						break;
 					case OT_TABLE:{
 						Push(temp);
@@ -795,7 +824,7 @@ common_call:
 			}while(_callsstack.size());
 
 			while(last_top>=_top)_stack[last_top--]=_null_;
-			//thow the exception to terminate the execution of the thread
+			//thow the exception to terminate the execution of the function
 		}
 		throw e;
 	}
@@ -811,7 +840,7 @@ void SQVM::CallDebugHook(int type)
 	Pop(5);
 }
 
-SQObjectPtr SQVM::CallNative(SQObjectPtr &nclosure,int nargs,int stackbase,bool tailcall)
+bool SQVM::CallNative(SQObjectPtr &nclosure,int nargs,int stackbase,bool tailcall,SQObjectPtr &retval)
 {
 	if(_nnativecalls+1>MAX_NATIVE_CALLS)RT_Error(_SC("Native stack overflow"));
 	_nnativecalls++;
@@ -833,13 +862,16 @@ SQObjectPtr SQVM::CallNative(SQObjectPtr &nclosure,int nargs,int stackbase,bool 
 	ci->_prevtop=(oldtop-oldstackbase);
 	int ret=(_nativeclosure(nclosure)->_function)(this);
 	_nnativecalls--;
-	if(ret<0)RT_Error(_stringval(_lasterror));
-	SQObjectPtr retval;
+	bool suspend=false;
+	if(ret==SQ_SUSPEND_FLAG) suspend=true;
+	else if(ret<0)RT_Error(_stringval(_lasterror));
+	//SQObjectPtr retval;
 	if(ret!=0){ retval=TOP(); }
+	else { retval=_null_; }
 	_stackbase=oldstackbase;
 	_top=oldtop;
 	POP_CALLINFO(this);
-	return retval;
+	return suspend;
 }
 
 bool SQVM::Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,bool raw,bool root)
@@ -981,8 +1013,8 @@ bool SQVM::Call(SQObjectPtr &closure,int nparams,int stackbase,SQObjectPtr &outr
 	case OT_CLOSURE:
 		outres=Execute(closure,_top-nparams,nparams,stackbase);
 		return true;
-	case OT_NATIVECLOSURE:
-		outres=CallNative(closure,nparams,stackbase,false);
+	case OT_NATIVECLOSURE:{
+		CallNative(closure,nparams,stackbase,false,outres);}
 		return true;
 	default:
 		return false;
@@ -1023,7 +1055,7 @@ void SQVM::dumpstack(int stackbase,bool dumpall)
 		case OT_NULL:			scprintf(_SC("NULL"));	break;
 		case OT_TABLE:			scprintf(_SC("TABLE %p[%p]"),_table(obj),_table(obj)->_delegate);break;
 		case OT_ARRAY:			scprintf(_SC("ARRAY %p"),_array(obj));break;
-		case OT_CLOSURE:		scprintf(_SC("CLOSURE"));break;
+		case OT_CLOSURE:		scprintf(_SC("CLOSURE [%p]"),_closure(obj));break;
 		case OT_NATIVECLOSURE:	scprintf(_SC("NATIVECLOSURE"));break;
 		case OT_USERDATA:		scprintf(_SC("USERDATA %p[%p]"),_userdataval(obj),_userdata(obj)->_delegate);break;
 		case OT_GENERATOR:		scprintf(_SC("GENERATOR"));break;

@@ -59,6 +59,15 @@ HSQUIRRELVM sq_newvm(HSQUIRRELVM friendvm,int initialstacksize)
 	}
 }
 
+int sq_getvmstate(HSQUIRRELVM v)
+{
+	if(v->_suspended)
+		return SQ_VMSTATE_SUSPENDED;
+	else {if(v->_callsstack.size()!=0) return SQ_VMSTATE_RUNNING;
+		  else return SQ_VMSTATE_IDLE;
+	}
+}
+
 void sq_seterrorhandler(HSQUIRRELVM v)
 {
 	SQObjectPtr o=stack_get(v,-1);
@@ -367,6 +376,7 @@ void sq_settop(HSQUIRRELVM v,int newtop)
 
 void sq_pop(HSQUIRRELVM v,int nelemstopop)
 {
+	assert(v->_top>=nelemstopop);
 	v->Pop(nelemstopop);
 }
 
@@ -532,12 +542,19 @@ void sq_getlasterror(HSQUIRRELVM v)
 	v->Push(v->_lasterror);
 }
 
+void sq_reservestack(HSQUIRRELVM v,int nsize)
+{
+	if (((unsigned int)v->_top + nsize) > v->_stack.size()) {
+		v->_stack.resize(v->_stack.size() + ((v->_top + nsize) - v->_stack.size()));
+	}
+}
+
 SQRESULT sq_resume(HSQUIRRELVM v,int retval)
 {
 	try{
 		if(type(v->GetUp(-1))==OT_GENERATOR){
 			v->Push(_null_); //retval
-			v->GetUp(-1)=v->Execute(v->GetUp(-2),v->_top,0,v->_top,true);
+			v->GetUp(-1)=v->Execute(v->GetUp(-2),v->_top,0,v->_top,SQVM::ET_RESUME_GENERATOR);
 			if(!retval)
 				v->Pop();
 			return SQ_OK;
@@ -552,16 +569,40 @@ SQRESULT sq_call(HSQUIRRELVM v,int params,int retval)
 	SQObjectPtr res;
 	try{
 		if(v->Call(v->GetUp(-(params+1)),params,v->_top-params,res)){
-			v->Pop(params+1);//pop closure and args
+			v->Pop(params);//pop closure and args
 			if(retval){
 				v->Push(res);return 1;
 			}
 			return SQ_OK;
 		}
-		v->Pop(params+1);
+		if(!v->_suspended)
+			v->Pop(params);
 		return sq_throwerror(v,_SC("call failed"));
 	}
 	catch(SQException &e){v->Pop(params+1); return sq_aux_throwobject(v,e);}
+}
+
+SQRESULT sq_suspendvm(HSQUIRRELVM v)
+{
+	return v->Suspend();
+}
+
+SQRESULT sq_wakeupvm(HSQUIRRELVM v,int wakeupret,int retval)
+{
+	try{
+		SQObjectPtr ret;
+		if(!v->_suspended)
+			return sq_throwerror(v,"cannot resume a vm that is not running any code");
+		if(wakeupret){
+			v->GetAt(v->_stackbase+v->_suspended_target)=v->GetUp(-1); //retval
+			v->Pop();
+		}else v->GetAt(v->_stackbase+v->_suspended_target)=_null_;
+		ret=v->Execute(_null_,v->_top,-1,-1,SQVM::ET_RESUME_VM);
+		if(retval)
+			v->Push(ret);
+		return SQ_OK;
+	}
+	catch(SQException &e){return sq_aux_throwobject(v,e);}
 }
 
 void sq_setreleasehook(HSQUIRRELVM v,int idx,SQUSERDATARELEASE hook)
@@ -601,6 +642,15 @@ SQRESULT sq_readclosure(HSQUIRRELVM v,SQREADFUNC r,SQUserPointer up)
 SQChar *sq_getscratchpad(HSQUIRRELVM v,int minsize)
 {
 	return _ss(v)->GetScratchPad(minsize);
+}
+
+int sq_collectgarbage(HSQUIRRELVM v)
+{
+#ifdef GARBAGE_COLLECTOR
+	return _ss(v)->CollectGarbage(v);
+#else
+	return -1;
+#endif
 }
 
 SQRESULT sq_setfreevariable(HSQUIRRELVM v,int idx,unsigned int nval)

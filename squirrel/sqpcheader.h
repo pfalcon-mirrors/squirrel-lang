@@ -10,7 +10,7 @@
 #include <string.h>
 #include <assert.h>
 #include <new>
-#define CYCLIC_REF_SAFE
+#define GARBAGE_COLLECTOR
 //squirrel stuff
 #include <squirrel.h>
 #include "sqobject.h"

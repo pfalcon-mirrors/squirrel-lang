@@ -271,6 +271,7 @@ SQString *StringTable::Add(const SQChar *news,int len)
 		if(s->_len==len && (!memcmp(news,s->_val,rsl(len))))
 			return s; //found
 	}
+
 	SQString *t=(SQString *)SQ_MALLOC(rsl(len)+sizeof(SQString));
 	new (t) SQString;
 	memcpy(t->_val,news,rsl(len));

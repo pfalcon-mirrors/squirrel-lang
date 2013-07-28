@@ -7,7 +7,7 @@
 #include "sqopcodes.h"
 #include "sqfuncstate.h"
 
-#ifdef _DEBUG
+#ifdef _DEBUG_DUMP
 SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_LINE"),-1,2,0,0},
 	{_SC("_OP_LOAD"),1,2,0,0},

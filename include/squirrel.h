@@ -97,14 +97,18 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 0.5 (alpha)")
+#define SQUIRREL_VERSION	_SC("Squirrel 0.6 (alpha)")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
+#define SQ_VMSTATE_IDLE			0
+#define SQ_VMSTATE_RUNNING		1
+#define SQ_VMSTATE_SUSPENDED	2
+
 #define SQUIRREL_EOB 0
 
-#define SQOBJECT_REF_COUNTED 0x8000
-#define SQOBJECT_NUMERIC 0x0800
+#define SQOBJECT_REF_COUNTED	0x8000
+#define SQOBJECT_NUMERIC		0x0800
 typedef unsigned int SQObjectType;
 
 #define _RT_MASK 0x00FF
@@ -193,6 +197,9 @@ SQUIRREL_API void sq_seterrorhandler(HSQUIRRELVM v);
 SQUIRREL_API void sq_releasevm(HSQUIRRELVM v);
 SQUIRREL_API void sq_setforeignptr(HSQUIRRELVM v,SQUserPointer p);
 SQUIRREL_API SQUserPointer sq_getforeignptr(HSQUIRRELVM v);
+SQUIRREL_API SQRESULT sq_suspendvm(HSQUIRRELVM v);
+SQUIRREL_API SQRESULT sq_wakeupvm(HSQUIRRELVM v,int resumedret,int retval);
+SQUIRREL_API int sq_getvmstate(HSQUIRRELVM v);
 
 /*compiler*/
 SQUIRREL_API SQRESULT sq_compile(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQChar *sourcename,int raiseerror,int lineinfo);
@@ -204,6 +211,7 @@ SQUIRREL_API void sq_pop(HSQUIRRELVM v,int nelemstopop);
 SQUIRREL_API void sq_remove(HSQUIRRELVM v,int idx);
 SQUIRREL_API int sq_gettop(HSQUIRRELVM v);
 SQUIRREL_API void sq_settop(HSQUIRRELVM v,int newtop);
+SQUIRREL_API void sq_reservestack(HSQUIRRELVM v,int nsize);
 SQUIRREL_API int sq_cmp(HSQUIRRELVM v);
 
 /*object creation handling*/
@@ -258,16 +266,19 @@ SQUIRREL_API void sq_addref(HSQUIRRELVM v,HSQOBJECT *po);
 SQUIRREL_API void sq_release(HSQUIRRELVM v,HSQOBJECT *po);
 SQUIRREL_API void sq_resetobject(HSQOBJECT *po);
 
+/*GC*/
+SQUIRREL_API int sq_collectgarbage(HSQUIRRELVM v);
+
 /*serialization*/
-SQUIRREL_API SQRESULT sq_writeclosure(HSQUIRRELVM vm,SQWRITEFUNC w,SQUserPointer up);
-SQUIRREL_API SQRESULT sq_readclosure(HSQUIRRELVM vm,SQREADFUNC w,SQUserPointer up);
+SQUIRREL_API SQRESULT sq_writeclosure(HSQUIRRELVM vm,SQWRITEFUNC writef,SQUserPointer up);
+SQUIRREL_API SQRESULT sq_readclosure(HSQUIRRELVM vm,SQREADFUNC readf,SQUserPointer up);
 
 SQUIRREL_API void *sq_malloc(unsigned int size);
 SQUIRREL_API void *sq_realloc(void* p,unsigned int oldsize,unsigned int newsize);
 SQUIRREL_API void sq_free(void *p,unsigned int size);
 
 /*debug*/
-SQUIRREL_API int sq_stackinfos(HSQUIRRELVM v,int level,SQStackInfos *si);
+SQUIRREL_API SQRESULT sq_stackinfos(HSQUIRRELVM v,int level,SQStackInfos *si);
 SQUIRREL_API void sq_setdebughook(HSQUIRRELVM v);
 
 /*UTILITY MACRO*/

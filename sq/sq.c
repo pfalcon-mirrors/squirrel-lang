@@ -144,6 +144,11 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 				return _DONE;
 			}
 			else{
+				const SQChar *err;
+				sq_getlasterror(v);
+				if(SQ_SUCCEEDED(sq_getstring(v,-1,&err))){
+					scprintf(_SC("Error [%s]\n"),err);
+				}
 				return _VERSION;
 			}
 		}
@@ -176,7 +181,7 @@ void PrintCallStack(HSQUIRRELVM v)
 	const SQChar *name=NULL; 
 	int seq=0;
 	scfprintf(stderr,_SC("\nCALLSTACK\n"));
-	while(sq_stackinfos(v,level,&si))
+	while(SQ_SUCCEEDED(sq_stackinfos(v,level,&si)))
 	{
 		const SQChar *fn=_SC("unknown");
 		const SQChar *src=_SC("unknown");
@@ -446,7 +451,7 @@ int main(int argc, char* argv[])
 		Interactive(v);
 		break;
 	case _DONE:
-	default:
+	default: 
 		break;
 	}
 		/* SAVE & LOAD THE BYTECODE BEFORE EXECUTE IT(is just a sample)

@@ -4,9 +4,6 @@
 #include "sqpcheader.h"
 #include <stdarg.h>
 #include "sqopcodes.h"
-/*
-	see copyright notice in squirrel.h
-*/
 #include "sqstring.h"
 #include "sqfuncproto.h"
 #include "sqfuncstate.h"
@@ -450,7 +447,8 @@ public:
 				_exst._deref=DEREF_FIELD;
 				}
 				break;
-			case _SC('['): 
+			case _SC('['):
+				if(_lex._prevtoken==_SC('\n'))Error("cannot brake deref/or comma needed after [exp]=exp slot declaration");
 				Lex(); Expression(); Expect(_SC(']')); 
 				pos=-1;
 				if(NeedGet())Emit2ArgsOP(_OP_GET);
@@ -565,7 +563,9 @@ public:
 			int tpos=_fs->GetCurrentPos(),nkeys=0;
 			Lex();
 			while(_token!=_SC('}')){
-				if(_token==_SC('[')){Lex();CommaExpr();Expect(_SC(']'));}
+				if(_token==_SC('[')){
+					Lex();CommaExpr();Expect(_SC(']'));
+				}
 				else{
 					_fs->AddInstruction(_OP_LOAD,_fs->PushTarget(),_fs->GetStringConstant(_stringval(Expect(IDENTIFIER))));
 				}
@@ -851,9 +851,9 @@ public:
 			}
 			stat_base+=stats_sizes[i];
 		}
-		nbreaks=_fs->_unresolvedbreaks.size()-nbreaks;
-		if(nbreaks>0)ResolveBreaks(_fs,nbreaks);
-		nbreaks=_fs->_unresolvedbreaks.size();
+		//nbreaks=_fs->_unresolvedbreaks.size()-nbreaks;
+		//if(nbreaks>0)ResolveBreaks(_fs,nbreaks);
+		//nbreaks=_fs->_unresolvedbreaks.size();
 		if(_token==DEFAULT){
 			Lex();Expect(_SC(':'));
 			Statements();

@@ -6,6 +6,8 @@
 #include "sqobject.h"
 #define MAX_NATIVE_CALLS 100
 #define MIN_STACK_OVERHEAD 10
+
+#define SQ_SUSPEND_FLAG -666
 //base lib
 void sq_base_register(HSQUIRRELVM v);
 
@@ -45,23 +47,20 @@ struct SQVM
 
 typedef sqvector<CallInfo> CallInfoVec;
 public:
+	enum ExecutionType {ET_CALL,ET_RESUME_GENERATOR,ET_RESUME_VM};
 	SQVM(SQSharedState *ss);
 	~SQVM();
 	bool Init(int stacksize);
-	SQObjectPtr Execute(SQObjectPtr &func,int target,int nargs,int stackbase,bool bresume=false);
-	//start a native call return when the NATIVE closure returns
-	SQObjectPtr CallNative(SQObjectPtr &nclosure,int nargs,int stackbase,bool tailcall);
+	SQObjectPtr Execute(SQObjectPtr &func,int target,int nargs,int stackbase,ExecutionType et=ET_CALL);
+	//start a native call return when the NATIVE closure returns(returns true if the vm has been suspended)
+	bool CallNative(SQObjectPtr &nclosure,int nargs,int stackbase,bool tailcall,SQObjectPtr &retval);
 	//start a SQUIRREL call in the same "Execution loop"
 	void StartCall(SQObjectPtr &closure,int target,int nargs,int stackbase,bool tailcall);
 	//call a generic closure pure SQUIRREL or NATIVE
 	bool Call(SQObjectPtr &closure,int nparams,int stackbase,SQObjectPtr &outres);
+	SQRESULT Suspend();
 
 	void CallDebugHook(int type);
-	SQObjectPtrVec _stack;
-	int _top;
-	int _stackbase;
-	SQObjectPtr _roottable;
-		
 	bool Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,bool raw,bool root=true);
 	bool Set(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr &val);
 	void NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr &val);
@@ -72,13 +71,11 @@ public:
 	void CompareError(const SQObject &o1,const SQObject &o2);
 	void RT_Error(const SQChar *s,...);
 	SQString *PrintObjVal(const SQObject &o);
-
 	void TypeOf(const SQObjectPtr &obj1,SQObjectPtr &dest);
 	bool CallMetaMethod(SQTable *mt,SQMetaMethod mm,int nparams,SQObjectPtr &outres);
 	bool ArithMetaMethod(int op,const SQObjectPtr &o1,const SQObjectPtr &o2,SQObjectPtr &dest);
 	void Modulo(const SQObjectPtr &o1,const SQObjectPtr &o2,SQObjectPtr &dest);
 	bool Return(int _arg0,int _arg1,SQObjectPtr &retval);
-
 	
 	void DerefInc(SQObjectPtr &target,SQObjectPtr &self,SQObjectPtr &key,SQObjectPtr &incr,bool postfix);
 #ifdef _DEBUG
@@ -93,7 +90,7 @@ public:
 	void Release(){delete this;} //does nothing
 #endif
 ////////////////////////////////////////////////////////////////////////////
-	//stack functions for he api
+	//stack functions for the api
 	void Pop(){
 		_stack[--_top]=_null_;
 	}
@@ -111,12 +108,17 @@ public:
 		_top--;
 	}
 
-
 	void Push(const SQObjectPtr &o){_stack[_top++]=o;}
 	SQObjectPtr &Top(){return _stack[_top-1];}
 	SQObjectPtr &PopGet(){return _stack[--_top];}
 	SQObjectPtr &GetUp(int n){return _stack[_top+n];}
 	SQObjectPtr &GetAt(int n){return _stack[n];}
+
+	SQObjectPtrVec _stack;
+	int _top;
+	int _stackbase;
+	SQObjectPtr _roottable;
+
 	SQObjectPtr _lasterror;
 	SQObjectPtr _errorhandler;
 	SQObjectPtr _debughook;
@@ -131,6 +133,11 @@ public:
 	SQVM *_prev;
 	SQSharedState *_sharedstate;
 	int _nnativecalls;
+	//suspend infos
+	bool _suspended;
+	bool _suspended_root;
+	int _suspended_target;
+	int _suspended_traps;
 };
 
 struct AutoDec{
