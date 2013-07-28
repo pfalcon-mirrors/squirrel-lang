@@ -354,7 +354,7 @@ public:
 				SQInteger tmp = _fs->PushTarget();
 				_fs->AddInstruction(_OP_GETOUTER,   tmp, pos);
 				//EmitCompArithLocal(tok,tmp,val, tmp);
-				_fs->AddInstruction(ChooseArithOpByToken(tok), tmp, tmp, val, 0);
+				_fs->AddInstruction(ChooseArithOpByToken(tok), tmp, val, tmp, 0);
 				_fs->AddInstruction(_OP_SETOUTER, tmp, pos, tmp);
 				_fs->PopTarget();
 				_fs->PushTarget(tmp);
@@ -688,6 +688,7 @@ public:
 	}
 	SQInteger Factor()
 	{
+		_es.etype = EXPR;
 		switch(_token)
 		{
 		case TK_STRING_LITERAL:
@@ -794,24 +795,8 @@ public:
 			_fs->AddInstruction(_OP_LOADNULLS, _fs->PushTarget(),1);
 			Lex();
 			break;
-		case TK_INTEGER:
-			if((_lex._nvalue & (~0x7FFFFFFF)) == 0) { //does it fit in 32 bits?
-				_fs->AddInstruction(_OP_LOADINT, _fs->PushTarget(),_lex._nvalue);
-			}
-			else {
-				_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetNumericConstant(_lex._nvalue));
-			}
-			Lex();
-			break;
-		case TK_FLOAT:
-			if(sizeof(SQFloat) == sizeof(SQInt32)) {
-				_fs->AddInstruction(_OP_LOADFLOAT, _fs->PushTarget(),*((SQInt32 *)&_lex._fvalue));
-			}
-			else {
-				_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetNumericConstant(_lex._fvalue));
-			}
-			Lex();
-			break;
+		case TK_INTEGER: EmitLoadConstInt(_lex._nvalue); Lex();	break;
+		case TK_FLOAT: EmitLoadConstFloat(_lex._fvalue); Lex(); break;
 		case TK_TRUE: case TK_FALSE:
 			_fs->AddInstruction(_OP_LOADBOOL, _fs->PushTarget(),_token == TK_TRUE?1:0);
 			Lex();
@@ -839,12 +824,23 @@ public:
 		case TK_FUNCTION: FunctionExp(_token);break;
 		case _SC('@'): FunctionExp(_token,true);break;
 		case TK_CLASS: Lex(); ClassExp();break;
-		case _SC('-'): UnaryOP(_OP_NEG); break;
-		case _SC('!'): UnaryOP(_OP_NOT); break;
-		case _SC('~'): UnaryOP(_OP_BWNOT); break;
-		case TK_TYPEOF : UnaryOP(_OP_TYPEOF); break;
-		case TK_RESUME : UnaryOP(_OP_RESUME); break;
-		case TK_CLONE : UnaryOP(_OP_CLONE); break;
+		case _SC('-'): 
+			Lex(); 
+			switch(_token) {
+			case TK_INTEGER: EmitLoadConstInt(-_lex._nvalue); Lex(); break;
+			case TK_FLOAT: EmitLoadConstFloat(-_lex._fvalue); Lex(); break;
+			default: UnaryOP(_OP_NEG);
+			}
+			break;
+		case _SC('!'): Lex(); UnaryOP(_OP_NOT); break;
+		case _SC('~'): 
+			Lex(); 
+			if(_token == TK_INTEGER)  { EmitLoadConstInt(~_lex._nvalue); Lex(); break; }
+			UnaryOP(_OP_BWNOT); 
+			break;
+		case TK_TYPEOF : Lex() ;UnaryOP(_OP_TYPEOF); break;
+		case TK_RESUME : Lex(); UnaryOP(_OP_RESUME); break;
+		case TK_CLONE : Lex(); UnaryOP(_OP_CLONE); break;
 		case TK_MINUSMINUS : 
 		case TK_PLUSPLUS :PrefixIncDec(_token); break;
 		case TK_DELETE : DeleteExpr(); break;
@@ -854,9 +850,27 @@ public:
 		}
 		return -1;
 	}
+	void EmitLoadConstInt(SQInteger value)
+	{
+		if((value & (~((SQInteger)0xFFFFFFFF))) == 0) { //does it fit in 32 bits?
+			_fs->AddInstruction(_OP_LOADINT, _fs->PushTarget(),value);
+		}
+		else {
+			_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetNumericConstant(value));
+		}
+	}
+	void EmitLoadConstFloat(SQFloat value)
+	{
+		if(sizeof(SQFloat) == sizeof(SQInt32)) {
+			_fs->AddInstruction(_OP_LOADFLOAT, _fs->PushTarget(),*((SQInt32 *)&value));
+		}
+		else {
+			_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetNumericConstant(value));
+		}
+	}
 	void UnaryOP(SQOpcode op)
 	{
-		Lex(); PrefixedExpr();
+		PrefixedExpr();
 		SQInteger src = _fs->PopTarget();
 		_fs->AddInstruction(op, _fs->PushTarget(), src);
 	}
@@ -921,6 +935,12 @@ public:
 					Lex(); CommaExpr(); Expect(_SC(']'));
 					Expect(_SC('=')); Expression();
 					break;
+				case TK_STRING_LITERAL: //JSON
+					if(separator == ',') { //only works for classes
+						_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(Expect(TK_STRING_LITERAL)));
+						Expect(_SC(':')); Expression();
+						break;
+					}
 				default :
 					_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(Expect(TK_IDENTIFIER)));
 					Expect(_SC('=')); Expression();

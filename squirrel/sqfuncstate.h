@@ -82,6 +82,7 @@ struct SQFuncState
 private:
 	CompilerErrorFunc _errfunc;
 	void *_errtarget;
+	SQSharedState *_ss;
 };
 
 

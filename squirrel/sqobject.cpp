@@ -157,13 +157,13 @@ bool SQGenerator::Yield(SQVM *v,SQInteger target)
 
 bool SQGenerator::Resume(SQVM *v,SQObjectPtr &dest)
 {
-	//SQInteger size=_stack.size();
 	if(_state==eDead){ v->Raise_Error(_SC("resuming dead generator")); return false; }
 	if(_state==eRunning){ v->Raise_Error(_SC("resuming active generator")); return false; }
 	SQInteger size = _stack.size();
 	SQInteger target = &dest - &(v->_stack._vals[v->_stackbase]);
 	assert(target>=0 && target<=255);
-	v->EnterFrame(v->_top, v->_top + size, false);
+	if(!v->EnterFrame(v->_top, v->_top + size, false)) 
+		return false;
 	v->ci->_generator   = this;
 	v->ci->_target      = (SQInt32)target;
 	v->ci->_closure     = _ci._closure;
@@ -186,9 +186,6 @@ bool SQGenerator::Resume(SQVM *v,SQObjectPtr &dest)
 		_stack._vals[n] = _null_;
 	}
 
-	/*v->_top=v->_stackbase+size;
-	v->ci->_prevtop = (SQInt32)prevtop;
-	v->ci->_prevstkbase = (SQInt32)(v->_stackbase - oldstackbase);*/
 	_state=eRunning;
 	if (v->_debughook)
 		v->CallDebugHook(_SC('c'));
@@ -237,6 +234,7 @@ SQInteger SQFunctionProto::GetLine(SQInstruction *curr)
 
 SQClosure::~SQClosure()
 {
+	__ObjRelease(_env);
 	__ObjRelease(_base);
 	REMOVE_FROM_CHAIN(&_ss(this)->_gc_chain,this);
 }
@@ -347,6 +345,18 @@ bool SQClosure::Load(SQVM *v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &ret)
 	return true;
 }
 
+SQFunctionProto::SQFunctionProto(SQSharedState *ss)
+{
+	_stacksize=0;
+	_bgenerator=false;
+	INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);
+}
+
+SQFunctionProto::~SQFunctionProto()
+{
+	REMOVE_FROM_CHAIN(&_ss(this)->_gc_chain,this);
+}
+
 bool SQFunctionProto::Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write)
 {
 	SQInteger i,nliterals = _nliterals,nparameters = _nparameters;
@@ -432,7 +442,7 @@ bool SQFunctionProto::Load(SQVM *v,SQUserPointer up,SQREADFUNC read,SQObjectPtr 
 	_CHECK_IO(SafeRead(v,read,up, &nfunctions, sizeof(nfunctions)));
 	
 
-	SQFunctionProto *f = SQFunctionProto::Create(ninstructions,nliterals,nparameters,
+	SQFunctionProto *f = SQFunctionProto::Create(_opt_ss(v),ninstructions,nliterals,nparameters,
 			nfunctions,noutervalues,nlineinfos,nlocalvarinfos,ndefaultparams);
 	SQObjectPtr proto = f; //gets a ref in case of failure
 	f->_sourcename = sourcename;
@@ -571,11 +581,20 @@ void SQGenerator::Mark(SQCollectable **chain)
 	END_MARK()
 }
 
+void SQFunctionProto::Mark(SQCollectable **chain)
+{
+	START_MARK()
+		for(SQInteger i = 0; i < _nliterals; i++) SQSharedState::MarkObject(_literals[i], chain);
+		for(SQInteger i = 0; i < _nfunctions; i++) SQSharedState::MarkObject(_functions[i], chain);
+	END_MARK()
+}
+
 void SQClosure::Mark(SQCollectable **chain)
 {
 	START_MARK()
 		if(_base) _base->Mark(chain);
 		SQFunctionProto *fp = _function;
+		fp->Mark(chain);
 		for(SQInteger i = 0; i < fp->_noutervalues; i++) SQSharedState::MarkObject(_outervalues[i], chain);
 		for(SQInteger i = 0; i < fp->_ndefaultparams; i++) SQSharedState::MarkObject(_defaultparams[i], chain);
 	END_MARK()

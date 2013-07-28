@@ -69,14 +69,14 @@ typedef sqvector<SQLineInfo> SQLineInfoVec;
 			ptr[nl].~type(); \
 	} \
 }
-struct SQFunctionProto : public SQRefCounted
+struct SQFunctionProto : public CHAINABLE_OBJ
 {
 private:
-	SQFunctionProto(){
-	_stacksize=0;
-	_bgenerator=false;}
+	SQFunctionProto(SQSharedState *ss);
+	~SQFunctionProto();
+	
 public:
-	static SQFunctionProto *Create(SQInteger ninstructions,
+	static SQFunctionProto *Create(SQSharedState *ss,SQInteger ninstructions,
 		SQInteger nliterals,SQInteger nparameters,
 		SQInteger nfunctions,SQInteger noutervalues,
 		SQInteger nlineinfos,SQInteger nlocalvarinfos,SQInteger ndefaultparams)
@@ -84,7 +84,7 @@ public:
 		SQFunctionProto *f;
 		//I compact the whole class and members in a single memory allocation
 		f = (SQFunctionProto *)sq_vm_malloc(_FUNC_SIZE(ninstructions,nliterals,nparameters,nfunctions,noutervalues,nlineinfos,nlocalvarinfos,ndefaultparams));
-		new (f) SQFunctionProto;
+		new (f) SQFunctionProto(ss);
 		f->_ninstructions = ninstructions;
 		f->_literals = (SQObjectPtr*)&f->_instructions[ninstructions];
 		f->_nliterals = nliterals;
@@ -124,7 +124,13 @@ public:
 	SQInteger GetLine(SQInstruction *curr);
 	bool Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write);
 	static bool Load(SQVM *v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &ret);
-
+#ifndef NO_GARBAGE_COLLECTOR
+	void Mark(SQCollectable **chain);
+	void Finalize(){
+		for(SQInteger i = 0; i < _nliterals; i++)
+			_literals[i].Null();
+	}
+#endif
 	SQObjectPtr _sourcename;
 	SQObjectPtr _name;
     SQInteger _stacksize;

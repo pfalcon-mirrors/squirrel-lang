@@ -584,6 +584,8 @@ SQInteger sq_getsize(HSQUIRRELVM v, SQInteger idx)
 	case OT_TABLE:		return _table(o)->CountUsed();
 	case OT_ARRAY:		return _array(o)->Size();
 	case OT_USERDATA:	return _userdata(o)->_size;
+	case OT_INSTANCE:	return _instance(o)->_class->_udsize;
+	case OT_CLASS:		return _class(o)->_udsize;
 	default:
 		return sq_aux_invalidtype(v, type);
 	}
@@ -948,11 +950,15 @@ void sq_getlasterror(HSQUIRRELVM v)
 	v->Push(v->_lasterror);
 }
 
-void sq_reservestack(HSQUIRRELVM v,SQInteger nsize)
+SQRESULT sq_reservestack(HSQUIRRELVM v,SQInteger nsize)
 {
 	if (((SQUnsignedInteger)v->_top + nsize) > v->_stack.size()) {
+		if(v->_nmetamethodscall) {
+			return sq_throwerror(v,_SC("cannot resize stack while in  a metamethod"));
+		}
 		v->_stack.resize(v->_stack.size() + ((v->_top + nsize) - v->_stack.size()));
 	}
+	return SQ_OK;
 }
 
 SQRESULT sq_resume(HSQUIRRELVM v,SQBool retval,SQBool raiseerror)

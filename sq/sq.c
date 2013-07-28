@@ -34,7 +34,7 @@ void PrintVersionInfos();
 int MemAllocHook( int allocType, void *userData, size_t size, int blockType, 
    long requestNumber, const unsigned char *filename, int lineNumber)
 {
-//	if(requestNumber==585)_asm int 3;
+	//if(requestNumber==769)_asm int 3;
 	return 1;
 }
 #endif
@@ -83,8 +83,9 @@ void PrintUsage()
 
 #define _INTERACTIVE 0
 #define _DONE 2
+#define _ERROR 3
 //<<FIXME>> this func is a mess
-int getargs(HSQUIRRELVM v,int argc, char* argv[])
+int getargs(HSQUIRRELVM v,int argc, char* argv[],SQInteger *retval)
 {
 	int i;
 	int compiles_only = 0;
@@ -92,6 +93,7 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 	const SQChar *ret=NULL;
 	char * output = NULL;
 	int lineinfo=0;
+	*retval = 0;
 	if(argc>1)
 	{
 		int arg=1,exitloop=0;
@@ -127,7 +129,8 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 					PrintVersionInfos();
 					scprintf(_SC("unknown prameter '-%c'\n"),argv[arg][1]);
 					PrintUsage();
-					return _DONE;
+					*retval = -1;
+					return _ERROR;
 				}
 			}else break;
 			arg++;
@@ -189,8 +192,18 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 						callargs++;
 						//sq_arrayappend(v,-2);
 					}
-					sq_call(v,callargs,SQFalse,SQTrue);
-					return _DONE;
+					if(SQ_SUCCEEDED(sq_call(v,callargs,SQTrue,SQTrue))) {
+						SQObjectType type = sq_gettype(v,-1);
+						if(type == OT_INTEGER) {
+							*retval = type;
+							sq_getinteger(v,-1,retval);
+						}
+						return _DONE;
+					}
+					else{
+						return _ERROR;
+					}
+					
 				}
 			}
 			//if this point is reached an error occured
@@ -199,7 +212,8 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 				sq_getlasterror(v);
 				if(SQ_SUCCEEDED(sq_getstring(v,-1,&err))) {
 					scprintf(_SC("Error [%s]\n"),err);
-					return _DONE;
+					*retval = -2;
+					return _ERROR;
 				}
 			}
 			
@@ -294,7 +308,7 @@ void Interactive(HSQUIRRELVM v)
 int main(int argc, char* argv[])
 {
 	HSQUIRRELVM v;
-	
+	SQInteger retval = 0;
 	const SQChar *filename=NULL;
 #if defined(_MSC_VER) && defined(_DEBUG)
 	_CrtSetAllocHook(MemAllocHook);
@@ -316,12 +330,13 @@ int main(int argc, char* argv[])
 	sqstd_seterrorhandlers(v);
 
 	//gets arguments
-	switch(getargs(v,argc,argv))
+	switch(getargs(v,argc,argv,&retval))
 	{
 	case _INTERACTIVE:
 		Interactive(v);
 		break;
 	case _DONE:
+	case _ERROR:
 	default: 
 		break;
 	}
@@ -332,6 +347,6 @@ int main(int argc, char* argv[])
 	_getch();
 	_CrtMemDumpAllObjectsSince( NULL );
 #endif
-	return 0;
+	return retval;
 }
 

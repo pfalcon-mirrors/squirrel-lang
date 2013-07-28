@@ -54,8 +54,13 @@ int main(int argc, char* argv[])
 	HSQUIRRELVM v; 
 	v = sq_open(1024); // creates a VM with initial stack size 1024 
 
-	//sq_pushroottable(v); //push the root table were to register the lib function
-	//sqstd_register_iolib(v); 
+	//REGISTRATION OF STDLIB
+	//sq_pushroottable(v); //push the root table where the std function will be registered
+	//sqstd_register_iolib(v);  //registers a library
+	// ... call here other stdlibs string,math etc...
+	//sq_pop(v,1); //pops the root table
+	//END REGISTRATION OF STDLIB
+	
 	sqstd_seterrorhandlers(v); //registers the default error handlers
 
 	sq_setprintfunc(v, printfunc,errorfunc); //sets the print function

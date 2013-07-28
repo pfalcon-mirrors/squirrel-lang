@@ -58,7 +58,7 @@ static SQInteger base_getconsttable(HSQUIRRELVM v)
 
 static SQInteger base_setroottable(HSQUIRRELVM v)
 {
-	SQObjectPtr &o=stack_get(v,2);
+	SQObjectPtr o = v->_roottable;
 	if(SQ_FAILED(sq_setroottable(v))) return SQ_ERROR;
 	v->Push(o);
 	return 1;
@@ -66,7 +66,7 @@ static SQInteger base_setroottable(HSQUIRRELVM v)
 
 static SQInteger base_setconsttable(HSQUIRRELVM v)
 {
-	SQObjectPtr &o=stack_get(v,2);
+	SQObjectPtr o = _ss(v)->_consts;
 	if(SQ_FAILED(sq_setconsttable(v))) return SQ_ERROR;
 	v->Push(o);
 	return 1;

@@ -179,14 +179,14 @@ struct SQObjectPtr : public SQObject
 	}
 	SQObjectPtr(const SQObjectPtr &o)
 	{
-		SQ_OBJECT_RAWINIT()
+		//SQ_OBJECT_RAWINIT()
 		_type=o._type;
 		_unVal=o._unVal;
 		__AddRef(_type,_unVal);
 	}
 	SQObjectPtr(const SQObject &o)
 	{
-		SQ_OBJECT_RAWINIT()
+		//SQ_OBJECT_RAWINIT()
 		_type=o._type;
 		_unVal=o._unVal;
 		__AddRef(_type,_unVal);

@@ -3,8 +3,8 @@
 */
 #include "sqpcheader.h"
 #include "sqcompiler.h"
-#include "sqfuncproto.h"
 #include "sqstring.h"
+#include "sqfuncproto.h"
 #include "sqtable.h"
 #include "sqopcodes.h"
 #include "sqfuncstate.h"
@@ -79,7 +79,7 @@ void DumpLiteral(SQObjectPtr &o)
 	switch(type(o)){
 		case OT_STRING:	scprintf(_SC("\"%s\""),_stringval(o));break;
 		case OT_FLOAT: scprintf(_SC("{%f}"),_float(o));break;
-		case OT_INTEGER: scprintf(_SC("{%d}"),_integer(o));break;
+		case OT_INTEGER: scprintf(_SC("{%Id}"),_integer(o));break;
 		case OT_BOOL: scprintf(_SC("%s"),_integer(o)?_SC("true"):_SC("false"));break;
 		default: scprintf(_SC("(%s %p)"),GetTypeName(o),(void*)_rawval(o));break; break; //shut up compiler
 	}
@@ -102,6 +102,7 @@ SQFuncState::SQFuncState(SQSharedState *ss,SQFuncState *parent,CompilerErrorFunc
 		_errtarget = ed;
 		_bgenerator = false;
 		_outers = 0;
+		_ss = ss;
 
 }
 
@@ -199,8 +200,9 @@ void SQFuncState::Dump(SQFunctionProto *func)
 	/*	else if(inst.op==_OP_ARITH){
 			scprintf(_SC("[%03d] %15s %d %d %d %c\n"),n,g_InstrDesc[inst.op].name,inst._arg0,inst._arg1,inst._arg2,inst._arg3);
 		}*/
-		else 
+		else {
 			scprintf(_SC("[%03d] %15s %d %d %d %d\n"),n,g_InstrDesc[inst.op].name,inst._arg0,inst._arg1,inst._arg2,inst._arg3);
+		}
 		n++;
 	}
 	scprintf(_SC("-----\n"));
@@ -542,7 +544,8 @@ SQObject SQFuncState::CreateTable()
 
 SQFunctionProto *SQFuncState::BuildProto()
 {
-	SQFunctionProto *f=SQFunctionProto::Create(_instructions.size(),
+	
+	SQFunctionProto *f=SQFunctionProto::Create(_ss,_instructions.size(),
 		_nliterals,_parameters.size(),_functions.size(),_outervalues.size(),
 		_lineinfos.size(),_localvarinfos.size(),_defaultparams.size());
 

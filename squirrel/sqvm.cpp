@@ -5,8 +5,8 @@
 #include <math.h>
 #include <stdlib.h>
 #include "sqopcodes.h"
-#include "sqfuncproto.h"
 #include "sqvm.h"
+#include "sqfuncproto.h"
 #include "sqclosure.h"
 #include "sqstring.h"
 #include "sqtable.h"
@@ -108,11 +108,12 @@ SQVM::SQVM(SQSharedState *ss)
 {
 	_sharedstate=ss;
 	_suspended = SQFalse;
-	_suspended_target=-1;
+	_suspended_target = -1;
 	_suspended_root = SQFalse;
-	_suspended_traps=-1;
-	_foreignptr=NULL;
-	_nnativecalls=0;
+	_suspended_traps = -1;
+	_foreignptr = NULL;
+	_nnativecalls = 0;
+	_nmetamethodscall = 0;
 	_lasterror = _null_;
 	_errorhandler = _null_;
 	_debughook = false;
@@ -266,7 +267,7 @@ void SQVM::ToString(const SQObjectPtr &o,SQObjectPtr &res)
 		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+1)),_SC("%g"),_float(o));
 		break;
 	case OT_INTEGER:
-		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+1)),_SC("%d"),_integer(o));
+		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+1)),_SC("%Id"),_integer(o));
 		break;
 	case OT_BOOL:
 		scsprintf(_sp(rsl(6)),_integer(o)?_SC("true"):_SC("false"));
@@ -382,7 +383,8 @@ bool SQVM::StartCall(SQClosure *closure,SQInteger target,SQInteger args,SQIntege
 		_stack._vals[stackbase] = closure->_env->_obj;
 	}
 
-	EnterFrame(stackbase, newtop, tailcall);
+	if(!EnterFrame(stackbase, newtop, tailcall)) return false;
+
 	ci->_closure  = closure;
 	ci->_literals = func->_literals;
 	ci->_ip       = func->_instructions;
@@ -584,7 +586,7 @@ bool SQVM::CLASS_OP(SQObjectPtr &target,SQInteger baseclass,SQInteger attributes
 	return true;
 }
 
-bool SQVM::IsEqual(SQObjectPtr &o1,SQObjectPtr &o2,bool &res)
+bool SQVM::IsEqual(const SQObjectPtr &o1,const SQObjectPtr &o2,bool &res)
 {
 	if(type(o1) == type(o2)) {
 		res = (_userpointer(o1) == _userpointer(o2));
@@ -602,8 +604,14 @@ bool SQVM::IsEqual(SQObjectPtr &o1,SQObjectPtr &o2,bool &res)
 
 bool SQVM::IsFalse(SQObjectPtr &o)
 {
-	if((type(o) & SQOBJECT_CANBEFALSE) && ( (type(o) == OT_FLOAT) && (_float(o) == SQFloat(0.0)) )
-		|| (_integer(o) == 0) ) { //OT_NULL|OT_INTEGER|OT_BOOL
+	if((type(o) & SQOBJECT_CANBEFALSE) 
+		&& ( (type(o) == OT_FLOAT) && (_float(o) == SQFloat(0.0)) )
+#if !defined(SQUSEDOUBLE) || defined(SQUSEDOUBLE) && defined(_SQ64)
+		|| (_integer(o) == 0) )  //OT_NULL|OT_INTEGER|OT_BOOL
+#else
+		|| ((type(o) != OT_FLOAT) && _integer(o) == 0) )  //OT_NULL|OT_INTEGER|OT_BOOL
+#endif
+	{
 		return true;
 	}
 	return false;
@@ -654,7 +662,12 @@ exception_restore:
 			{
 			case _OP_LINE: if (_debughook) CallDebugHook(_SC('l'),arg1); continue;
 			case _OP_LOAD: TARGET = ci->_literals[arg1]; continue;
-			case _OP_LOADINT: TARGET = (SQInteger)arg1; continue;
+			case _OP_LOADINT: 
+#ifndef _SQ64
+				TARGET = (SQInteger)arg1; continue;
+#else
+				TARGET = (SQInteger)((SQUnsignedInteger32)arg1); continue;
+#endif
 			case _OP_LOADFLOAT: TARGET = *((SQFloat *)&arg1); continue;
 			case _OP_DLOAD: TARGET = ci->_literals[arg1]; STK(arg2) = ci->_literals[arg3];continue;
 			case _OP_TAILCALL:
@@ -991,7 +1004,7 @@ exception_trap:
 bool SQVM::CreateClassInstance(SQClass *theclass, SQObjectPtr &inst, SQObjectPtr &constructor)
 {
 	inst = theclass->CreateInstance();
-	if(!theclass->Get(_ss(this)->_constructoridx,constructor)) {
+	if(!theclass->GetConstructor(constructor)) {
 		constructor = _null_;
 	}
 	return true;
@@ -1056,7 +1069,7 @@ bool SQVM::CallNative(SQNativeClosure *nclosure, SQInteger nargs, SQInteger newb
 		}
 	}
 
-	EnterFrame(newbase, newtop, false);
+	if(!EnterFrame(newbase, newtop, false)) return false;
 	ci->_closure  = nclosure;
 
 	SQInteger outers = nclosure->_outervalues.size();
@@ -1174,6 +1187,8 @@ SQInteger SQVM::FallBackGet(const SQObjectPtr &self,const SQObjectPtr &key,SQObj
 		SQObjectPtr closure;
 		if(_delegable(self)->GetMetaMethod(this, MT_GET, closure)) {
 			Push(self);Push(key);
+			_nmetamethodscall++;
+			AutoDec ad(&_nmetamethodscall);
 			if(Call(closure, 2, _top - 2, dest, SQFalse)) {
 				Pop(2);
 				return FALLBACK_OK;
@@ -1230,13 +1245,15 @@ SQInteger SQVM::FallBackSet(const SQObjectPtr &self,const SQObjectPtr &key,const
 		if(_table(self)->_delegate) {
 			if(Set(_table(self)->_delegate,key,val,DONT_FALL_BACK))	return FALLBACK_OK;
 		}
-		//leps on going
+		//keps on going
 	case OT_INSTANCE:
 	case OT_USERDATA:{
 		SQObjectPtr closure;
 		SQObjectPtr t;
 		if(_delegable(self)->GetMetaMethod(this, MT_SET, closure)) {
 			Push(self);Push(key);Push(val);
+			_nmetamethodscall++;
+			AutoDec ad(&_nmetamethodscall);
 			if(Call(closure, 3, _top - 3, t, SQFalse)) {
 				Pop(3);
 				return FALLBACK_OK;
@@ -1407,10 +1424,13 @@ bool SQVM::CallMetaMethod(SQDelegable *del,SQMetaMethod mm,SQInteger nparams,SQO
 {
 	SQObjectPtr closure;
 	if(del->GetMetaMethod(this, mm, closure)) {
+		_nmetamethodscall++;
 		if(Call(closure, nparams, _top - nparams, outres, SQFalse)) {
+			_nmetamethodscall--;
 			Pop(nparams);
 			return true;
 		}
+		_nmetamethodscall--;
 	}
 	Pop(nparams);
 	return false;
@@ -1438,7 +1458,7 @@ void SQVM::FindOuter(SQObjectPtr &target, SQObjectPtr *stackindex)
 	return;
 }
 
-void SQVM::EnterFrame(SQInteger newbase, SQInteger newtop, bool tailcall)
+bool SQVM::EnterFrame(SQInteger newbase, SQInteger newtop, bool tailcall)
 {
 	if( !tailcall ) {
 		if( _callsstacksize == _alloccallsstacksize ) {
@@ -1459,9 +1479,14 @@ void SQVM::EnterFrame(SQInteger newbase, SQInteger newtop, bool tailcall)
 	_stackbase = newbase;
 	_top = newtop;
 	if(newtop + MIN_STACK_OVERHEAD > (SQInteger)_stack.size()) {
+		if(_nmetamethodscall) {
+			Raise_Error(_SC("stack overflow, cannot resize stack while in  a metamethod"));
+			return false;
+		}
 		_stack.resize(_stack.size() + (MIN_STACK_OVERHEAD << 2));
 		RelocateOuters();
 	}
+	return true;
 }
 
 void SQVM::LeaveFrame() {

@@ -102,8 +102,8 @@ void SQSharedState::Init()
 #ifndef NO_GARBAGE_COLLECTOR
 	_gc_chain=NULL;
 #endif
-	_stringtable = (StringTable*)SQ_MALLOC(sizeof(StringTable));
-	new (_stringtable) StringTable(this);
+	_stringtable = (SQStringTable*)SQ_MALLOC(sizeof(SQStringTable));
+	new (_stringtable) SQStringTable(this);
 	sq_new(_metamethods,SQObjectPtrVec);
 	sq_new(_systemstrings,SQObjectPtrVec);
 	sq_new(_types,SQObjectPtrVec);
@@ -208,7 +208,7 @@ SQSharedState::~SQSharedState()
 	sq_delete(_types,SQObjectPtrVec);
 	sq_delete(_systemstrings,SQObjectPtrVec);
 	sq_delete(_metamethods,SQObjectPtrVec);
-	sq_delete(_stringtable,StringTable);
+	sq_delete(_stringtable,SQStringTable);
 	if(_scratchpad)SQ_FREE(_scratchpad,_scratchpadsize);
 }
 
@@ -239,6 +239,7 @@ void SQSharedState::MarkObject(SQObjectPtr &o,SQCollectable **chain)
 	case OT_CLASS:_class(o)->Mark(chain);break;
 	case OT_INSTANCE:_instance(o)->Mark(chain);break;
 	case OT_OUTER:_outer(o)->Mark(chain);break;
+	case OT_FUNCPROTO:_funcproto(o)->Mark(chain);break;
 	default: break; //shutup compiler
 	}
 }
@@ -481,34 +482,34 @@ void RefTable::AllocNodes(SQUnsignedInteger size)
 	_numofslots = size;
 }
 //////////////////////////////////////////////////////////////////////////
-//StringTable
+//SQStringTable
 /*
 * The following code is based on Lua 4.0 (Copyright 1994-2002 Tecgraf, PUC-Rio.)
 * http://www.lua.org/copyright.html#4
 * http://www.lua.org/source/4.0.1/src_lstring.c.html
 */
 
-StringTable::StringTable(SQSharedState *ss)
+SQStringTable::SQStringTable(SQSharedState *ss)
 {
 	_sharedstate = ss;
 	AllocNodes(4);
 	_slotused = 0;
 }
 
-StringTable::~StringTable()
+SQStringTable::~SQStringTable()
 {
 	SQ_FREE(_strings,sizeof(SQString*)*_numofslots);
 	_strings = NULL;
 }
 
-void StringTable::AllocNodes(SQInteger size)
+void SQStringTable::AllocNodes(SQInteger size)
 {
 	_numofslots = size;
 	_strings = (SQString**)SQ_MALLOC(sizeof(SQString*)*_numofslots);
 	memset(_strings,0,sizeof(SQString*)*_numofslots);
 }
 
-SQString *StringTable::Add(const SQChar *news,SQInteger len)
+SQString *SQStringTable::Add(const SQChar *news,SQInteger len)
 {
 	if(len<0)
 		len = (SQInteger)scstrlen(news);
@@ -534,7 +535,7 @@ SQString *StringTable::Add(const SQChar *news,SQInteger len)
 	return t;
 }
 
-void StringTable::Resize(SQInteger size)
+void SQStringTable::Resize(SQInteger size)
 {
 	SQInteger oldsize=_numofslots;
 	SQString **oldtable=_strings;
@@ -552,7 +553,7 @@ void StringTable::Resize(SQInteger size)
 	SQ_FREE(oldtable,oldsize*sizeof(SQString*));
 }
 
-void StringTable::Remove(SQString *bs)
+void SQStringTable::Remove(SQString *bs)
 {
 	SQString *s;
 	SQString *prev=NULL;

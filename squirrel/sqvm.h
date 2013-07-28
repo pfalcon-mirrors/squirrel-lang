@@ -75,7 +75,7 @@ public:
 	bool Clone(const SQObjectPtr &self, SQObjectPtr &target);
 	bool ObjCmp(const SQObjectPtr &o1, const SQObjectPtr &o2,SQInteger &res);
 	bool StringCat(const SQObjectPtr &str, const SQObjectPtr &obj, SQObjectPtr &dest);
-	bool IsEqual(SQObjectPtr &o1,SQObjectPtr &o2,bool &res);
+	bool IsEqual(const SQObjectPtr &o1,const SQObjectPtr &o2,bool &res);
 	void ToString(const SQObjectPtr &o,SQObjectPtr &res);
 	SQString *PrintObjVal(const SQObjectPtr &o);
 
@@ -120,7 +120,7 @@ public:
 		_callsstack = &_callstackdata[0];
 		_alloccallsstacksize = newsize;
 	}
-	void EnterFrame(SQInteger newbase, SQInteger newtop, bool tailcall);
+	bool EnterFrame(SQInteger newbase, SQInteger newtop, bool tailcall);
 	void LeaveFrame();
 	void Release(){ sq_delete(this,SQVM); } //does nothing
 ////////////////////////////////////////////////////////////////////////////
@@ -164,6 +164,7 @@ public:
 	//VMs sharing the same state
 	SQSharedState *_sharedstate;
 	SQInteger _nnativecalls;
+	SQInteger _nmetamethodscall;
 	//suspend infos
 	SQBool _suspended;
 	SQBool _suspended_root;

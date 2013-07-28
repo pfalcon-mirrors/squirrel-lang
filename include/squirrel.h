@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2009 Alberto Demichelis
+Copyright (c) 2003-2010 Alberto Demichelis
 
 This software is provided 'as-is', without any 
 express or implied warranty. In no event will the 
@@ -56,9 +56,11 @@ typedef unsigned long SQUnsignedInteger;
 typedef unsigned long SQHash; /*should be the same size of a pointer*/
 #endif
 typedef int SQInt32; 
+typedef unsigned int SQUnsignedInteger32;
 #else 
 typedef int SQInteger;
 typedef int SQInt32; /*must be 32 bits(also on 64bits processors)*/
+typedef unsigned int SQUnsignedInteger32; /*must be 32 bits(also on 64bits processors)*/
 typedef unsigned int SQUnsignedInteger;
 typedef unsigned int SQHash; /*should be the same size of a pointer*/
 #endif
@@ -70,7 +72,7 @@ typedef double SQFloat;
 typedef float SQFloat;
 #endif
 
-#if defined(SQUSEDOUBLE) && !defined(_SQ64)
+#if defined(SQUSEDOUBLE) && !defined(_SQ64) || !defined(SQUSEDOUBLE) && defined(_SQ64)
 #ifdef _MSC_VER
 typedef __int64 SQRawObjectVal; //must be 64bits
 #else
@@ -160,8 +162,8 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 3.0 beta 1")
-#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2009 Alberto Demichelis")
+#define SQUIRREL_VERSION	_SC("Squirrel 3.0 beta 2")
+#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2010 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
 #define SQ_VMSTATE_IDLE			0
@@ -319,7 +321,7 @@ SQUIRREL_API void sq_poptop(HSQUIRRELVM v);
 SQUIRREL_API void sq_remove(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQInteger sq_gettop(HSQUIRRELVM v);
 SQUIRREL_API void sq_settop(HSQUIRRELVM v,SQInteger newtop);
-SQUIRREL_API void sq_reservestack(HSQUIRRELVM v,SQInteger nsize);
+SQUIRREL_API SQRESULT sq_reservestack(HSQUIRRELVM v,SQInteger nsize);
 SQUIRREL_API SQInteger sq_cmp(HSQUIRRELVM v);
 SQUIRREL_API void sq_move(HSQUIRRELVM dest,HSQUIRRELVM src,SQInteger idx);
 
