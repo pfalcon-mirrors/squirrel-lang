@@ -1,3 +1,11 @@
+***version 3.0.4 stable***
+-sq_deleteslot slot now pops the key in case of failure
+-fixed bug when _get metamethod throws null
+-fixed a bug in rstrip
+-added some error handling
+-minor bugfixes
+
+***2012-06-19		   ***
 ***version 3.0.3 stable***
 -improved error messages for _cmp(when a non integer value is returned) (thx Yexo)
 -added class.newmember() built in method (thx Nam)
