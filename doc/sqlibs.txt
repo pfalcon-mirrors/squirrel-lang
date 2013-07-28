@@ -1,0 +1,110 @@
+This is a very short description of the sqlibs.
+These libraries are meant to be a sample for playing around with this
+distribution and take a look at the Squirrel API.
+
+mathlib:
+	mapped 1:1 on the ANSI C functions, implements:
+	sqrt,sin,cos,asin,acos,log,
+	log10,tan,atan,atan2,pow,floor,
+	ceil,exp,rand,srand
+	PI,RAND_MAX
+
+systemlib:
+	mappend on the ANSI C functions, implements:
+	getenv
+	system
+	clock (returns in seconds)
+	gmtime	(returns a string)
+	localtime (returns a string)
+	
+iolib:
+	remove(path)
+		removes a file
+	rename(oldname,newname)
+		renames a file
+	fopen(filename,mode) 
+		mode: is the same as fopen() in ANSI C
+		returns a file object that implements the following methods
+		FILE OBJECT METHODS(the operator 'typeof' returns "file" on this object)
+			close()
+				close the file
+			eof()
+				returns a val!=null if is the end of file
+			read(type[,nsize])
+				type == 'l' : read a line from a file and returns it as string
+				type == 'c' : read a signed byte and retuns it as integer
+				type == 'u' : read a unsigned byte and retuns it as integer
+				type == 'i' : read a 32 bits integer and retuns it as integer
+				type == 's' : read a 16 bits integer and retuns it as integer
+				type == 'f' : read a 32 bits float and retuns it as float
+				type == 'str' , nsize: read nsize bytes and return a string
+			readblob(nbytes)
+				read n bytes from a file and retuns them as blob 
+			writeblob(blob)
+				writes a blob to the file
+			fillblob(blob)
+				reads enough bytes from the file in order to fill the blob
+			write(x)
+				write a string,integer or float in the file
+			seek(pos[,startpos])
+				seeks into the file 
+				base can be 'set','cur' or 'end' (by default is 'set')
+			size()
+				returns the size of the file
+	
+	stdin & stdout are global files
+	
+bloblib:
+	this lib is just an experiment.
+	blobs are chunks of memory implemented for manipulating binary data.
+	blobs can be indexed like arrays with the [] brackets and they
+	return a integer representing a byte.
+	blobs can be iterated with foreach (byte by byte)
+	
+	rawcastI2F(int)
+		cast a int to a float
+	rawcastF2I(float)
+		cast a float to a int
+	swap2
+		swap the byte order (like it would be a short int)
+	swap4
+		swap the byte order of a 32 bit int
+	swapfloat
+		swaps the byteorder of a float
+	createblob(nsize)
+		returns a blob of size 'nsize'
+	BLOB OBJECT METHODS
+		readI1()	//int8
+	    readI2()	//int16
+	    readI4()	//int32
+		readU2()	//uint16
+	    readU1()	//uint32
+	    readF4()	//float32
+		readF8()	//float64(double)
+			read from the blob
+		writeI1()
+	    writeI2()
+	    writeI4()
+		writeU2()
+	    writeU1()
+	    writeF4()
+		writeF8()
+			write to the blob
+		swapblob4()
+			swap the byteorder of a blob(32bits)
+		swapblob2()
+			swap the byteorder of a blob(16bits)
+	    seek(pos)
+	    	move the read/write pointer 
+	   	readblob(nbytes)
+	   		reads nbytes from the blob and retuns another blob
+	    cloneblob()
+	    	retuns a copy of the blob
+		size()
+			retuns the size of the blob
+		tell()
+			returns the pos of the read/write pointer
+		resize(newsize)
+			resize the blob
+	
+END OF SQLIBS.TXT

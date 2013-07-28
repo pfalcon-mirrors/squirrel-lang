@@ -1,0 +1,32 @@
+The programming language SQUIRREL 0.1 pre-alpha
+
+This is a work in progress
+--------------------------------------------------
+the current development state is pre-alpha,
+this mean that all features have been implemented but
+they could be subject to changes.
+The project has been compiled and run on Windows(Windows XP/2000 on Intel x86) and
+Linux(Slackware 9.0 on Intel x86).
+
+Has been tested with the following compilers:
+	MS Visual C++ 6.0,7.0 and 7.1
+	MinGW gcc 3.2 (mingw special 20020817-1)
+	Linux gcc 3.2.3
+	
+
+Work in prograss
+-The documentation is unfinished
+-The API library will be extended and will be subject to minor changes
+-the libraries (sqlibs) are just a prototype for testing pouposes;
+	a system for dynamic library loading is under development.
+-The stand alone version of the interpreter "sq" is still in early(messy) stage.
+-The language core need extensive testing.
+-The runtime erros messages are a bit weak :)
+
+Feedback and suggestions are appreciated 
+mailing list - http://groups.yahoo.com/group/squirrel_language/
+email - squirrel@ademichelis.com
+author - alberto@ademichelis.com
+
+END OF README
+
