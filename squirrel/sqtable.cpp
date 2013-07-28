@@ -20,53 +20,11 @@ SQTable::SQTable(SQSharedState *ss,int nInitialSize)
 
 void SQTable::Remove(const SQObjectPtr &key)
 {
-	unsigned long h = HashKey(key);
-	_HashNode *n = &_nodes[h&(_numofnodes-1)];
-	_HashNode *first = n;
-	_HashNode *prev = NULL;
-	do{
-		if(type(n->key)==type(key) && _rawval(n->key)==_rawval(key)){
-			if(n == first && n->next) {
-				_HashNode *z = n->next;
-				first->val = _null_;
-				first->key = _null_;
-				first->next = NULL;
-					
-				
-				//rechain (fu&#s up the foreach)
-				while(z) {
-					_HashNode *main = &_nodes[HashKey(z->key)&(_numofnodes-1)];
-					if(type(main->key) == OT_NULL) {
-						main->key = z->key;
-						main->val = z->val;
-						main->next = NULL;
-						z->key = z->val = _null_;
-					}
-					else {
-						_HashNode *x = main;
-						while(x->next)
-							x = x->next;
-						x->next = z;
-					}
-					_HashNode *t = z;
-					z = z->next;
-					t->next = NULL;
-				}
-				break;
-			}
-			else{
-				if(prev)
-					prev->next=n->next;
-				n->val = n->key = _null_;
-			}
-			if(n > _firstfree)
-				_firstfree=n;
-			break;
-		}
-		prev=n;
-		n=n->next;
-	}while(n);
-	Rehash(false);
+	_HashNode *n = _Get(key, HashKey(key) & (_numofnodes - 1));
+	if (n) {
+		n->val = n->key = _null_;
+		Rehash(false);
+	}
 }
 
 void SQTable::AllocNodes(int nSize)

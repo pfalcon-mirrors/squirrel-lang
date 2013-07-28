@@ -1,4 +1,4 @@
-Squirrel 1.0 release candidate 2(RC 2)
+Squirrel 1.0 stable
 --------------------------------------------------------
 What is in this distribution?
 
@@ -14,6 +14,9 @@ sq
 doc
 	The manual
 	
+etc
+	a minimalistic embedding sample	
+
 samples
 	samples programs
 	

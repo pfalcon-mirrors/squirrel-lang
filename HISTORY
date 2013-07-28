@@ -1,3 +1,9 @@
+***version 1.0 stable***
+-fixed some minor bug
+-improoved operator 'delete' performances
+-added scientific notation for float numbers( eg. 2.e16 or 2.e-2)
+
+***2004-08-30        ***
 ***version 1.0 release candidate 2(RC 2)***
 -fixed bug in the vm(thx Pierre Renaux)
 -fixed bug in the optimizer(thx Pierre Renaux)

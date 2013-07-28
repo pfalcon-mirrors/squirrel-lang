@@ -86,7 +86,7 @@ public:
 #endif
 	void Finalize();
 
-	void Release(){ delete this; } //does nothing
+	void Release(){ sq_delete(this,SQVM); } //does nothing
 ////////////////////////////////////////////////////////////////////////////
 	//stack functions for the api
 	void Pop() {

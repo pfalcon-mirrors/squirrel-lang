@@ -299,11 +299,14 @@ int SQLexer::ReadString(int ndelim,bool verbatim)
 	return TK_STRING_LITERAL;
 }
 
+int isexponent(int c) { return c == 'e' || c=='E'; }
+
 int SQLexer::ReadNumber()
 {
 #define TINT 1
 #define TFLOAT 2
 #define THEX 3
+#define TSCIENTIFIC 4
 	int type = TINT, firstchar = CUR_CHAR;
 	bool isfloat = false;
 	SQChar *sTemp;
@@ -320,14 +323,27 @@ int SQLexer::ReadNumber()
 	}
 	else {
 		APPEND_CHAR(firstchar);
-		while (CUR_CHAR == _SC('.') || scisdigit(CUR_CHAR)) {
+		while (CUR_CHAR == _SC('.') || scisdigit(CUR_CHAR) || isexponent(CUR_CHAR)) {
             if(CUR_CHAR == _SC('.')) type = TFLOAT;
+			if(isexponent(CUR_CHAR)) {
+				if(type != TFLOAT) throw ParserException(_SC("invalid numeric format"));
+				type = TSCIENTIFIC;
+				APPEND_CHAR(CUR_CHAR);
+				NEXT();
+				if(CUR_CHAR == '+' || CUR_CHAR == '-'){
+					APPEND_CHAR(CUR_CHAR);
+					NEXT();
+				}
+				if(!scisdigit(CUR_CHAR)) throw ParserException(_SC("exponent expected"));
+			}
+			
 			APPEND_CHAR(CUR_CHAR);
 			NEXT();
 		}
 	}
 	TERMINATE_BUFFER();
 	switch(type) {
+	case TSCIENTIFIC:
 	case TFLOAT:
 		_fvalue = (SQFloat)scstrtod(&_longstr[0],&sTemp);
 		return TK_FLOAT;
