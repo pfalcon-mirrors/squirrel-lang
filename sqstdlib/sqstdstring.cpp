@@ -215,13 +215,6 @@ static int _regexp_constructor(HSQUIRRELVM v)
 	if(!rex) return sq_throwerror(v,error);
 	sq_setinstanceup(v,1,rex);
 	sq_setreleasehook(v,1,_rexobj_releasehook);
-	/* *((SQRex **)sq_newuserdata(v,sizeof(SQRex *))) = rex;
-	sq_setreleasehook(v,-1,_rexobj_releasehook);
-	sq_pushregistrytable(v);
-	sq_pushstring(v,_SC("std_rex"),-1);
-	sq_rawget(v,-2);
-	sq_setdelegate(v,-3);
-	sq_pop(v,1);*/
 	return 0;
 }
 
@@ -245,7 +238,6 @@ static SQRegFunction rexobj_funcs[]={
 #define _DECL_FUNC(name,nparams,pmask) {_SC(#name),_string_##name,nparams,pmask}
 static SQRegFunction stringlib_funcs[]={
 	_DECL_FUNC(format,-2,_SC(".s")),
-	//_DECL_FUNC(regexp,2,_SC(".s")),
 	{0,0}
 };
 
@@ -254,7 +246,6 @@ int sqstd_register_stringlib(HSQUIRRELVM v)
 {
 	sq_pushstring(v,_SC("regexp"),-1);
 	sq_newclass(v,SQFalse);
-	//sq_pushregistrytable(v);
 	int i = 0;
 	while(rexobj_funcs[i].name != 0) {
 		SQRegFunction &f = rexobj_funcs[i];
@@ -266,19 +257,6 @@ int sqstd_register_stringlib(HSQUIRRELVM v)
 		i++;
 	}
 	sq_createslot(v,-3);
-	/*sq_pushstring(v,_SC("std_rex"),-1);
-	sq_newtable(v);
-	int i = 0;
-	while(rexobj_funcs[i].name != 0) {
-		SQRegFunction &f = rexobj_funcs[i];
-		sq_pushstring(v,f.name,-1);
-		sq_newclosure(v,f.f,0);
-		sq_setparamscheck(v,f.nparamscheck,f.typemask);
-		sq_createslot(v,-3);
-		i++;
-	}
-	sq_createslot(v,-3);
-	sq_pop(v,1);*/
 
 	i = 0;
 	while(stringlib_funcs[i].name!=0)

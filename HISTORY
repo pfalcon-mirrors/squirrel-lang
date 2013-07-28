@@ -1,3 +1,9 @@
+***2005-04-03		 ***
+***version 2.0.1 stable***
+-various bugfixes
+-sq_setparamscheck() now allows spaces in the typemask
+
+***2005-04-03		 ***
 ***version 2.0 stable***
 -added API sq_gettypetag()
 -added built-in function to tha bool type(tointeger, tostring etc...)

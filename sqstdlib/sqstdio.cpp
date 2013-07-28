@@ -173,6 +173,7 @@ SQRESULT sqstd_createfile(HSQUIRRELVM v, SQFILE file,SQBool own)
 			sq_pushnull(v); //false
 		}
 		if(SQ_SUCCEEDED( sq_call(v,3,SQTrue) )) {
+			sq_remove(v,-2);
 			return SQ_OK;
 		}
 	}

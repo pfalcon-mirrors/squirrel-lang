@@ -591,7 +591,7 @@ bool SQVM::CLASS_OP(SQObjectPtr &target,int baseclass,int attributes)
 	return true;
 }
 
-bool IsFalse(SQObjectPtr &o)
+bool SQVM::IsFalse(SQObjectPtr &o)
 {
 	SQObjectType t = type(o);
 	if((t & SQOBJECT_CANBEFALSE)

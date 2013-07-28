@@ -57,6 +57,7 @@ bool CompileTypemask(SQIntVec &res,const SQChar *typemask)
 				case 'x': mask |= _RT_INSTANCE; break;
 				case 'y': mask |= _RT_CLASS; break;
 				case '.': mask = -1; res.push_back(mask); i++; mask = 0; continue;
+				case ' ': i++; continue; //ignores spaces
 				default:
 					return false;
 		}

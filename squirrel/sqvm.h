@@ -79,6 +79,7 @@ public:
 	bool ObjCmp(const SQObjectPtr &o1, const SQObjectPtr &o2,int &res);
 	bool StringCat(const SQObjectPtr &str, const SQObjectPtr &obj, SQObjectPtr &dest);
 	bool IsEqual(SQObjectPtr &o1,SQObjectPtr &o2,bool &res);
+	bool IsFalse(SQObjectPtr &o);
 	SQString *PrintObjVal(const SQObject &o);
 
  

@@ -115,10 +115,10 @@ static int base_getstackinfos(HSQUIRRELVM v)
 
 static int base_assert(HSQUIRRELVM v)
 {
-	if(sq_gettype(v,-1)!=OT_NULL){
-		return 0;
+	if(v->IsFalse(stack_get(v,2))){
+		return sq_throwerror(v,_SC("assertion failed"));
 	}
-	else return sq_throwerror(v,_SC("assertion failed"));
+	return 0;
 }
 
 static int get_slice_params(HSQUIRRELVM v,int &sidx,int &eidx,SQObjectPtr &o)
@@ -277,7 +277,8 @@ static int default_delegate_tofloat(HSQUIRRELVM v)
 		v->Push(SQObjectPtr(tofloat(o)));
 		break;
 	case OT_BOOL:
-		v->Push(SQObjectPtr((float)_integer(o)));
+		v->Push(SQObjectPtr((SQFloat)(_integer(o)?1:0)));
+		break;
 	default:
 		v->Push(_null_);
 		break;
@@ -299,7 +300,7 @@ static int default_delegate_tointeger(HSQUIRRELVM v)
 		v->Push(SQObjectPtr(tointeger(o)));
 		break;
 	case OT_BOOL:
-		v->Push(SQObjectPtr(_integer(o)));
+		v->Push(SQObjectPtr(_integer(o)?1:0));
 		break;
 	default:
 		v->Push(_null_);
@@ -611,8 +612,8 @@ SQRegFunction SQSharedState::_string_default_delegate_funcz[]={
 	{_SC("tointeger"),default_delegate_tointeger,1, _SC("s")},
 	{_SC("tofloat"),default_delegate_tofloat,1, _SC("s")},
 	{_SC("tostring"),default_delegate_tostring,1, _SC("s")},
-	{_SC("slice"),string_slice,-1, _SC("snn")},
-	{_SC("find"),string_find,-2, _SC("ssn")},
+	{_SC("slice"),string_slice,-1, _SC(" s n  n")},
+	{_SC("find"),string_find,-2, _SC("s s n ")},
 	{_SC("tolower"),string_tolower,1, _SC("s")},
 	{_SC("toupper"),string_toupper,1, _SC("s")},
 	{0,0}

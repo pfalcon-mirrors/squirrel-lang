@@ -414,17 +414,17 @@ public:
 		BitwiseOrExp();
 		for(;;) switch(_token) {
 		case TK_AND: {
-			int trg = _fs->PopTarget();
-			_fs->AddInstruction(_OP_AND, _fs->PushTarget(), 0, trg, 0);
-			_fs->PopTarget();
+			int first_exp = _fs->PopTarget();
+			int trg = _fs->PushTarget();
+			_fs->AddInstruction(_OP_AND, trg, 0, first_exp, 0);
 			int jpos = _fs->GetCurrentPos();
+			if(trg != first_exp) _fs->AddInstruction(_OP_MOVE, trg, first_exp);
 			Lex(); LogicalAndExp();
-			if(trg != _fs->TopTarget()) {
-				_fs->AddInstruction(_OP_MOVE,trg,_fs->PopTarget());
-				_fs->PushTarget(trg);
-			}
 			_fs->SnoozeOpt();
-			_fs->SetIntructionParam(jpos, 1, _fs->GetCurrentPos() - jpos);
+			int second_exp = _fs->PopTarget();
+			if(trg != second_exp) _fs->AddInstruction(_OP_MOVE, trg, second_exp);
+			_fs->SnoozeOpt();
+			_fs->SetIntructionParam(jpos, 1, (_fs->GetCurrentPos() - jpos));
 			break;
 			}
 		case TK_IN: BIN_EXP(_OP_EXISTS, &SQCompiler::BitwiseOrExp); break;
