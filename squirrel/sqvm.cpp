@@ -727,6 +727,22 @@ exception_restore:
 					case OT_CLOSURE:
 						_GUARD(StartCall(_closure(clo), sarg0, arg3, _stackbase+arg2, false));
 						continue;
+					case OT_LNATIVECLOSURE:{
+						bool suspend;
+						_GUARD(CallNativeLight(_lnativeclosure(clo), arg3, _stackbase+arg2, clo,suspend));
+						if(suspend){
+							_suspended = SQTrue;
+							_suspended_target = sarg0;
+							_suspended_root = ci->_root;
+							_suspended_traps = traps;
+							outres = clo;
+							return true;
+						}
+						if(sarg0 != -1) {
+							STK(arg0) = clo;
+						}
+										   }
+						continue;
 					case OT_NATIVECLOSURE: {
 						bool suspend;
 						_GUARD(CallNative(_nativeclosure(clo), arg3, _stackbase+arg2, clo,suspend));
@@ -756,11 +772,19 @@ exception_restore:
 								_stack._vals[stkbase] = inst;
 								_GUARD(StartCall(_closure(clo), -1, arg3, stkbase, false));
 								break;
-							case OT_NATIVECLOSURE:
+							case OT_NATIVECLOSURE:{
 								bool suspend;
 								stkbase = _stackbase+arg2;
 								_stack._vals[stkbase] = inst;
 								_GUARD(CallNative(_nativeclosure(clo), arg3, stkbase, clo,suspend));
+												  }
+								break;
+							case OT_LNATIVECLOSURE:{
+								bool suspend;
+								stkbase = _stackbase+arg2;
+								_stack._vals[stkbase] = inst;
+								_GUARD(CallNativeLight(_lnativeclosure(clo), arg3, stkbase, clo,suspend));
+												   }
 								break;
 							default: break; //shutup GCC 4.x
 						}
@@ -1116,6 +1140,41 @@ void SQVM::CallDebugHook(SQInteger type,SQInteger forcedline)
 	_debughook = true;
 }
 
+bool SQVM::CallNativeLight(SQFUNCTION f, SQInteger nargs, SQInteger newbase, SQObjectPtr &retval, bool &suspend)
+{
+	SQInteger newtop = newbase + nargs /*+ nclosure->_noutervalues*/;
+	
+	if (_nnativecalls + 1 > MAX_NATIVE_CALLS) {
+		Raise_Error(_SC("Native stack overflow"));
+		return false;
+	}
+	if(!EnterFrame(newbase, newtop, false)) return false;
+	ci->_closure = f;
+	
+	_nnativecalls++;
+	SQInteger ret = (f)(this);
+	_nnativecalls--;
+
+	suspend = false;
+	if (ret == SQ_SUSPEND_FLAG) {
+		suspend = true;
+	}
+	else if (ret < 0) {
+		LeaveFrame();
+		Raise_Error(_lasterror);
+		return false;
+	}
+	if(ret) {
+		retval = _stack._vals[_top-1];
+	}
+	else {
+		retval.Null();
+	}
+	//retval = ret ? _stack._vals[_top-1] : _null_;
+	LeaveFrame();
+	return true;
+}
+
 bool SQVM::CallNative(SQNativeClosure *nclosure, SQInteger nargs, SQInteger newbase, SQObjectPtr &retval, bool &suspend)
 {
 	SQInteger nparamscheck = nclosure->_nparamscheck;
@@ -1275,12 +1334,12 @@ SQInteger SQVM::FallBackGet(const SQObjectPtr &self,const SQObjectPtr &key,SQObj
 				return FALLBACK_OK;
 			}
 			else {
+				Pop(2);
 				if(type(_lasterror) != OT_NULL) { //NULL means "clean failure" (not found)
-					//error
-					Pop(2);
 					return FALLBACK_ERROR;
 				}
 			}
+			
 		}
 					  }
 		break;
@@ -1528,6 +1587,12 @@ SQInteger prevstackbase = _stackbase;
 		
 						  }
 		break;
+	case OT_LNATIVECLOSURE:{
+		bool suspend;
+		return CallNativeLight(_lnativeclosure(closure), nparams, stackbase, outres,suspend);
+		
+						  }
+		break;
 	case OT_CLASS: {
 		SQObjectPtr constr;
 		SQObjectPtr temp;
@@ -1711,6 +1776,7 @@ void SQVM::dumpstack(SQInteger stackbase,bool dumpall)
 		case OT_CLASS:			scprintf(_SC("CLASS %p"),_class(obj));break;
 		case OT_INSTANCE:		scprintf(_SC("INSTANCE %p"),_instance(obj));break;
 		case OT_WEAKREF:		scprintf(_SC("WEAKERF %p"),_weakref(obj));break;
+		case OT_LNATIVECLOSURE:	scprintf(_SC("LNATIVECLOSURE %p"),_userpointer(obj));break;
 		default:
 			assert(0);
 			break;

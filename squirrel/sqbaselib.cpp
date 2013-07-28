@@ -914,7 +914,7 @@ static SQInteger closure_getinfos(HSQUIRRELVM v) {
 		res->NewSlot(SQString::Create(_ss(v),_SC("varargs"),-1,SQTrue),f->_varparams);
     res->NewSlot(SQString::Create(_ss(v),_SC("defparams"),-1,SQTrue),defparams);
 	}
-	else { //OT_NATIVECLOSURE 
+	else if(type(o) == OT_NATIVECLOSURE) { //OT_NATIVECLOSURE 
 		SQNativeClosure *nc = _nativeclosure(o);
 		res->NewSlot(SQString::Create(_ss(v),_SC("native"),-1,SQTrue),true);
 		res->NewSlot(SQString::Create(_ss(v),_SC("name"),-1,SQTrue),nc->_name);
@@ -928,6 +928,10 @@ static SQInteger closure_getinfos(HSQUIRRELVM v) {
 			}
 		}
 		res->NewSlot(SQString::Create(_ss(v),_SC("typecheck"),-1,SQTrue),typecheck);
+	}
+	else { //OT_LNATIVECLOSURE 
+		res->NewSlot(SQString::Create(_ss(v),_SC("native"),-1,SQTrue),true);
+		res->NewSlot(SQString::Create(_ss(v),_SC("name"),-1,SQTrue),SQString::Create(_ss(v),_SC("#lightnative#"),-1,SQTrue));
 	}
 	v->Push(res);
 	return 1;
@@ -975,7 +979,7 @@ static SQInteger thread_call(HSQUIRRELVM v)
 		_thread(o)->Push(_thread(o)->_roottable);
 		for(SQInteger i = 2; i<(nparams+1); i++)
 			sq_move(_thread(o),v,i);
-		if(SQ_SUCCEEDED(sq_call(_thread(o),nparams,SQTrue,SQFalse))) {
+		if(SQ_SUCCEEDED(sq_call(_thread(o),nparams,SQTrue,SQTrue))) {
 			sq_move(v,_thread(o),-1);
 			sq_pop(_thread(o),1);
 			return 1;

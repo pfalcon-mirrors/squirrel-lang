@@ -48,6 +48,9 @@ void sqstd_printcallstack(HSQUIRRELVM v)
 				case OT_USERPOINTER:
 					pf(v,_SC("[%s] USERPOINTER\n"),name);
 					break;
+				case OT_LNATIVECLOSURE:
+					pf(v,_SC("[%s] LNATIVECLOSURE\n"),name);
+					break;
 				case OT_STRING:
 					sq_getstring(v,-1,&s);
 					pf(v,_SC("[%s] \"%s\"\n"),name,s);

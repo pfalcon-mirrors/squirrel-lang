@@ -151,6 +151,7 @@ struct SQObjectPtr;
 #define _outer(obj) ((obj)._unVal.pOuter)
 #define _refcounted(obj) ((obj)._unVal.pRefCounted)
 #define _rawval(obj) ((obj)._unVal.raw)
+#define _lnativeclosure(obj) ((obj)._unVal.pLNativeClosure)
 
 #define _stringval(obj) (obj)._unVal.pString->_val
 #define _userdataval(obj) ((SQUserPointer)sq_aligning((obj)._unVal.pUserData + 1))
@@ -240,6 +241,7 @@ struct SQObjectPtr : public SQObject
 	_SCALAR_TYPE_DECL(OT_INTEGER,SQInteger,nInteger)
 	_SCALAR_TYPE_DECL(OT_FLOAT,SQFloat,fFloat)
 	_SCALAR_TYPE_DECL(OT_USERPOINTER,SQUserPointer,pUserPointer)
+	_SCALAR_TYPE_DECL(OT_LNATIVECLOSURE,SQFUNCTION,pLNativeClosure)
 
 	SQObjectPtr(bool bBool)
 	{

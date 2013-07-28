@@ -256,6 +256,12 @@ void sq_pushuserpointer(HSQUIRRELVM v,SQUserPointer p)
 	v->Push(p);
 }
 
+void sq_pushlnativeclosure(HSQUIRRELVM v,SQFUNCTION p)
+{
+	v->Push(p);
+}
+
+
 SQUserPointer sq_newuserdata(HSQUIRRELVM v,SQUnsignedInteger size)
 {
 	SQUserData *ud = SQUserData::Create(_ss(v), size);
@@ -402,6 +408,12 @@ SQRESULT sq_getclosureinfo(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger *nparam
 		SQNativeClosure *c = _nativeclosure(o);
 		*nparams = (SQUnsignedInteger)c->_nparamscheck;
 		*nfreevars = c->_noutervalues;
+		return SQ_OK;
+	}
+	else if(type(o) == OT_LNATIVECLOSURE)
+	{
+		*nparams = 0;
+		*nfreevars = 0;
 		return SQ_OK;
 	}
 	return sq_throwerror(v,_SC("the object is not a closure"));
@@ -1160,6 +1172,8 @@ SQRESULT sq_writeclosure(HSQUIRRELVM v,SQWRITEFUNC w,SQUserPointer up)
 	SQObjectPtr *o = NULL;
 	_GETSAFE_OBJ(v, -1, OT_CLOSURE,o);
 	unsigned short tag = SQ_BYTECODE_STREAM_TAG;
+	if(_closure(*o)->_function->_noutervalues) 
+		return sq_throwerror(v,_SC("a closure with free valiables bound it cannot be serialized"));
 	if(w(up,&tag,2) != 2)
 		return sq_throwerror(v,_SC("io error"));
 	if(!_closure(*o)->Save(v,up,w))

@@ -26,6 +26,7 @@ const SQChar *IdType2Name(SQObjectType type)
 	case _RT_GENERATOR:return _SC("generator");
 	case _RT_CLOSURE:
 	case _RT_NATIVECLOSURE:
+	case _RT_LNATIVECLOSURE:
 		return _SC("function");
 	case _RT_USERDATA:
 	case _RT_USERPOINTER:
