@@ -154,17 +154,17 @@ public:
 	}
 	bool Compile(SQObjectPtr &o)
 	{
-		//SQ_TRY {
-			_debugline = 1;
-			_debugop = 0;
-			Lex();
-			SQFuncState funcstate(_ss(_vm), SQFunctionProto::Create(), NULL,ThrowError,this);
-			_funcproto(funcstate._func)->_name = SQString::Create(_ss(_vm), _SC("main"));
-			_fs = &funcstate;
-			_fs->AddParameter(_fs->CreateString(_SC("this")));
-			_funcproto(_fs->_func)->_sourcename = _sourcename;
-			int stacksize = _fs->GetStackSize();
+		_debugline = 1;
+		_debugop = 0;
+
+		SQFuncState funcstate(_ss(_vm), SQFunctionProto::Create(), NULL,ThrowError,this);
+		_funcproto(funcstate._func)->_name = SQString::Create(_ss(_vm), _SC("main"));
+		_fs = &funcstate;
+		_fs->AddParameter(_fs->CreateString(_SC("this")));
+		_funcproto(_fs->_func)->_sourcename = _sourcename;
+		int stacksize = _fs->GetStackSize();
 		if(setjmp(_errorjmp) == 0) {
+			Lex();
 			while(_token > 0){
 				Statement();
 				if(_lex._prevtoken != _SC('}')) OptionalSemicolon();

@@ -291,9 +291,23 @@ int SQLexer::ReadString(int ndelim,bool verbatim)
 					APPEND_CHAR('\\'); NEXT(); 
 				}
 				else {
-
 					NEXT();
 					switch(CUR_CHAR) {
+					case _SC('x'): NEXT(); {
+						if(!isxdigit(CUR_CHAR)) Error(_SC("hexadecimal number expected")); 
+						const int maxdigits = 4;
+						SQChar temp[maxdigits+1];
+						int n = 0;
+						while(isxdigit(CUR_CHAR) && n < maxdigits) {
+							temp[n] = CUR_CHAR;
+							n++;
+							NEXT();
+						}
+						temp[n] = 0;
+						SQChar *sTemp;
+						APPEND_CHAR((SQChar)scstrtoul(temp,&sTemp,16));
+					}
+				    break;
 					case _SC('t'): APPEND_CHAR(_SC('\t')); NEXT(); break;
 					case _SC('a'): APPEND_CHAR(_SC('\a')); NEXT(); break;
 					case _SC('b'): APPEND_CHAR(_SC('\b')); NEXT(); break;

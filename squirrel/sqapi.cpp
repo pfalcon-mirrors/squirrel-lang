@@ -363,6 +363,9 @@ SQRESULT sq_setparamscheck(HSQUIRRELVM v,int nparamscheck,const SQChar *typemask
 	else {
 		nc->_typecheck.resize(0);
 	}
+	if(nparamscheck == SQ_MATCHTYPEMASKSTRING) {
+		nc->_nparamscheck = nc->_typecheck.size();
+	}
 	return SQ_OK;
 }
 

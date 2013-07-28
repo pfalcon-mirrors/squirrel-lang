@@ -42,6 +42,7 @@ bool CompileTypemask(SQIntVec &res,const SQChar *typemask)
 	while(typemask[i] != 0) {
 		
 		switch(typemask[i]){
+				case 'o': mask |= _RT_NULL; break;
 				case 'i': mask |= _RT_INTEGER; break;
 				case 'f': mask |= _RT_FLOAT; break;
 				case 'n': mask |= (_RT_FLOAT | _RT_INTEGER); break;

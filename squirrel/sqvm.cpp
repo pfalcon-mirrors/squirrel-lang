@@ -75,9 +75,9 @@ SQObjectPtr &stack_get(HSQUIRRELVM v,int idx){return ((idx>=0)?(v->GetAt(idx+v->
 SQVM::SQVM(SQSharedState *ss)
 {
 	_sharedstate=ss;
-	_suspended=false;
+	_suspended = SQFalse;
 	_suspended_target=-1;
-	_suspended_root=false;
+	_suspended_root = SQFalse;
 	_suspended_traps=-1;
 	_foreignptr=NULL;
 	_nnativecalls=0;
@@ -348,7 +348,7 @@ bool SQVM::StartCall(SQClosure *closure,int target,int nargs,int stackbase,bool 
 		ci->_target = target;
 		ci->_prevtop = _top - _stackbase;
 		ci->_ncalls = 1;
-		ci->_root = false;
+		ci->_root = SQFalse;
 	}
 	else {
 		ci->_ncalls++;
@@ -376,7 +376,7 @@ bool SQVM::Return(int _arg0, int _arg1, SQObjectPtr &retval)
 		for(int i=0;i<ci->_ncalls;i++)
 			CallDebugHook(_SC('r'));
 						
-	bool broot = ci->_root;
+	SQBool broot = ci->_root;
 	int last_top = _top;
 	int target = ci->_target;
 	int oldstackbase = _stackbase;
@@ -397,7 +397,7 @@ bool SQVM::Return(int _arg0, int _arg1, SQObjectPtr &retval)
 
 	while (last_top >= _top) _stack[last_top--].Null();
 	assert(oldstackbase >= _stackbase); 
-	return broot;
+	return broot?true:false;
 }
 
 #define _RET_ON_FAIL(exp) { if(!exp) return false; }
@@ -637,13 +637,13 @@ bool SQVM::Execute(SQObjectPtr &closure, int target, int nargs, int stackbase,SQ
 				if(ci == NULL) CallErrorHandler(_lasterror);
 				return false;
 			}
-			ci->_root = true;
+			ci->_root = SQTrue;
 			break;
-		case ET_RESUME_GENERATOR: _generator(closure)->Resume(this, target); ci->_root = true; traps += ci->_etraps; break;
+		case ET_RESUME_GENERATOR: _generator(closure)->Resume(this, target); ci->_root = SQTrue; traps += ci->_etraps; break;
 		case ET_RESUME_VM:
 			traps = _suspended_traps;
 			ci->_root = _suspended_root;
-			_suspended = false;
+			_suspended = SQFalse;
 			break;
 	}
 	
@@ -696,7 +696,7 @@ common_call:
 						bool suspend;
 						_GUARD(CallNative(_nativeclosure(temp_reg), arg3, _stackbase+arg2, ct_tailcall, temp_reg,suspend));
 						if(suspend){
-							_suspended = true;
+							_suspended = SQTrue;
 							_suspended_target = ct_target;
 							_suspended_root = ci->_root;
 							_suspended_traps = traps;
@@ -943,7 +943,7 @@ exception_trap:
 			CallErrorHandler(currerror);
 			//remove call stack until a C function is found or the cstack is empty
 			if(ci) do{
-				bool exitafterthisone = ci->_root;
+				SQBool exitafterthisone = ci->_root;
 				if(type(ci->_generator) == OT_GENERATOR) _generator(ci->_generator)->Kill();
 				_stackbase -= ci->_prevstkbase;
 				_top = _stackbase + ci->_prevtop;
@@ -1325,15 +1325,6 @@ bool SQVM::CallMetaMethod(SQDelegable *del,SQMetaMethod mm,int nparams,SQObjectP
 	return false;
 }
 
-void SQVM::Pop() {
-	_stack[--_top] = _null_;
-}
-void SQVM::Pop(int n) {
-	for(int i = 0; i < n; i++){
-		_stack[--_top] = _null_;
-	}
-}
-
 void SQVM::Remove(int n) {
 	n = (n >= 0)?n + _stackbase - 1:_top + n;
 	for(int i = n; i < _top; i++){
@@ -1343,11 +1334,6 @@ void SQVM::Remove(int n) {
 	_top--;
 }
 
-void SQVM::Push(const SQObjectPtr &o) { _stack[_top++] = o; }
-SQObjectPtr &SQVM::Top() { return _stack[_top-1]; }
-SQObjectPtr &SQVM::PopGet() { return _stack[--_top]; }
-SQObjectPtr &SQVM::GetUp(int n) { return _stack[_top+n]; }
-SQObjectPtr &SQVM::GetAt(int n) { return _stack[n]; }
 
 #ifdef _DEBUG_DUMP
 void SQVM::dumpstack(int stackbase,bool dumpall)
