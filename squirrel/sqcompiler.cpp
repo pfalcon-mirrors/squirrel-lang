@@ -1,6 +1,7 @@
 /*
 	see copyright notice in squirrel.h
 */
+#ifndef SQ_VM_ONLY
 #include "sqpcheader.h"
 #include <stdarg.h>
 #include "sqopcodes.h"
@@ -1050,3 +1051,4 @@ bool Compile(SQVM *vm,SQLEXREADFUNC rg, SQUserPointer up, const SQChar *sourcena
 	SQCompiler p(vm, rg, up, sourcename, raiseerror, lineinfo);
 	return p.Compile(out);
 }
+#endif

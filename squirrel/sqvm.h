@@ -42,7 +42,7 @@ struct SQVM : public CHAINABLE_OBJ
 
 typedef sqvector<CallInfo> CallInfoVec;
 public:
-	enum ExecutionType { ET_CALL, ET_RESUME_GENERATOR, ET_RESUME_VM };
+	enum ExecutionType { ET_CALL, ET_UNPROTECTEDCALL, ET_RESUME_GENERATOR, ET_RESUME_VM };
 	SQVM(SQSharedState *ss);
 	~SQVM();
 	bool Init(SQVM *friendvm, int stacksize);
@@ -52,7 +52,7 @@ public:
 	//start a SQUIRREL call in the same "Execution loop"
 	void StartCall(SQClosure *closure, int target, int nargs, int stackbase, bool tailcall);
 	//call a generic closure pure SQUIRREL or NATIVE
-	bool Call(SQObjectPtr &closure, int nparams, int stackbase, SQObjectPtr &outres);
+	bool Call(SQObjectPtr &closure, int nparams, int stackbase, SQObjectPtr &outres,ExecutionType et);
 	SQRESULT Suspend();
 
 	void CallDebugHook(int type,int forcedline=0);
@@ -133,6 +133,7 @@ public:
 	bool _suspended_root;
 	int _suspended_target;
 	int _suspended_traps;
+	bool _suspended_stopexception;
 };
 
 struct AutoDec{

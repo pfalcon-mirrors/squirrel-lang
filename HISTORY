@@ -1,3 +1,8 @@
+***version 1.01 stable***
+-fixed a minor bug
+-added conditional compilation flag SQ_VM_ONLY
+
+***2004-11-01        ***
 ***version 1.0 stable***
 -fixed some minor bug
 -improoved operator 'delete' performances

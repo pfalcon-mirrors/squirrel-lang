@@ -1,6 +1,8 @@
 /*
 	see copyright notice in squirrel.h
 */
+#ifndef SQ_VM_ONLY
+
 #include "sqpcheader.h"
 #include "sqcompiler.h"
 #include "sqfuncproto.h"
@@ -450,3 +452,6 @@ void SQFuncState::Finalize()
 	f->_lineinfos.resize(_lineinfos.size());
 	f->_lineinfos.copy(_lineinfos);
 }
+
+#endif //SQ_VM_ONLY
+

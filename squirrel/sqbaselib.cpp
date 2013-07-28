@@ -167,6 +167,7 @@ static int base_print(HSQUIRRELVM v)
 
 static int base_compilestring(HSQUIRRELVM v)
 {
+#ifndef SQ_VM_ONLY
 	int nargs=sq_gettop(v);
 	const SQChar *src=NULL,*name=_SC("unnamedbuffer");
 	SQInteger size;
@@ -179,6 +180,9 @@ static int base_compilestring(HSQUIRRELVM v)
 		return 1;
 	else
 		return SQ_ERROR;
+#else
+	return sq_throwerror(v,_SC("squirrel has been compiled with SQ_VM_ONLY"));
+#endif
 }
 
 static int base_newthread(HSQUIRRELVM v)

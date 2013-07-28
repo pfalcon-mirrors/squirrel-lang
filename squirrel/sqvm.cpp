@@ -421,11 +421,13 @@ SQObjectPtr SQVM::Execute(SQObjectPtr &closure, int target, int nargs, int stack
 	//temp_reg vars for OP_CALL
 	int ct_target;
 	bool ct_tailcall;
-
+	bool protectedcall = true;
 	SQ_TRY {
 		switch(et){
-			case ET_CALL: 
+			case ET_CALL:
+			case ET_UNPROTECTEDCALL:
 				StartCall(_closure(closure), _top - nargs, nargs, stackbase, false); ci->_root = true;
+				protectedcall = !(et == ET_UNPROTECTEDCALL);
 				if (type(_debughook) != OT_NULL && _rawval(_debughook) != _rawval(ci->_closure))
 					CallDebugHook(_SC('c'));
 				break;
@@ -867,18 +869,22 @@ common_call:
 					n++;
 				}while(_callsstack.size());
 			}
-			//call the hook
-			CallErrorHandler(e);
-			//remove call stack until a C function is found or the cstack is empty
-			if(ci) do{
-				if(type(ci->_generator) == OT_GENERATOR) _generator(ci->_generator)->Kill();
-				_stackbase -= ci->_prevstkbase;
-				_top = _stackbase + ci->_prevtop;
-				POP_CALLINFO(this);
-				if( ci && type(ci->_closure) != OT_CLOSURE) break;
-			}while(_callsstack.size());
 
-			while(last_top >= _top) _stack[last_top--] = _null_;
+			if(protectedcall) {
+				//call the hook
+				CallErrorHandler(e);
+				//remove call stack until a C function is found or the cstack is empty
+
+				do{
+					if(type(ci->_generator) == OT_GENERATOR) _generator(ci->_generator)->Kill();
+					_stackbase -= ci->_prevstkbase;
+					_top = _stackbase + ci->_prevtop;
+					POP_CALLINFO(this);
+					if( ci && type(ci->_closure) != OT_CLOSURE) break;
+				}while(ci && _callsstack.size() && type(ci->_closure) == OT_CLOSURE);
+
+				while(last_top >= _top) _stack[last_top--] = _null_;
+			}
 			//thow the exception to terminate the execution of the function
 		}
 		throw e;
@@ -891,7 +897,7 @@ void SQVM::CallErrorHandler(SQException &e)
 	if(type(_errorhandler) != OT_NULL) {
 		SQObjectPtr out;
 		Push(_roottable); Push(e._description);
-		Call(_errorhandler, 2, _top-2, out);
+		Call(_errorhandler, 2, _top-2, out,ET_CALL);
 		Pop(2);
 	}
 }
@@ -902,7 +908,7 @@ void SQVM::CallDebugHook(int type,int forcedline)
 	int nparams=5;
 	SQFunctionProto *func=_funcproto(_closure(ci->_closure)->_function);
 	Push(_roottable); Push(type); Push(func->_sourcename); Push(forcedline?forcedline:func->GetLine(ci->_ip)); Push(func->_name);
-	Call(_debughook,nparams,_top-nparams,temp_reg);
+	Call(_debughook,nparams,_top-nparams,temp_reg,ET_CALL);
 	Pop(nparams);
 }
 
@@ -1138,11 +1144,11 @@ void SQVM::DeleteSlot(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr
 	}
 }
 
-bool SQVM::Call(SQObjectPtr &closure,int nparams,int stackbase,SQObjectPtr &outres)
+bool SQVM::Call(SQObjectPtr &closure,int nparams,int stackbase,SQObjectPtr &outres,ExecutionType et)
 {
 	switch(type(closure)) {
 	case OT_CLOSURE:
-		outres=Execute(closure, _top - nparams, nparams, stackbase);
+		outres=Execute(closure, _top - nparams, nparams, stackbase,et);
 		return true;
 	case OT_NATIVECLOSURE: {
 		CallNative(_nativeclosure(closure), nparams, stackbase, false, outres); }
@@ -1155,12 +1161,14 @@ bool SQVM::Call(SQObjectPtr &closure,int nparams,int stackbase,SQObjectPtr &outr
 bool SQVM::CallMetaMethod(SQTable *mt,SQMetaMethod mm,int nparams,SQObjectPtr &outres)
 {
 	SQObjectPtr closure;
+	int top = _top;
 	if(mt->Get((*_ss(this)->_metamethods)[mm], closure)) {
-		if(Call(closure, nparams, _top - nparams, outres)) {
+		if(Call(closure, nparams, _top - nparams, outres,ET_UNPROTECTEDCALL)) {
 			Pop(nparams);
 			return true;
 		}
 	}
+	assert(top == _top);
 	Pop(nparams);
 	return false;
 }

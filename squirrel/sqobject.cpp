@@ -42,9 +42,13 @@ int SQGenerator::Yield(SQVM *v)
 	int size=v->_top-v->_stackbase;
 	_ci=*v->ci;
 	_stack.resize(size);
-	int bytesize=sizeof(SQObjectPtr)*size;
-	memcpy(&_stack._vals[0],&v->_stack[v->_stackbase],bytesize);
-	memset(&v->_stack[v->_stackbase],0,bytesize);
+	//int bytesize=sizeof(SQObjectPtr)*size;
+	//memcpy(&_stack._vals[0],&v->_stack[v->_stackbase],bytesize);
+	//memset(&v->_stack[v->_stackbase],0,bytesize);
+	for(int n =0; n<size; n++) {
+		_stack._vals[n] = v->_stack[v->_stackbase+n];
+		v->_stack[v->_stackbase+n] = _null_;
+	}
 	_ci._generator=_null_;
 	for(int i=0;i<_ci._etraps;i++) {
 		_etraps.push_back(v->_etraps.top());
@@ -69,9 +73,13 @@ void SQGenerator::Resume(SQVM *v,int target)
 		v->_etraps.push_back(_etraps.top());
 		_etraps.pop_back();
 	}
-    int bytesize=sizeof(SQObjectPtr)*size;
-	memcpy(&v->_stack[v->_stackbase],&_stack._vals[0],bytesize);
-	memset(&_stack._vals[0],0,bytesize);
+   //   int bytesize=sizeof(SQObjectPtr)*size;
+	for(int n =0; n<size; n++) {
+		v->_stack[v->_stackbase+n] = _stack._vals[n];
+		_stack._vals[0] = _null_;
+	}
+	//memcpy(&v->_stack[v->_stackbase],&_stack._vals[0],bytesize);
+	//memset(&_stack._vals[0],0,bytesize);
 	v->_top=v->_stackbase+size;
 	v->ci->_prevtop=prevtop;
 	v->ci->_prevstkbase=v->_stackbase-oldstackbase;

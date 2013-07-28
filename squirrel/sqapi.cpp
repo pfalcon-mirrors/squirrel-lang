@@ -111,12 +111,16 @@ void sq_close(HSQUIRRELVM v)
 
 SQRESULT sq_compile(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQChar *sourcename,int raiseerror)
 {
+#ifndef SQ_VM_ONLY
 	SQObjectPtr o;
 	if(Compile(v, read, p, sourcename, o, raiseerror>0?true:false, _ss(v)->_debuginfo)) {
 		v->Push(SQClosure::Create(_ss(v), _funcproto(o)));
 		return SQ_OK;
 	}
 	return SQ_ERROR;
+#else
+	return sq_throwerror(v,_SC("squirrel has been compiled with SQ_VM_ONLY"));
+#endif
 }
 
 void sq_enabledebuginfo(HSQUIRRELVM v, int debuginfo)
@@ -735,9 +739,10 @@ SQRESULT sq_resume(HSQUIRRELVM v,int retval)
 SQRESULT sq_call(HSQUIRRELVM v,int params,int retval)
 {
 	SQObjectPtr res;
+	int top = v->_top;
 	SQ_TRY {
-		if(v->Call(v->GetUp(-(params+1)),params,v->_top-params,res)){
-			v->Pop(params);//pop closure and args
+		if(v->Call(v->GetUp(-(params+1)),params,v->_top-params,res,SQVM::ET_CALL)){
+			v->Pop(params);//pop args
 			if(retval){
 				v->Push(res); return SQ_OK;
 			}
@@ -747,7 +752,10 @@ SQRESULT sq_call(HSQUIRRELVM v,int params,int retval)
 			v->Pop(params);
 		return sq_throwerror(v,_SC("call failed"));
 	}
-	SQ_CATCH(SQException,e){v->Pop(params+1); return sq_aux_throwobject(v,e);}
+	SQ_CATCH(SQException,e) {
+		v->Pop(params); 
+		return sq_aux_throwobject(v,e);
+	}
 }
 
 SQRESULT sq_suspendvm(HSQUIRRELVM v)

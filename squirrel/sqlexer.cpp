@@ -1,6 +1,7 @@
 /*
 	see copyright notice in squirrel.h
 */
+#ifndef SQ_VM_ONLY
 #include "sqpcheader.h"
 #include <ctype.h>
 #include <stdlib.h>
@@ -372,3 +373,4 @@ int SQLexer::ReadID()
 	}
 	return res;
 }
+#endif //SQ_VM_ONLY
