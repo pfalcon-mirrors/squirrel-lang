@@ -285,8 +285,12 @@ SQRESULT sqstd_writeclosuretofile(HSQUIRRELVM v,const SQChar *filename)
 int _g_io_loadfile(HSQUIRRELVM v)
 {
 	const SQChar *filename;
+	SQBool printerror = SQFalse;
 	sq_getstring(v,2,&filename);
-	if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,SQFalse)))
+	if(sq_gettop(v) >= 3) {
+		sq_getbool(v,3,&printerror);
+	}
+	if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,printerror)))
 		return 1;
 	return SQ_ERROR; //propagates the error
 }
@@ -294,17 +298,21 @@ int _g_io_loadfile(HSQUIRRELVM v)
 int _g_io_dofile(HSQUIRRELVM v)
 {
 	const SQChar *filename;
+	SQBool printerror = SQFalse;
 	sq_getstring(v,2,&filename);
+	if(sq_gettop(v) >= 3) {
+		sq_getbool(v,3,&printerror);
+	}
 	sq_push(v,1); //repush the this
-	if(SQ_SUCCEEDED(sqstd_dofile(v,filename,SQTrue,SQFalse)))
+	if(SQ_SUCCEEDED(sqstd_dofile(v,filename,SQTrue,printerror)))
 		return 1;
 	return SQ_ERROR; //propagates the error
 }
 
 #define _DECL_GLOBALIO_FUNC(name,nparams,typecheck) {_SC(#name),_g_io_##name,nparams,typecheck}
 static SQRegFunction iolib_funcs[]={
-	_DECL_GLOBALIO_FUNC(loadfile,2,_SC(".s")),
-	_DECL_GLOBALIO_FUNC(dofile,2,_SC(".s")),
+	_DECL_GLOBALIO_FUNC(loadfile,-2,_SC(".sb")),
+	_DECL_GLOBALIO_FUNC(dofile,-2,_SC(".sb")),
 	{0,0}
 };
 

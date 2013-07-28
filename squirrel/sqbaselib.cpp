@@ -276,6 +276,8 @@ static int default_delegate_tofloat(HSQUIRRELVM v)
 	case OT_INTEGER:case OT_FLOAT:
 		v->Push(SQObjectPtr(tofloat(o)));
 		break;
+	case OT_BOOL:
+		v->Push(SQObjectPtr((float)_integer(o)));
 	default:
 		v->Push(_null_);
 		break;
@@ -295,6 +297,9 @@ static int default_delegate_tointeger(HSQUIRRELVM v)
 		}}
 	case OT_INTEGER:case OT_FLOAT:
 		v->Push(SQObjectPtr(tointeger(o)));
+		break;
+	case OT_BOOL:
+		v->Push(SQObjectPtr(_integer(o)));
 		break;
 	default:
 		v->Push(_null_);
@@ -318,6 +323,9 @@ static int default_delegate_tostring(HSQUIRRELVM v)
 		scsprintf(_ss(v)->GetScratchPad(rsl(NUMBER_MAX_CHAR+1)),_SC("%.14g"),_float(o));
 		v->Push(SQString::Create(_ss(v),_ss(v)->GetScratchPad(-1)));
 		break;
+	case OT_BOOL:
+		v->Push(SQObjectPtr(SQString::Create(_ss(v),_integer(o)?_SC("true"):_SC("false"))));
+		break;
 	default:
 		v->Push(_null_);
 		break;
@@ -339,7 +347,6 @@ static int number_delegate_tochar(HSQUIRRELVM v)
 
 static int table_rawdelete(HSQUIRRELVM v)
 {
-	//return SQ_SUCCEEDED(sq_getdelegate(v,-1))?1:SQ_ERROR;
 	if(SQ_FAILED(sq_rawdeleteslot(v,1,SQTrue)))
 		return SQ_ERROR;
 	return 1;
@@ -511,10 +518,9 @@ static int array_sort(HSQUIRRELVM v)
 	if(_array(o)->Size() > 1) {
 		if(type(funcobj) == OT_CLOSURE || type(funcobj) == OT_NATIVECLOSURE) func = 2;
 		if(!_qsort(v, o, 0, _array(o)->Size()-1, func))
-			return SQ_ERROR;//sq_aux_throwobject(v,v->_thrownerror);
-			//v->RT_Error(v->_thrownerror);
+			return SQ_ERROR;
+
 	}
-	//} SQ_CATCH(SQException,e) { v->_lasterror = e._description; return SQ_ERROR; }
 	return 0;
 }
 static int array_slice(HSQUIRRELVM v)
@@ -614,10 +620,10 @@ SQRegFunction SQSharedState::_string_default_delegate_funcz[]={
 
 //INTEGER DEFAULT DELEGATE//////////////////////////
 SQRegFunction SQSharedState::_number_default_delegate_funcz[]={
-	{_SC("tointeger"),default_delegate_tointeger,1, _SC("n")},
-	{_SC("tofloat"),default_delegate_tofloat,1, _SC("n")},
-	{_SC("tostring"),default_delegate_tostring,1, _SC("n")},
-	{_SC("tochar"),number_delegate_tochar,1, _SC("n")},
+	{_SC("tointeger"),default_delegate_tointeger,1, _SC("n|b")},
+	{_SC("tofloat"),default_delegate_tofloat,1, _SC("n|b")},
+	{_SC("tostring"),default_delegate_tostring,1, _SC("n|b")},
+	{_SC("tochar"),number_delegate_tochar,1, _SC("n|b")},
 	{0,0}
 };
 

@@ -491,14 +491,20 @@ SQRESULT sq_settypetag(HSQUIRRELVM v,int idx,unsigned int typetag)
 {
 	SQObjectPtr &o = stack_get(v,idx);
 	switch(type(o)) {
-		case OT_USERDATA:
-			_userdata(o)->_typetag = typetag;
-			break;
-		case OT_CLASS:
-			_class(o)->_typetag = typetag;
-			break;
-		default:
-			return sq_throwerror(v,_SC("invalid object type"));
+		case OT_USERDATA:	_userdata(o)->_typetag = typetag;	break;
+		case OT_CLASS:		_class(o)->_typetag = typetag;		break;
+		default:			return sq_throwerror(v,_SC("invalid object type"));
+	}
+	return SQ_OK;
+}
+
+SQRESULT sq_gettypetag(HSQUIRRELVM v,int idx,unsigned int *typetag)
+{
+	SQObjectPtr &o = stack_get(v,idx);
+	switch(type(o)) {
+		case OT_USERDATA:	*typetag = _userdata(o)->_typetag;	break;
+		case OT_CLASS:		*typetag = _class(o)->_typetag;		break;
+		default:			return sq_throwerror(v,_SC("invalid object type"));
 	}
 	return SQ_OK;
 }

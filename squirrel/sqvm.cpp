@@ -1048,7 +1048,7 @@ bool SQVM::CallNative(SQNativeClosure *nclosure,int nargs,int stackbase,bool tai
 	_stackbase = oldstackbase;
 	_top = oldtop;
 	POP_CALLINFO(this);
-	return true;;
+	return true;
 }
 
 bool SQVM::Get(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPtr &dest,bool raw, bool fetchroot)
@@ -1125,7 +1125,7 @@ bool SQVM::FallBackGet(const SQObjectPtr &self,const SQObjectPtr &key,SQObjectPt
 			return _instance_ddel->Get(key,dest);
 		}
 		return true;
-	case OT_INTEGER:case OT_FLOAT: 
+	case OT_INTEGER:case OT_FLOAT:case OT_BOOL: 
 		if(raw)return false;
 		return _number_ddel->Get(key,dest);
 	case OT_GENERATOR: 

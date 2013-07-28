@@ -13,11 +13,6 @@ struct SQFuncState
 	void Dump();
 #endif
 	void AddInstruction(SQOpcode _op,int arg0=0,int arg1=0,int arg2=0,int arg3=0){SQInstruction i(_op,arg0,arg1,arg2,arg3);AddInstruction(i);}
-	/*void AddLInstruction(SQOpcode _op,int arg0=0,int arg1 = 0){
-		SQInstruction i(_op,arg0,arg1,0,0);
-		i.args.l._arg1 = arg1;
-		AddInstruction(i);
-	}*/
 	void AddInstruction(SQInstruction &i);
 	void SetIntructionParams(int pos,int arg0,int arg1,int arg2=0,int arg3=0);
 	void SetIntructionParam(int pos,int arg,int val);

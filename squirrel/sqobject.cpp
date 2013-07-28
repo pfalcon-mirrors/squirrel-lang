@@ -55,8 +55,8 @@ bool SQGenerator::Yield(SQVM *v)
 	}
 	int nvargs = v->ci->_vargs.size;
 	int vargsbase = v->ci->_vargs.base;
-	for(int n = nvargs - 1; n >= 0; n--) {
-		_vargsstack.push_back(v->_vargsstack[vargsbase+n]);
+	for(int j = nvargs - 1; j >= 0; j--) {
+		_vargsstack.push_back(v->_vargsstack[vargsbase+j]);
 	}
 	_ci._generator=_null_;
 	for(int i=0;i<_ci._etraps;i++) {

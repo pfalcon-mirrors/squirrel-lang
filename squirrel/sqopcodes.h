@@ -101,21 +101,6 @@ struct SQInstruction
 	unsigned char _arg3;
 };
 
-/*union compact_SQInstruction{
-	struct x{
-		unsigned int op : 6;
-		unsigned int arg0 : 7;
-		unsigned int arg1 : 7;
-		unsigned int arg2 : 6;
-		unsigned int arg3 : 6;
-	}s;
-	struct y{
-		unsigned int op : 6;
-		unsigned int arg0 : 7;
-		unsigned int arg1 : 19;
-	}l;
-};*/
-
 #include "squtils.h"
 typedef sqvector<SQInstruction> SQInstructionVec;
 

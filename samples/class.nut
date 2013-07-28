@@ -34,3 +34,16 @@ local v0 = Vector3(1,2,3)
 local v1 = Vector3(11,12,13)
 local v2 = v0 + v1;
 v2.Print();
+
+FakeNamespace <- {
+	Utils = {}
+}
+
+class FakeNamespace.Utils.SuperClass {
+	constructor()
+	{
+		::print("FakeNamespace.Utils.SuperClass")
+	}
+}
+
+local testy = FakeNamespace.Utils.SuperClass();

@@ -1,3 +1,8 @@
+***version 2.0 stable***
+-added API sq_gettypetag()
+-added built-in function to tha bool type(tointeger, tostring etc...)
+
+***2005-02-27							***
 ***version 2.0 release candidate 1(RC 1)***
 -added API sq_reseterror()
 -modified sq_release()

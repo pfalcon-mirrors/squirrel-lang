@@ -263,14 +263,6 @@ struct SQObjectPtr : public SQObject
 		SQObjectPtr(const SQChar *){} //safety
 };
 /////////////////////////////////////////////////////////////////////////////////////
-/*struct SQException
-{
-	SQException(SQSharedState *ss,const SQChar *str);
-	SQException(const SQObjectPtr &desc);
-	SQException(const SQException &b);
-	SQObjectPtr _description;
-};*/
-
 #ifndef NO_GARBAGE_COLLECTOR
 #define MARK_FLAG 0x80000000
 struct SQCollectable : public SQRefCounted {

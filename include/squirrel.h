@@ -105,7 +105,7 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 2.0 release candidate 1(RC1)")
+#define SQUIRREL_VERSION	_SC("Squirrel 2.0 stable")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2005 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
@@ -267,6 +267,7 @@ SQUIRREL_API SQRESULT sq_getthread(HSQUIRRELVM v,int idx,HSQUIRRELVM *thread);
 SQUIRREL_API SQRESULT sq_getuserpointer(HSQUIRRELVM v,int idx,SQUserPointer *p);
 SQUIRREL_API SQRESULT sq_getuserdata(HSQUIRRELVM v,int idx,SQUserPointer *p,unsigned int *typetag);
 SQUIRREL_API SQRESULT sq_settypetag(HSQUIRRELVM v,int idx,unsigned int typetag);
+SQUIRREL_API SQRESULT sq_gettypetag(HSQUIRRELVM v,int idx,unsigned int *typetag);
 SQUIRREL_API void sq_setreleasehook(HSQUIRRELVM v,int idx,SQRELEASEHOOK hook);
 SQUIRREL_API SQChar *sq_getscratchpad(HSQUIRRELVM v,int minsize);
 SQUIRREL_API SQRESULT sq_getclosureinfo(HSQUIRRELVM v,int idx,unsigned int *nparams,unsigned int *nfreevars);
