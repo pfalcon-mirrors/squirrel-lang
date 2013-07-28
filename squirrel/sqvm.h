@@ -22,7 +22,7 @@ struct SQExceptionTrap{
 };
 
 typedef sqvector<SQExceptionTrap> ExceptionsTraps;
-struct SQVM 
+struct SQVM : public CHAINABLE_OBJ
 {
 	struct CallInfo{
 		CallInfo() {}
@@ -46,12 +46,12 @@ public:
 	enum ExecutionType { ET_CALL, ET_RESUME_GENERATOR, ET_RESUME_VM };
 	SQVM(SQSharedState *ss);
 	~SQVM();
-	bool Init(int stacksize);
+	bool Init(SQVM *friendvm, int stacksize);
 	SQObjectPtr Execute(SQObjectPtr &func, int target, int nargs, int stackbase, ExecutionType et = ET_CALL);
 	//start a native call return when the NATIVE closure returns(returns true if the vm has been suspended)
-	bool CallNative(SQObjectPtr &nclosure, int nargs, int stackbase, bool tailcall, SQObjectPtr &retval);
+	bool CallNative(SQNativeClosure *nclosure, int nargs, int stackbase, bool tailcall, SQObjectPtr &retval);
 	//start a SQUIRREL call in the same "Execution loop"
-	void StartCall(SQObjectPtr &closure, int target, int nargs, int stackbase, bool tailcall);
+	void StartCall(SQClosure *closure, int target, int nargs, int stackbase, bool tailcall);
 	//call a generic closure pure SQUIRREL or NATIVE
 	bool Call(SQObjectPtr &closure, int nparams, int stackbase, SQObjectPtr &outres);
 	SQRESULT Suspend();
@@ -78,14 +78,13 @@ public:
 #ifdef _DEBUG
 	void dumpstack(int stackbase=-1, bool dumpall = false);
 #endif
-#ifdef GARBAGE_COLLECTOR
+
+#ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
-	void UnMark() {}; //does nothing
 #endif
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
-	void Clear() {}; //does nothing
+	void Finalize();
+
 	void Release(){ delete this; } //does nothing
-#endif
 ////////////////////////////////////////////////////////////////////////////
 	//stack functions for the api
 	void Pop() {
@@ -115,20 +114,16 @@ public:
 	int _top;
 	int _stackbase;
 	SQObjectPtr _roottable;
-
 	SQObjectPtr _lasterror;
 	SQObjectPtr _errorhandler;
 	SQObjectPtr _debughook;
-	
-	SQObjectPtr temp;
+
+	SQObjectPtr temp_reg;
 	CallInfoVec _callsstack;
 	ExceptionsTraps _etraps;
 	CallInfo *ci;
-	SQCOMPILERERROR _compilererrorhandler;
 	void *_foreignptr;
 	//VMs sharing the same state
-	SQVM *_next;
-	SQVM *_prev;
 	SQSharedState *_sharedstate;
 	int _nnativecalls;
 	//suspend infos
@@ -150,7 +145,7 @@ const SQChar *GetTypeName(SQObjectType type);
 
 #define _ss(_vm_) (_vm_)->_sharedstate
 
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
+#ifndef NO_GARBAGE_COLLECTOR
 #define _opt_ss(_vm_) (_vm_)->_sharedstate
 #else
 #define _opt_ss(_vm_) NULL

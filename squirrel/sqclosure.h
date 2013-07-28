@@ -23,10 +23,8 @@ public:
 	}
 	void Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write);
 	void Load(SQVM *v,SQUserPointer up,SQREADFUNC read);
-#ifdef GARBAGE_COLLECTOR
+#ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
-#endif
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
 	void Finalize(){_outervalues.resize(0);}
 #endif
 	SQObjectPtr _function;
@@ -57,10 +55,8 @@ public:
 	}
 	int Yield(SQVM *v);
 	void Resume(SQVM *v,int target);
-#ifdef GARBAGE_COLLECTOR
+#ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
-#endif
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
 	void Finalize(){_stack.resize(0);_closure=_null_;}
 #endif
 	SQObjectPtr _closure;
@@ -88,10 +84,8 @@ public:
 	void Release(){
 		sq_delete(this,SQNativeClosure);
 	}
-#ifdef GARBAGE_COLLECTOR
+#ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
-#endif
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
 	void Finalize(){_outervalues.resize(0);}
 #endif
 	SQFUNCTION _function;

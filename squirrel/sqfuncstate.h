@@ -53,7 +53,6 @@ struct SQFuncState
 	SQOuterVarVec _outervalues;
 	SQInstructionVec _instructions;
 	SQLocalVarInfoVec _localvarinfos;
-	//SQObjectPtrVec _literals;
 	SQObjectPtr _literals;
 	SQInteger _nliterals;
 	SQLineInfoVec _lineinfos;

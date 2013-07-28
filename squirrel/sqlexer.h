@@ -19,14 +19,11 @@ private:
 	int ReadMultilineString();
 	int ReadID();
 	void Next();
-	const SQChar *_source;
-	const SQChar *_lastline;
 	int _curtoken;
 	SQChar _tempstring[MAX_STRING];
 	SQTable *_keywords;
 public:
 	int _prevtoken;
-	int _currentchar;
 	int _currentline;
 	int _lasttokenline;
 	int _currentcolumn;

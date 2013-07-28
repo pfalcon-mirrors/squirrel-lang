@@ -16,7 +16,11 @@ SQObjectPtr _notnull_(1);
 SQObjectPtr _one_(1);
 SQObjectPtr _minusone_(-1);
 
-SQSharedState::SQSharedState(){}
+SQSharedState::SQSharedState()
+{
+	_compilererrorhandler = NULL;
+	_printfunc = NULL;
+}
 
 #define newsysstring(s) {	\
 	_systemstrings->push_back(SQString::Create(this,s));	\
@@ -41,10 +45,9 @@ SQTable *CreateDefaultDelegate(SQSharedState *ss,SQRegFunction *funcz)
 
 void SQSharedState::Init()
 {	
-	_vms_chain=NULL;
 	_scratchpad=NULL;
 	_scratchpadsize=0;
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
+#ifndef NO_GARBAGE_COLLECTOR
 	_gc_chain=NULL;
 #endif
 	sq_new(_stringtable,StringTable);
@@ -88,6 +91,7 @@ void SQSharedState::Init()
 	_number_default_delegate=CreateDefaultDelegate(this,_number_default_delegate_funcz);
 	_closure_default_delegate=CreateDefaultDelegate(this,_closure_default_delegate_funcz);
 	_generator_default_delegate=CreateDefaultDelegate(this,_generator_default_delegate_funcz);
+	_thread_default_delegate=CreateDefaultDelegate(this,_thread_default_delegate_funcz);
 
 }
 
@@ -99,19 +103,17 @@ SQSharedState::~SQSharedState()
 		_systemstrings->back()=_null_;
 		_systemstrings->pop_back();
 	}
+	_thread(_root_vm)->Finalize();
+	_root_vm = _null_;
 	_table_default_delegate=_null_;
 	_array_default_delegate=_null_;
 	_string_default_delegate=_null_;
 	_number_default_delegate=_null_;
 	_closure_default_delegate=_null_;
 	_generator_default_delegate=_null_;
+	_thread_default_delegate=_null_;
 	
-	SQVM *v=_vms_chain;
-	while(_vms_chain){
-		sq_delete(v,SQVM);
-		v=_vms_chain;
-	}
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
+#ifndef NO_GARBAGE_COLLECTOR
 	
 	
 	SQCollectable *t=_gc_chain;
@@ -137,7 +139,7 @@ SQSharedState::~SQSharedState()
 	if(_scratchpad)SQ_FREE(_scratchpad,_scratchpadsize);
 }
 
-#ifdef GARBAGE_COLLECTOR
+#ifndef NO_GARBAGE_COLLECTOR
 
 void SQSharedState::MarkObject(SQObjectPtr &o,SQCollectable **chain)
 {
@@ -148,37 +150,28 @@ void SQSharedState::MarkObject(SQObjectPtr &o,SQCollectable **chain)
 	case OT_CLOSURE:_closure(o)->Mark(chain);break;
 	case OT_NATIVECLOSURE:_nativeclosure(o)->Mark(chain);break;
 	case OT_GENERATOR:_generator(o)->Mark(chain);break;
+	case OT_THREAD:_thread(o)->Mark(chain);break;
 	}
 }
 
-void SQVM::Mark(SQCollectable **chain)
-{
-	SQSharedState::MarkObject(_roottable,chain);
-	SQSharedState::MarkObject(_lasterror,chain);
-	SQSharedState::MarkObject(_errorhandler,chain);
-	SQSharedState::MarkObject(_debughook,chain);
-	SQSharedState::MarkObject(temp,chain);
-	for(unsigned int i=0;i<_stack.size();i++)SQSharedState::MarkObject(_stack[i],chain);
-}
 
 int SQSharedState::CollectGarbage(SQVM *vm)
 {
 	int n=0;
 	SQCollectable *tchain=NULL;
-	SQVM *vms=_vms_chain;
+	SQVM *vms=_thread(_root_vm);
 	
-	while(vms){
-		vms->Mark(&tchain);
-		vms=vms->_next;
-	}
+	vms->Mark(&tchain);
+
 	MarkObject(_refs_table,&tchain);
 	MarkObject(_table_default_delegate,&tchain);
 	MarkObject(_array_default_delegate,&tchain);
 	MarkObject(_string_default_delegate,&tchain);
 	MarkObject(_number_default_delegate,&tchain);
 	MarkObject(_generator_default_delegate,&tchain);
+	MarkObject(_thread_default_delegate,&tchain);
 	MarkObject(_closure_default_delegate,&tchain);
-
+	
 	SQCollectable *t=_gc_chain;
 	SQCollectable *nx=NULL;
 	while(t){
@@ -201,7 +194,7 @@ int SQSharedState::CollectGarbage(SQVM *vm)
 }
 #endif
 
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
+#ifndef NO_GARBAGE_COLLECTOR
 void SQCollectable::AddToChain(SQCollectable **chain,SQCollectable *c)
 {
     c->_prev=NULL;

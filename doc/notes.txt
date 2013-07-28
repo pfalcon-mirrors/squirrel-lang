@@ -1,0 +1,105 @@
+
+	
+goals:
+
+features:
+	dynamically typed
+	delegation
+	reflexivity
+	higher-order functions
+	tailcalls
+	generators
+	exception handling
+	ref counting
+	optional GC
+	small (compiler + vm ~6k lines)
+	
+credits:
+
+*Environment
+Every squirrel program run in a global environment, this environment is an associative container
+known as "global table"(see tables). 
+
+*Statementes
+stat := exp [;]
+stats := stat [stats]
+
+*Block
+A block is list of statements delimited by '{' '}'
+stat := '{'[stats]'}'
+
+*Assignment
+
+assignexp := var '=' exp 
+
+*Control structures
+stat := while'(' exp ')'stat
+stat := do stat while'(' exp ')'
+stat := if'(' exp ')' stat [else stat]
+
+*For statement
+
+stat := for '(' [init expression] ';' [cond expression] ';' [loop expression] ')' stat
+stat := foreach '(' indexid,valid in exp')' stat
+*Function calls
+
+*locals
+
+*expressions
+*aritmetic ops
+*relationals ops
+*logical ops
+*bitwise ops
+
+*precedence
+
+
+*Types
+dynamically typed
+values have type
+variable do not have type
+list of the types brief description and link
+
+*Integers
+
+*floats
+
+*strings
+
+*Tables
+associative container
+key/val pair
+key all types except null
+value all values
+{} contructor
+optional comma
+<- create operator
+assignment
+
+*Arrays
+
+*function declaration and beahviour (this etc)
+
+*free variables
+
+*generators
+
+*delegation
+
+*meta methods
+
+*exception handling
+
+*API
+
+Less Than (<), Less Than or Equal To (<=) 
+Greater Than (>) 
+Greater Than or Equal To (>=) 
+Logical And(&&), Or (||), Not (!) 
+Bitwise And (&), Or (|), Not (~), Xor (^) 
+Bitwise Left Shift (<<), Shift Right (>>) 
+Unsigned Shift Right (>>>) 
+Conditional (?:) 
+Comma (,) 
+delete, typeof, void 
+Decrement (--), Increment (++)

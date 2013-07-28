@@ -17,10 +17,8 @@ struct SQUserData : CHAINABLE_OBJ
 		ud->_size = size - 1;
 		return ud;
 	}
-#ifdef GARBAGE_COLLECTOR
+#ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
-#endif
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
 	void Finalize(){SetDelegate(NULL);}
 #endif
 	void Release(){

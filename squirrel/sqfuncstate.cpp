@@ -71,6 +71,7 @@ SQInstructionDesc g_InstrDesc[]={
 	//optimiz
 	{_SC("_OP_GETK"),1,1,1,0},
 	{_SC("_OP_PREPCALLK"),1,1,1,1},
+	{_SC("_OP_DMOVE"),1,1,1,1}
 };
 #endif
 void DumpLiteral(SQObjectPtr &o)
@@ -147,12 +148,15 @@ void SQFuncState::Dump()
 				&& inst._arg3==0xFF)){
 			
 			scprintf(_SC("[%03d] %15s %d "),n,g_InstrDesc[inst.op].name,inst._arg0);
-			if(inst._arg1==-1)
+			if(inst._arg1==0xFFFF)
 				scprintf(_SC("null"));
 			else {
-				SQObjectPtr val;
-				_table(_literals)->Get(SQObjectPtr(inst._arg1),val);
-				DumpLiteral(val);
+				int refidx;
+				SQObjectPtr val,key,refo;
+				while(((refidx=_table(_literals)->Next(refo,key,val))!= -1) && (_integer(val) != inst._arg1)) {
+					refo = refidx;	
+				}
+				DumpLiteral(key);
 			}
 			scprintf(_SC(" %d %d \n"),inst._arg2,inst._arg3);
 		}
@@ -192,16 +196,6 @@ int SQFuncState::GetConstant(SQObjectPtr cons)
 		if(_nliterals>MAX_LITERALS) throw ParserException(_SC("internal compiler error: too many literals"));
 	}
 	return _integer(val);
-	/*for(unsigned int i=0;i<_literals.size();i++){
-		if((type(cons)==type(_literals[i])) && 
-			(_userpointer(cons)==_userpointer(_literals[i]))){
-			return n;
-		}
-		n++;
-	}
-	_literals.push_back(cons);
-	if(_literals.size()>MAX_LITERALS) throw ParserException(_SC("internal compiler error: too many literals"));
-	return _literals.size()-1;*/
 }
 
 void SQFuncState::SetIntructionParams(int pos,int arg0,int arg1,int arg2,int arg3)
@@ -346,72 +340,81 @@ void SQFuncState::AddLineInfos(int line,bool lineop,bool force)
 
 void SQFuncState::AddInstruction(SQInstruction &i)
 {
-	int size=_instructions.size();
-	if(size>0 && (_optimization || i.op==_OP_RETURN)){ //simple optimizer
-		SQInstruction &pi=_instructions[size-1];//previous intruction
-		switch(i.op){
+	int size = _instructions.size();
+	if(size > 0 && (_optimization || i.op == _OP_RETURN)){ //simple optimizer
+		SQInstruction &pi = _instructions[size-1];//previous intruction
+		switch(i.op) {
 		case _OP_RETURN:
-			if( _parent && i._arg0!=0xFF && pi.op==_OP_CALL) {
-				pi.op=_OP_TAILCALL;
+			if( _parent && i._arg0 != 0xFF && pi.op == _OP_CALL) {
+				pi.op = _OP_TAILCALL;
 			}
 		break;
 		case _OP_GET:
-			if( pi.op==_OP_LOAD	&& pi._arg0==i._arg2 && (!IsLocal(pi._arg0))){
-				pi._arg2=(unsigned char)i._arg1;
-				pi.op=_OP_GETK;
-				pi._arg0=i._arg0;
+			if( pi.op == _OP_LOAD	&& pi._arg0 == i._arg2 && (!IsLocal(pi._arg0))){
+				pi._arg2 = (unsigned char)i._arg1;
+				pi.op = _OP_GETK;
+				pi._arg0 = i._arg0;
 				return;
 			}
 		break;
 		case _OP_PREPCALL:
-			if( pi.op==_OP_LOAD	&& pi._arg0==i._arg1 && (!IsLocal(pi._arg0))){
-				pi.op=_OP_PREPCALLK;
-				pi._arg0=i._arg0;
-				pi._arg2=i._arg2;
-				pi._arg3=i._arg3;
+			if( pi.op == _OP_LOAD && pi._arg0 == i._arg1 && (!IsLocal(pi._arg0))){
+				pi.op = _OP_PREPCALLK;
+				pi._arg0 = i._arg0;
+				pi._arg2 = i._arg2;
+				pi._arg3 = i._arg3;
 				return;
 			}
 			break;
 		case _OP_APPENDARRAY:
-			if(pi.op==_OP_LOAD && pi._arg0==i._arg1	&& (!IsLocal(pi._arg0))){
-				pi.op=_OP_APPENDARRAY;
-				pi._arg0=i._arg0;
-				pi._arg1=pi._arg1;
-				pi._arg2=0xFF;
+			if(pi.op == _OP_LOAD && pi._arg0 == i._arg1 && (!IsLocal(pi._arg0))){
+				pi.op = _OP_APPENDARRAY;
+				pi._arg0 = i._arg0;
+				pi._arg1 = pi._arg1;
+				pi._arg2 = 0xFF;
 				return;
 			}
 			break;
 		case _OP_MOVE: 
-			if((pi.op==_OP_GET || pi.op==_OP_ADD || pi.op==_OP_SUB
-				|| pi.op==_OP_MUL || pi.op==_OP_DIV || pi.op==_OP_SHIFTL
-				|| pi.op==_OP_SHIFTR || pi.op==_OP_BWOR	|| pi.op==_OP_BWXOR
-				|| pi.op==_OP_BWAND) && (pi._arg0==i._arg1))
+			if((pi.op == _OP_GET || pi.op == _OP_ADD || pi.op == _OP_SUB
+				|| pi.op == _OP_MUL || pi.op == _OP_DIV || pi.op == _OP_SHIFTL
+				|| pi.op == _OP_SHIFTR || pi.op == _OP_BWOR	|| pi.op == _OP_BWXOR
+				|| pi.op == _OP_BWAND) && (pi._arg0 == i._arg1))
 			{
-				pi._arg0=i._arg0;
+				pi._arg0 = i._arg0;
+				_optimization = false;
+				return;
+			}
+
+			if(pi.op == _OP_MOVE)
+			{
+				pi.op = _OP_DMOVE;
+				pi._arg2 = i._arg0;
+				pi._arg3 = (unsigned char)i._arg1;
 				return;
 			}
 			break;
 
 		case _OP_ADD:case _OP_SUB:case _OP_MUL:case _OP_DIV:
 		case _OP_EQ:case _OP_NE:case _OP_G:case _OP_GE:case _OP_L:case _OP_LE:
-			if(pi.op==_OP_LOAD && pi._arg0==i._arg1	&& (!IsLocal(pi._arg0) ))
+			if(pi.op == _OP_LOAD && pi._arg0 == i._arg1 && (!IsLocal(pi._arg0) ))
 			{
-				pi.op=i.op;
-				pi._arg0=i._arg0;
-				pi._arg2=i._arg2;
-				pi._arg3=0xFF;
+				pi.op = i.op;
+				pi._arg0 = i._arg0;
+				pi._arg2 = i._arg2;
+				pi._arg3 = 0xFF;
 				return;
 			}
 			break;
 		case _OP_LINE:
-			if(pi.op==_OP_LINE) {
+			if(pi.op == _OP_LINE) {
 				_instructions.pop_back();
 				_lineinfos.pop_back();
 			}
 			break;
 		}
 	}
-	_optimization=true;
+	_optimization = true;
 	_instructions.push_back(i);
 }
 

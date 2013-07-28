@@ -173,7 +173,6 @@ void SQClosure::Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write)
 
 void SQClosure::Load(SQVM *v,SQUserPointer up,SQREADFUNC read)
 {
-	_function=SQFunctionProto::Create();
 	_funcproto(_function)->Load(v,up,read);
 }
 
@@ -223,75 +222,87 @@ void SQFunctionProto::Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write)
 
 void SQFunctionProto::Load(SQVM *v,SQUserPointer up,SQREADFUNC read)
 {
-	int i,nsize=_literals.size();
+	int i, nsize = _literals.size();
 	SQObjectPtr o;
-	ReadObject(v,up,read,_sourcename);
-	ReadObject(v,up,read,_name);
-	read(up,&nsize,sizeof(nsize));
-	for(i=0;i<nsize;i++){
-		ReadObject(v,up,read,o);
+	ReadObject(v, up, read, _sourcename);
+	ReadObject(v, up, read, _name);
+	read(up, &nsize, sizeof(nsize));
+	for(i = 0;i < nsize; i++){
+		ReadObject(v, up, read, o);
 		_literals.push_back(o);
 	}
-	read(up,&nsize,sizeof(nsize));
-	for(i=0;i<nsize;i++){
-		ReadObject(v,up,read,o);
+	read(up, &nsize, sizeof(nsize));
+	for(i = 0; i < nsize; i++){
+		ReadObject(v, up, read, o);
 		_parameters.push_back(o);
 	}
 	read(up,&nsize,sizeof(nsize));
-	for(i=0;i<nsize;i++){
+	for(i = 0; i < nsize; i++){
 		bool bl;
-		read(up,&bl,sizeof(bool));
-		ReadObject(v,up,read,o);
-		_outervalues.push_back(SQOuterVar(o,bl));
+		read(up, &bl, sizeof(bool));
+		ReadObject(v, up, read, o);
+		_outervalues.push_back(SQOuterVar(o, bl));
 	}
-	read(up,&nsize,sizeof(nsize));
-	for(i=0;i<nsize;i++){
+	read(up, &nsize, sizeof(nsize));
+	for(i = 0; i < nsize; i++){
 		SQLocalVarInfo lvi;
-		ReadObject(v,up,read,lvi._name);
-		read(up,&lvi._pos,sizeof(unsigned int));
-		read(up,&lvi._start_op,sizeof(unsigned int));
-		read(up,&lvi._end_op,sizeof(unsigned int));
+		ReadObject(v, up, read, lvi._name);
+		read(up, &lvi._pos, sizeof(unsigned int));
+		read(up, &lvi._start_op, sizeof(unsigned int));
+		read(up, &lvi._end_op, sizeof(unsigned int));
 		_localvarinfos.push_back(lvi);
 	}
-	read(up,&nsize,sizeof(nsize));
+	read(up, &nsize,sizeof(nsize));
 	_lineinfos.resize(nsize);
-	read(up,&_lineinfos[0],sizeof(SQLineInfo)*nsize);
-	read(up,&nsize,sizeof(nsize));
+	read(up, &_lineinfos[0], sizeof(SQLineInfo)*nsize);
+	read(up, &nsize, sizeof(nsize));
 	_instructions.resize(nsize);
-	read(up,&_instructions[0],sizeof(SQInstruction)*nsize);
-	read(up,&nsize,sizeof(nsize));
-	for(i=0;i<nsize;i++){
-		o=SQFunctionProto::Create();
-		_funcproto(o)->Load(v,up,read);
+	read(up, &_instructions[0], sizeof(SQInstruction)*nsize);
+	read(up, &nsize, sizeof(nsize));
+	for(i = 0; i < nsize; i++){
+		o = SQFunctionProto::Create();
+		_funcproto(o)->Load(v, up, read);
 		_functions.push_back(o);
 	}
-	read(up,&_stacksize,sizeof(_stacksize));
-	read(up,&_bgenerator,sizeof(_bgenerator));
+	read(up, &_stacksize, sizeof(_stacksize));
+	read(up, &_bgenerator, sizeof(_bgenerator));
 }
 
-#ifdef GARBAGE_COLLECTOR
+#ifndef NO_GARBAGE_COLLECTOR
 
 #define START_MARK() 	if(!(_uiRef&MARK_FLAG)){ \
 		_uiRef|=MARK_FLAG;
 
-#define END_MARK() RemoveFromChain(&_sharedstate->_gc_chain,this); \
-		AddToChain(chain,this); }
+#define END_MARK() RemoveFromChain(&_sharedstate->_gc_chain, this); \
+		AddToChain(chain, this); }
+
+void SQVM::Mark(SQCollectable **chain)
+{
+	START_MARK()
+		SQSharedState::MarkObject(_lasterror,chain);
+		SQSharedState::MarkObject(_errorhandler,chain);
+		SQSharedState::MarkObject(_debughook,chain);
+		SQSharedState::MarkObject(_roottable, chain);
+		SQSharedState::MarkObject(temp_reg, chain);
+		for(unsigned int i = 0; i < _stack.size(); i++) SQSharedState::MarkObject(_stack[i], chain);
+	END_MARK()
+}
 
 void SQArray::Mark(SQCollectable **chain)
 {
 	START_MARK()
-		int len=_values.size();
-		for(int i=0;i<len;i++)SQSharedState::MarkObject(_values[i],chain);
+		int len = _values.size();
+		for(int i = 0;i < len; i++) SQSharedState::MarkObject(_values[i], chain);
 	END_MARK()
 }
 void SQTable::Mark(SQCollectable **chain)
 {
 	START_MARK()
-		if(_delegate)_delegate->Mark(chain);
-		int len=_numofnodes;
-		for(int i=0;i<len;i++){
-			SQSharedState::MarkObject(_nodes[i].key,chain);
-			SQSharedState::MarkObject(_nodes[i].val,chain);
+		if(_delegate) _delegate->Mark(chain);
+		int len = _numofnodes;
+		for(int i = 0; i < len; i++){
+			SQSharedState::MarkObject(_nodes[i].key, chain);
+			SQSharedState::MarkObject(_nodes[i].val, chain);
 		}
 	END_MARK()
 }
@@ -299,31 +310,31 @@ void SQTable::Mark(SQCollectable **chain)
 void SQGenerator::Mark(SQCollectable **chain)
 {
 	START_MARK()
-		for(unsigned int i=0;i<_stack.size();i++)SQSharedState::MarkObject(_stack[i],chain);
-		SQSharedState::MarkObject(_closure,chain);
+		for(unsigned int i = 0; i < _stack.size(); i++) SQSharedState::MarkObject(_stack[i], chain);
+		SQSharedState::MarkObject(_closure, chain);
 	END_MARK()
 }
 
 void SQClosure::Mark(SQCollectable **chain)
 {
 	START_MARK()
-		for(unsigned int i=0;i<_outervalues.size();i++)SQSharedState::MarkObject(_outervalues[i],chain);
+		for(unsigned int i = 0; i < _outervalues.size(); i++) SQSharedState::MarkObject(_outervalues[i], chain);
 	END_MARK()
 }
 
 void SQNativeClosure::Mark(SQCollectable **chain)
 {
 	START_MARK()
-		for(unsigned int i=0;i<_outervalues.size();i++)SQSharedState::MarkObject(_outervalues[i],chain);
+		for(unsigned int i = 0; i < _outervalues.size(); i++) SQSharedState::MarkObject(_outervalues[i], chain);
 	END_MARK()
 }
 
 void SQUserData::Mark(SQCollectable **chain){
 	START_MARK()
-		if(_delegate)_delegate->Mark(chain);
+		if(_delegate) _delegate->Mark(chain);
 	END_MARK()
 }
 
-void SQCollectable::UnMark(){_uiRef&=~MARK_FLAG;}
+void SQCollectable::UnMark() { _uiRef&=~MARK_FLAG; }
 
 #endif

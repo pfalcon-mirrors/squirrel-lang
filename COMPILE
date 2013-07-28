@@ -1,4 +1,4 @@
-Squirrel 0.9 alpha
+Squirrel 1.0 beta 1
 --------------------------------------------------------
 What is in this distribution?
 
@@ -10,7 +10,7 @@ sqlibs
 	with the language and as example for C++ bindings.
 	
 sq
-	stand alone interpreter(very early stage)
+	stand alone interpreter
 
 doc
 	The manual

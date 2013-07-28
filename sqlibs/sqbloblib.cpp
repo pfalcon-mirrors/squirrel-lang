@@ -13,9 +13,9 @@ static SQUIRREL_FREE g_default_free=NULL;
 #define chk_params_at_least(n) \
 	if(sq_gettop(_v)<_n) return sq_throwerror(v,_SC("invalid number of args"));
 
-#define SQ_SEEK_SET 0
-#define SQ_SEEK_CUR 1
-#define SQ_SEEK_END 2
+#define SQ_SEEK_SET 's'
+#define SQ_SEEK_CUR 'c'
+#define SQ_SEEK_END 'e'
 
 SQFloat sq_aux_getfloat(HSQUIRRELVM v,int idx)
 {
@@ -119,9 +119,8 @@ struct Blob_Userdata
 
 
 #define blob_readX(v,type) \
-	chk_params(v,1);	\
 	Blob_Userdata *bu; \
-	if(!sq_getuserdata(v,1,(SQUserPointer*)&bu) || bu->_magic_number!=BLOB_MAGIC_NUMBER)return 0; \
+	if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer*)&bu)) || bu->_magic_number!=BLOB_MAGIC_NUMBER)return 0; \
 	_Blob *b=&(bu->_blob); \
 	type t; \
 	if(!b->Read(&t,sizeof(t)))return 0;
@@ -134,7 +133,7 @@ int _blob_read_void(HSQUIRRELVM v,int size,void *dest)
 {
 	chk_params(v,1);
 	Blob_Userdata *bu;
-	if(!sq_getuserdata(v,1,(SQUserPointer*)&bu) || bu->_magic_number!=BLOB_MAGIC_NUMBER)return 0;
+	if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer*)&bu)) || bu->_magic_number!=BLOB_MAGIC_NUMBER)return 0;
 	_Blob *b=&bu->_blob;
 	if(!b)return 0;
 	int sdiff=4-size;
@@ -145,14 +144,14 @@ int _blob_read_void(HSQUIRRELVM v,int size,void *dest)
 #define blob_writeX(v,type,func) \
 	chk_params(v,2); \
 	Blob_Userdata *bu; \
-	if(!sq_getuserdata(v,1,(SQUserPointer*)&bu) || bu->_magic_number!=BLOB_MAGIC_NUMBER)return 0; \
+	if(SQ_FAILED(sq_getuserdata(v,1,(SQUserPointer*)&bu)) || bu->_magic_number!=BLOB_MAGIC_NUMBER)return 0; \
 	_Blob *b=&bu->_blob; \
 	type t=func(v,2); \
 	if(!b->Write(&t,sizeof(t)))return sq_throwerror(v,_SC("end of blob"));
 
 
 #define GET_BLOB(idx) Blob_Userdata *bu; \
-	if(!sq_getuserdata(v,idx,(SQUserPointer*)&bu) || bu->_magic_number!=BLOB_MAGIC_NUMBER)return 0; \
+	if(SQ_FAILED(sq_getuserdata(v,idx,(SQUserPointer*)&bu)) || bu->_magic_number!=BLOB_MAGIC_NUMBER)return 0; \
 	_Blob *b=&bu->_blob; 
 
 int blob_readI1(HSQUIRRELVM v)
@@ -426,8 +425,21 @@ int blob_swapfloat(HSQUIRRELVM v)
 	return 1;
 }
 
+int blob_eob(HSQUIRRELVM v)
+{
+	GET_BLOB(1);
+	if(!b->CanAdvance(1))
+	{
+		sq_pushinteger(v,1);
+		return 1;
+	}
+	return 0;
+}
+
+
 #define _DECL_FUNC(name,nparams) {_SC(#name),blob_##name,nparams}
 static SQRegFunction blob_funcs[]={
+	_DECL_FUNC(eob,1),
 	_DECL_FUNC(readI1,1),
     _DECL_FUNC(readI2,1),
     _DECL_FUNC(readI4,1),

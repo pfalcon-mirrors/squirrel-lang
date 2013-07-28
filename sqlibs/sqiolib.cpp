@@ -451,7 +451,7 @@ int sq_iolib_register(HSQUIRRELVM v)
 		i++;
 	}
 	////
-	sq_newclosure(v,io_fopen,4,1);
+	sq_newclosure(v,io_fopen,3,1);
 	sq_createslot(v,-3);
 
 	//AHHHHH COPY & PASTE <<FIXME>>

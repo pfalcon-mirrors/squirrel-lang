@@ -16,7 +16,7 @@ public:
 		new (newarray) SQArray(ss,nInitialSize);
 		return newarray;
 	}
-#ifdef GARBAGE_COLLECTOR
+#ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
 #endif
 	void Finalize(){

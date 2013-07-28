@@ -1,6 +1,24 @@
+***version 1.0 beta 1***
+-fixed a bug in the compiler (thanks Martin Kofler)
+-fixed bug in the switch case statement
+-fixed the _unm metamethod
+-fixed minor bugs in the API
+-fixed automatic stack resizing
+-first beta version 
+	first pass code clean up in the VM and base lib
+	first pass code coverege test has been done on VM and built-in lib
+-new VM creation API sq_open() sq_close() (sq_newvm and sq_releasevm are now obsolete)
+-new api allows to specifiy a "print" function to output text(sq_printfunc)
+-added some small optimizations
+-new cooperative multi-threading capabilities in the base library(coroutines), VMs are now a built in type("thread")
+-new built in functions have been added for manipulating the new "thread" type
+-friend virtual machines share the same root table, error handler and debug hook by default
+-new compile time options
+
+***2004-01-19       ***
 ***version 0.9 alpha***
 -fixed a garbage collection bug
--fixed some API bugs(thx Joshua Jensen)
+-fixed some API bugs(thanks to Joshua Jensen)
 -fixed tail calls (in the version 0.8 the tail call optimization was erroneously disabled)
 -new function parameters semantic, now passing a wrong number of parameters generates an exception
 -native closures have now a built in parameter number checking
@@ -11,10 +29,11 @@
 -faster compiler
 -try/catch blocks do not cause any runtime memory allocation anymore
 
-***varsion 0.8 alpha***
+***2003-12-06       ***
+***version 0.8 alpha***
 -fixed a bug that was preventing to have callable userdata throught the metamethod _call
 -fixed a garbage collection bug
--fixed == operator now can compare different types
+-fixed == operator now can compare correctly different types
 -new built in method getstackinfos(level)
 -improoved line informations precision for the debug hook
 -new api call sq_compilebuffer()
@@ -22,7 +41,8 @@
 -new syntactic sugar for function declarations inside tables
 -the debug API has been finalized
 
-***varsion 0.7 alpha***
+***2003-11-17       ***
+***version 0.7 alpha***
 -fixed critical bug int the tail call system
 -fixed bug in the continue statement code generation
 -fixed func call param issue(thanks to Rewoonenco Andrew)
@@ -33,12 +53,14 @@
 -new api method sq_deleteslot()
 -new debug hook event 'r' is triggered when a function returns
 
-***varsion 0.6 alpha***
+***2003-11-04       ***
+***version 0.6 alpha***
 -fixed switch statement(was executing the default case after a break)
 -sq_call() doesn't pop the closure (just the params)
 -the vm execution can be suspended from the C API anytime (micro-threads)
 -new api calls sq_suspendvm() sq_wakeupvm() sq_getvmstate() and sq_reservestack()
 
+***2003-10-13       ***
 ***version 0.5 alpha***
 -fixed some minor bug
 -tested with non ASCII identifiers in unicode mode(I've tried chinese chars)
@@ -47,9 +69,10 @@
 -the debug hook function now has a new prototype debug_hook(event_type,sourcefile,line,functionname)
 -fixed some debug info imprecision
 
+***2003-10-01       ***
 ***version 0.4 alpha***
 -faster VM
--sq_call will pop the arguments also in case of failure
+-sq_call will pop arguments and closure also in case of failure
 -fixed a bug in sq_remove
 -now the VM detects delegation cycles(and throws an exception)
 -new operators ++ and --
@@ -57,27 +80,29 @@
 -fixed some expression precedence issue
 -fixed bug in sq_arraypop
 
+***2003-09-15       ***
 ***version 0.3 alpha***
--first alpha release
+-fixed a bug in array::insert()
 -optional Unicode core(define SQUNICODE or _UNICODE on Win32)
 -sq_compiler uses a new reader function SQLEXREADFUNC
 -the debug hook passes 'l' instead of 'line' for line callbacks
 	and 'c' instead of 'call' for call callbacks
 -new array.extend() bulit-in function
 -new API sq_clone()
--fixed a bug in array.insert()
 
+***2003-09-10           ***
 ***version 0.2 pre-alpha***
--new reentrant VM (sq_open and sq_close are now obsolete)
+-new completely reentrant VM (sq_open and sq_close are now obsolete)
 -sq_newvm() has a new prototype
--allocators are now linked in the VM(see sqmem.cpp)
+-allocators are now global and linked in the VM
 -_newslot meta method added
 -rawset creates a slot if doesn't exists
 -the compiler error callback pass the vm handle(thanks Pierre Renaux)
 -sq_setforeignptr() sq_getforeingptr() are now public
 -sq_resume() now is possible to resume generators from C
 -sq_getlasterror() retrieve the last thrown error
--improved/fixed docs
+-improved docs
 
+***2003-09-06           ***
 ***version 0.1 pre-alpha***
 first release

@@ -1,9 +1,8 @@
-The programming language SQUIRREL 0.9 alpha
+The programming language SQUIRREL 1.0 beta 1
 
 This is a work in progress
 --------------------------------------------------
-the current development state is alpha,
-this mean that all features have been implemented.
+the current development state is beta,
 The project has been compiled and run on Windows(Windows XP/2000 on Intel x86) and
 Linux(Slackware 9.0 on Intel x86).
 
@@ -14,9 +13,8 @@ Has been tested with the following compilers:
 	Linux gcc 3.2.3
 	
 
-Work in prograss
+Work in progress
 -The documentation covers all topics but has to be improved/corrected.
--The API library could be extended.
 -the libraries (sqlibs) are just a prototype for testing pouposes;
 	a system for dynamic library loading is under development.
 -The language could have some minor bug.

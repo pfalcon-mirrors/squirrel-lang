@@ -50,7 +50,7 @@ public:
 		for (int i = 0; i < _numofnodes; i++) _nodes[i].~_HashNode();
 		SQ_FREE(_nodes, _numofnodes * sizeof(_HashNode));
 	}
-#ifdef GARBAGE_COLLECTOR
+#ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
 #endif
 	inline unsigned long HashKey(const SQObjectPtr &key)
@@ -177,7 +177,5 @@ public:
 		return true;
 	}
 };
-
-SQTable *Table_CreateUnifiedMethods();
 
 #endif //_SQTABLE_H_

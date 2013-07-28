@@ -97,7 +97,7 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 0.9 (alpha)")
+#define SQUIRREL_VERSION	_SC("Squirrel 1.0 (beta 1)")
 #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2004 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
 
@@ -125,7 +125,8 @@ typedef unsigned int SQObjectType;
 #define _RT_NATIVECLOSURE	0x0008
 #define _RT_GENERATOR		0x0009
 #define _RT_USERPOINTER		0x000A
-#define _RT_FUNCPROTO		0x000B
+#define _RT_THREAD			0x000B
+#define _RT_FUNCPROTO		0x000C
 
 #define OT_NULL				_RT_NULL
 #define OT_INTEGER			(_RT_INTEGER|SQOBJECT_NUMERIC)
@@ -138,7 +139,9 @@ typedef unsigned int SQObjectType;
 #define OT_NATIVECLOSURE	(_RT_NATIVECLOSURE|SQOBJECT_REF_COUNTED)
 #define OT_GENERATOR		(_RT_GENERATOR|SQOBJECT_REF_COUNTED)
 #define OT_USERPOINTER		_RT_USERPOINTER
+#define OT_THREAD			(_RT_THREAD|SQOBJECT_REF_COUNTED) 
 #define OT_FUNCPROTO		(_RT_FUNCPROTO|SQOBJECT_REF_COUNTED) //internal usage only
+
 
 #define ISREFCOUNTED(t) (t&SQOBJECT_REF_COUNTED)
 
@@ -156,6 +159,7 @@ typedef union tagSQObjectValue
 	SQUserPointer pUserPointer;
 	struct SQFunctionProto *pFunctionProto;
 	struct SQRefCounted *pRefCounted;
+	struct SQVM *pThread;
 }SQObjectValue;
 
 
@@ -176,6 +180,7 @@ typedef SQObject HSQOBJECT;
 typedef int (*SQFUNCTION)(HSQUIRRELVM);
 typedef int (*SQUSERDATARELEASE)(SQUserPointer,int size);
 typedef void (*SQCOMPILERERROR)(HSQUIRRELVM,const SQChar * /*desc*/,const SQChar * /*source*/,int /*line*/,int /*column*/);
+typedef void (*SQPRINTFUNCTION)(HSQUIRRELVM,const SQChar * ,...);
 
 typedef int (*SQWRITEFUNC)(SQUserPointer,SQUserPointer,int);
 typedef int (*SQREADFUNC)(SQUserPointer,SQUserPointer,int);
@@ -193,11 +198,13 @@ typedef struct tagSQRegFunction{
 }SQRegFunction;
 
 /*vm*/
-SQUIRREL_API HSQUIRRELVM sq_newvm(HSQUIRRELVM friendvm,int initialstacksize);
+SQUIRREL_API HSQUIRRELVM sq_open(int initialstacksize);
+SQUIRREL_API HSQUIRRELVM sq_newthread(HSQUIRRELVM friendvm, int initialstacksize);
 SQUIRREL_API void sq_seterrorhandler(HSQUIRRELVM v);
-SQUIRREL_API void sq_releasevm(HSQUIRRELVM v);
+SQUIRREL_API void sq_close(HSQUIRRELVM v);
 SQUIRREL_API void sq_setforeignptr(HSQUIRRELVM v,SQUserPointer p);
 SQUIRREL_API SQUserPointer sq_getforeignptr(HSQUIRRELVM v);
+SQUIRREL_API void sq_setprintfunc(HSQUIRRELVM v, SQPRINTFUNCTION printfunc);
 SQUIRREL_API SQRESULT sq_suspendvm(HSQUIRRELVM v);
 SQUIRREL_API SQRESULT sq_wakeupvm(HSQUIRRELVM v,int resumedret,int retval);
 SQUIRREL_API int sq_getvmstate(HSQUIRRELVM v);
@@ -215,6 +222,7 @@ SQUIRREL_API int sq_gettop(HSQUIRRELVM v);
 SQUIRREL_API void sq_settop(HSQUIRRELVM v,int newtop);
 SQUIRREL_API void sq_reservestack(HSQUIRRELVM v,int nsize);
 SQUIRREL_API int sq_cmp(HSQUIRRELVM v);
+SQUIRREL_API void sq_move(HSQUIRRELVM dest,HSQUIRRELVM src,int idx);
 
 /*object creation handling*/
 SQUIRREL_API SQUserPointer sq_newuserdata(HSQUIRRELVM v,unsigned int size);
@@ -296,6 +304,7 @@ SQUIRREL_API void sq_setdebughook(HSQUIRRELVM v);
 #define sq_isfloat(o) (o._type==OT_FLOAT)
 #define sq_isuserpointer(o) (o._type==OT_USERPOINTER)
 #define sq_isuserdata(o) (o._type==OT_USERDATA)
+#define sq_isthread(o) (o._type==OT_THREAD)
 #define sq_isnull(o) (o._type==OT_NULL)
 #define sq_type(o) (o._type)
 

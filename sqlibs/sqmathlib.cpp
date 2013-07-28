@@ -28,12 +28,20 @@ static int math_srand(HSQUIRRELVM v)
 
 static int math_rand(HSQUIRRELVM v)
 {
-	rand();
-	return 0;
+	sq_pushfloat(v,rand());
+	return 1;
 }
 
+static int math_abs(HSQUIRRELVM v)
+{
+	SQInteger n;
+	if(sq_gettop(v)!=2 || SQ_FAILED(sq_getinteger(v,2,&n)))return sq_throwerror(v,_SC("invalid param")); 
+	sq_pushinteger(v,(SQInteger)abs(n)); 
+	return 1; 
+}
 
 SINGLE_ARG_FUNC(sqrt)
+SINGLE_ARG_FUNC(fabs)
 SINGLE_ARG_FUNC(sin)
 SINGLE_ARG_FUNC(cos)
 SINGLE_ARG_FUNC(asin)
@@ -66,6 +74,8 @@ static SQRegFunction mathlib_funcs[]={
 	_DECL_FUNC(exp,2),
 	_DECL_FUNC(srand,2),
 	_DECL_FUNC(rand,1),
+	_DECL_FUNC(fabs,2),
+	_DECL_FUNC(abs,2),
 	{0,0},
 };
 

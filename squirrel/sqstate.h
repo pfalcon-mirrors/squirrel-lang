@@ -40,7 +40,7 @@ struct SQSharedState
 	void Init();
 public:
 	SQChar* GetScratchPad(int size);
-#ifdef GARBAGE_COLLECTOR
+#ifndef NO_GARBAGE_COLLECTOR
 	int CollectGarbage(SQVM *vm); 
 	static void MarkObject(SQObjectPtr &o,SQCollectable **chain);
 #endif
@@ -49,10 +49,10 @@ public:
 	SQObjectPtrVec *_types;
 	StringTable *_stringtable;
 	SQObjectPtr _refs_table;
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
+#ifndef NO_GARBAGE_COLLECTOR
 	SQCollectable *_gc_chain;
 #endif
-	SQVM *_vms_chain;
+	SQObjectPtr _root_vm;
 	SQObjectPtr _table_default_delegate;
 	static SQRegFunction _table_default_delegate_funcz[];
 	SQObjectPtr _array_default_delegate;
@@ -65,6 +65,11 @@ public:
 	static SQRegFunction _generator_default_delegate_funcz[];
 	SQObjectPtr _closure_default_delegate;
 	static SQRegFunction _closure_default_delegate_funcz[];
+	SQObjectPtr _thread_default_delegate;
+	static SQRegFunction _thread_default_delegate_funcz[];
+	
+	SQCOMPILERERROR _compilererrorhandler;
+	SQPRINTFUNCTION _printfunc;
 private:
 	SQChar *_scratchpad;
 	int _scratchpadsize;
@@ -79,6 +84,7 @@ private:
 #define _number_ddel	_table(_sharedstate->_number_default_delegate) 
 #define _generator_ddel	_table(_sharedstate->_generator_default_delegate) 
 #define _closure_ddel	_table(_sharedstate->_closure_default_delegate) 
+#define _thread_ddel	_table(_sharedstate->_thread_default_delegate) 
 
 #ifdef SQUNICODE //rsl REAL STRING LEN
 #define rsl(l) ((l)<<1)

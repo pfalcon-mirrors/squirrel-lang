@@ -129,7 +129,7 @@ public:
 	}
 	bool Compile(SQObjectPtr &o)
 	{
-		try{
+		SQ_TRY {
 			_debugline=1;
 			_debugop=0;
 			Lex();
@@ -154,10 +154,10 @@ public:
 			_fs->Dump();
 #endif
 		}
-		catch(ParserException &ex){
-			if(_raiseerror && _vm->_compilererrorhandler){
+		SQ_CATCH(ParserException,ex){
+			if(_raiseerror && _ss(_vm)->_compilererrorhandler){
 				SQObjectPtr ret;
-				_vm->_compilererrorhandler(_vm,ex.desc,type(_sourcename)==OT_STRING?_stringval(_sourcename):_SC("unknown"),
+				_ss(_vm)->_compilererrorhandler(_vm,ex.desc,type(_sourcename)==OT_STRING?_stringval(_sourcename):_SC("unknown"),
 					_lex._currentline,_lex._currentcolumn);
 			}
 			_vm->_lasterror=SQString::Create(_ss(_vm),ex.desc,-1);
@@ -824,14 +824,18 @@ public:
 				_fs->SetIntructionParam(skipcondjmp,1,(_fs->GetCurrentPos()-skipcondjmp));
 			}
 			tonextcondjmp=_fs->GetCurrentPos();
+			int stacksize=_fs->GetStackSize();
 			Statements();
+			_fs->SetStackSize(stacksize);
 			bfirst=false;
 		}
 		if(tonextcondjmp!=-1)
 			_fs->SetIntructionParam(tonextcondjmp,1,_fs->GetCurrentPos()-tonextcondjmp);
 		if(_token==TK_DEFAULT){
 			Lex();Expect(_SC(':'));
+			int stacksize=_fs->GetStackSize();
 			Statements();
+			_fs->SetStackSize(stacksize);
 		}
 		Expect(_SC('}'));
 		_fs->PopTarget();

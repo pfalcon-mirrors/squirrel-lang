@@ -23,9 +23,11 @@
 #ifdef SQUNICODE
 #define scfprintf fwprintf
 #define scfopen	_wfopen
+#define scvprintf vwprintf
 #else
 #define scfprintf fprintf
 #define scfopen	fopen
+#define scvprintf vprintf
 #endif
 
 int CompileScriptFromFile(HSQUIRRELVM,const SQChar *name,int printerror,int lineinfo);
@@ -76,6 +78,14 @@ int quit(HSQUIRRELVM v)
 	sq_getuserpointer(v,-1,(SQUserPointer*)&done);
 	*done=1;
 	return 0;
+}
+
+void printfunc(HSQUIRRELVM v,const SQChar *s,...)
+{
+	va_list vl;
+	va_start(vl, s);
+	scvprintf( s, vl);
+	va_end(vl);
 }
 
 #define _INTERACTIVE 0
@@ -132,6 +142,7 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[])
 				int alen=strlen(argv[i]);
 				a=sq_getscratchpad(v,alen*sizeof(SQChar));
 				mbstowcs(sq_getscratchpad(v,-1),argv[i],alen);
+				sq_getscratchpad(v,-1)[alen] = _SC('\0');
 #else
 				a=argv[i];
 #endif
@@ -235,6 +246,9 @@ void PrintCallStack(HSQUIRRELVM v)
 				break;
 			case OT_USERDATA:
 				scfprintf(stderr,_SC("[%s] USERDATA\n"),name);
+				break;
+			case OT_THREAD:
+				scfprintf(stderr,_SC("[%s] THREAD\n"),name);
 				break;
 			}
 			sq_pop(v,1);
@@ -410,13 +424,14 @@ int main(int argc, char* argv[])
 	_CrtSetAllocHook(MemAllocHook);
 #endif
 	
-	v=sq_newvm(NULL,1024);
+	v=sq_open(1024);
 	
 	sq_pushroottable(v);
 	sq_blob_register(v,x_malloc,x_free);
 	sq_iolib_register(v);
 	sq_systemlib_register(v);
 	sq_mathlib_register(v);
+	sq_setprintfunc(v,printfunc);
 
 	//sets error handlers
 	sq_setcompilererrorhandler(v,compiler_error);
@@ -453,7 +468,7 @@ int main(int argc, char* argv[])
 		sq_readclosure(v,file_read,bytecodefile);
 		fclose(bytecodefile);*/
 
-	sq_releasevm(v);
+	sq_close(v);
 	
 #if defined(_MSC_VER) && defined(_DEBUG)
 	_getch();

@@ -4,6 +4,9 @@
 
 #include "squtils.h"
 
+#define SQ_TRY try
+#define SQ_CATCH(type, ex) catch(type &ex)
+
 struct SQSharedState;
 
 enum SQMetaMethod{
@@ -73,6 +76,7 @@ struct SQObjectPtr;
 #define _nativeclosure(obj) (obj)._unVal.pNativeClosure
 #define _userdata(obj) (obj)._unVal.pUserData
 #define _userpointer(obj) (obj)._unVal.pUserPointer
+#define _thread(obj) (obj)._unVal.pThread
 #define _funcproto(obj) (obj)._unVal.pFunctionProto
 #define _rawval(obj) (obj)._unVal.pRefCounted
 
@@ -151,6 +155,13 @@ struct SQObjectPtr : public SQObject
 		assert(_unVal.pUserData);
 		__AddRef(_type,_unVal);
 	}
+	SQObjectPtr(SQVM *pThread)
+	{
+		_type=OT_THREAD;
+		_unVal.pThread=pThread;
+		assert(_unVal.pThread);
+		__AddRef(_type,_unVal);
+	}
 	SQObjectPtr(SQFunctionProto *pFunctionProto)
 	{
 		_type=OT_FUNCPROTO;
@@ -213,21 +224,20 @@ struct SQException
 	SQObjectPtr _description;
 };
 
-#if defined(CYCLIC_REF_SAFE) || defined(GARBAGE_COLLECTOR)
+#ifndef NO_GARBAGE_COLLECTOR
 #define MARK_FLAG 0x80000000
 struct SQCollectable : public SQRefCounted {
 	SQCollectable *_next;
 	SQCollectable *_prev;
 	SQSharedState *_sharedstate;
 	virtual void Release()=0;
-#ifdef GARBAGE_COLLECTOR
 	virtual void Mark(SQCollectable **chain)=0;
 	void UnMark();
-#endif
 	virtual void Finalize()=0;
 	static void AddToChain(SQCollectable **chain,SQCollectable *c);
 	static void RemoveFromChain(SQCollectable **chain,SQCollectable *c);
 };
+
 
 #define ADD_TO_CHAIN(chain,obj) AddToChain(chain,obj)
 #define REMOVE_FROM_CHAIN(chain,obj) {if(!(_uiRef&MARK_FLAG))RemoveFromChain(chain,obj);}

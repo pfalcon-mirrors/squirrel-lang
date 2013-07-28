@@ -64,6 +64,7 @@ enum SQOpcode
 	//optimized stuff
 	_OP_GETK=0x39,
 	_OP_PREPCALLK=0x3A,
+	_OP_DMOVE=0x3B,
 };
 
 struct SQInstructionDesc {
@@ -85,7 +86,7 @@ struct SQInstruction
 		_arg0=a0;_arg1=a1;
 		_arg2=a2;_arg3=a3;
 	}
-	short _arg1;
+	unsigned short _arg1;
 	unsigned char op;
 	unsigned char _arg0;
 	unsigned char _arg2;

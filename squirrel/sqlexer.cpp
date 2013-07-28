@@ -57,10 +57,8 @@ void SQLexer::Init(SQSharedState *ss, SQLEXREADFUNC rg, SQUserPointer up)
 	_readf = rg;
 	_up = up;
 	_lasttokenline = _currentline = 1;
-	_currentchar = 0;
 	_currentcolumn = 0;
 	_prevtoken = -1;
-	_lastline = _source;
 	Next();
 }
 
@@ -111,7 +109,6 @@ int SQLexer::Lex()
 			_prevtoken=_curtoken;
 			_curtoken=_SC('\n');
 			NEXT();
-			_lastline=&CUR_CHAR;
 			_currentcolumn=1;
 			continue;
 		case _SC('/'):
@@ -272,7 +269,6 @@ int SQLexer::ReadString(int ndelim)
 		case _SC('\\'):
 			NEXT();
 			switch(CUR_CHAR) {
-			case _SC('\n'): APPEND_CHAR(_SC('\n')); _currentline++; break;
 			case _SC('t'): APPEND_CHAR(_SC('\t')); NEXT(); break;
 			case _SC('a'): APPEND_CHAR(_SC('\a')); NEXT(); break;
 			case _SC('b'): APPEND_CHAR(_SC('\b')); NEXT(); break;
