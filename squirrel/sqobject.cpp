@@ -46,9 +46,9 @@ const SQChar *GetTypeName(const SQObjectPtr &obj1)
 	return IdType2Name(type(obj1));	
 }
 
-SQString *SQString::Create(SQSharedState *ss,const SQChar *s,SQInteger len)
+SQString *SQString::Create(SQSharedState *ss,const SQChar *s,SQInteger len,SQBool isconst)
 {
-	SQString *str=ADD_STRING(ss,s,len);
+	SQString *str=ADD_STRING(ss,s,len,isconst);
 	return str;
 }
 
@@ -305,7 +305,7 @@ bool WriteObject(HSQUIRRELVM v,SQUserPointer up,SQWRITEFUNC write,SQObjectPtr &o
 	switch(type(o)){
 	case OT_STRING:
 		_CHECK_IO(SafeWrite(v,write,up,&_string(o)->_len,sizeof(SQInteger)));
-		_CHECK_IO(SafeWrite(v,write,up,_stringval(o),rsl(_string(o)->_len)));
+		_CHECK_IO(SafeWrite(v,write,up,_stringval(o),rsl(_string(o)->_len + 1)));
 		break;
 	case OT_INTEGER:
 		_CHECK_IO(SafeWrite(v,write,up,&_integer(o),sizeof(SQInteger)));break;
@@ -329,7 +329,7 @@ bool ReadObject(HSQUIRRELVM v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &o)
 	case OT_STRING:{
 		SQInteger len;
 		_CHECK_IO(SafeRead(v,read,up,&len,sizeof(SQInteger)));
-		_CHECK_IO(SafeRead(v,read,up,_ss(v)->GetScratchPad(rsl(len)),rsl(len)));
+		_CHECK_IO(SafeRead(v,read,up,_ss(v)->GetScratchPad(rsl(len + 1)),rsl(len + 1)));
 		o=SQString::Create(_ss(v),_ss(v)->GetScratchPad(-1),len);
 				   }
 		break;

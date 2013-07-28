@@ -120,16 +120,16 @@ static SQInteger __getcallstackinfos(HSQUIRRELVM v,SQInteger level)
 		if(si.funcname)fn = si.funcname;
 		if(si.source)src = si.source;
 		sq_newtable(v);
-		sq_pushstring(v, _SC("func"), -1);
+		sq_pushstringex(v, _SC("func"), -1, SQTrue);
 		sq_pushstring(v, fn, -1);
 		sq_newslot(v, -3, SQFalse);
-		sq_pushstring(v, _SC("src"), -1);
+		sq_pushstringex(v, _SC("src"), -1, SQTrue);
 		sq_pushstring(v, src, -1);
 		sq_newslot(v, -3, SQFalse);
-		sq_pushstring(v, _SC("line"), -1);
+		sq_pushstringex(v, _SC("line"), -1, SQTrue);
 		sq_pushinteger(v, si.line);
 		sq_newslot(v, -3, SQFalse);
-		sq_pushstring(v, _SC("locals"), -1);
+		sq_pushstringex(v, _SC("locals"), -1, SQTrue);
 		sq_newtable(v);
 		seq=0;
 		while ((name = sq_getlocal(v, level, seq))) {
@@ -294,27 +294,27 @@ void sq_base_register(HSQUIRRELVM v)
 	SQInteger i=0;
 	sq_pushroottable(v);
 	while(base_funcs[i].name!=0) {
-		sq_pushstring(v,base_funcs[i].name,-1);
+		sq_pushstringex(v,base_funcs[i].name,-1,SQTrue);
 		sq_newclosure(v,base_funcs[i].f,0);
-		sq_setnativeclosurename(v,-1,base_funcs[i].name);
+		sq_setnativeclosurenameex(v,-1,base_funcs[i].name,SQTrue);
 		sq_setparamscheck(v,base_funcs[i].nparamscheck,base_funcs[i].typemask);
 		sq_newslot(v,-3, SQFalse);
 		i++;
 	}
 	
-	sq_pushstring(v,_SC("_versionnumber_"),-1);
+	sq_pushstringex(v,_SC("_versionnumber_"),-1,SQTrue);
 	sq_pushinteger(v,SQUIRREL_VERSION_NUMBER);
 	sq_newslot(v,-3, SQFalse);
-	sq_pushstring(v,_SC("_version_"),-1);
-	sq_pushstring(v,SQUIRREL_VERSION,-1);
+	sq_pushstringex(v,_SC("_version_"),-1,SQTrue);
+	sq_pushstringex(v,SQUIRREL_VERSION,-1,SQTrue);
 	sq_newslot(v,-3, SQFalse);
-	sq_pushstring(v,_SC("_charsize_"),-1);
+	sq_pushstringex(v,_SC("_charsize_"),-1,SQTrue);
 	sq_pushinteger(v,sizeof(SQChar));
 	sq_newslot(v,-3, SQFalse);
-	sq_pushstring(v,_SC("_intsize_"),-1);
+	sq_pushstringex(v,_SC("_intsize_"),-1,SQTrue);
 	sq_pushinteger(v,sizeof(SQInteger));
 	sq_newslot(v,-3, SQFalse);
-	sq_pushstring(v,_SC("_floatsize_"),-1);
+	sq_pushstringex(v,_SC("_floatsize_"),-1,SQTrue);
 	sq_pushinteger(v,sizeof(SQFloat));
 	sq_newslot(v,-3, SQFalse);
 	sq_pop(v,1);
@@ -925,18 +925,18 @@ static SQInteger closure_getinfos(HSQUIRRELVM v) {
 		if(f->_varparams) {
 			_array(params)->Set(nparams-1,SQString::Create(_ss(v),_SC("..."),-1));
 		}
-		res->NewSlot(SQString::Create(_ss(v),_SC("native"),-1),false);
-		res->NewSlot(SQString::Create(_ss(v),_SC("name"),-1),f->_name);
-		res->NewSlot(SQString::Create(_ss(v),_SC("src"),-1),f->_sourcename);
-		res->NewSlot(SQString::Create(_ss(v),_SC("parameters"),-1),params);
-		res->NewSlot(SQString::Create(_ss(v),_SC("varargs"),-1),f->_varparams);
-    res->NewSlot(SQString::Create(_ss(v),_SC("defparams"),-1),defparams);
+		res->NewSlot(SQString::Create(_ss(v),_SC("native"),-1,SQTrue),false);
+		res->NewSlot(SQString::Create(_ss(v),_SC("name"),-1,SQTrue),f->_name);
+		res->NewSlot(SQString::Create(_ss(v),_SC("src"),-1,SQTrue),f->_sourcename);
+		res->NewSlot(SQString::Create(_ss(v),_SC("parameters"),-1,SQTrue),params);
+		res->NewSlot(SQString::Create(_ss(v),_SC("varargs"),-1,SQTrue),f->_varparams);
+    res->NewSlot(SQString::Create(_ss(v),_SC("defparams"),-1,SQTrue),defparams);
 	}
 	else { //OT_NATIVECLOSURE 
 		SQNativeClosure *nc = _nativeclosure(o);
-		res->NewSlot(SQString::Create(_ss(v),_SC("native"),-1),true);
-		res->NewSlot(SQString::Create(_ss(v),_SC("name"),-1),nc->_name);
-		res->NewSlot(SQString::Create(_ss(v),_SC("paramscheck"),-1),nc->_nparamscheck);
+		res->NewSlot(SQString::Create(_ss(v),_SC("native"),-1,SQTrue),true);
+		res->NewSlot(SQString::Create(_ss(v),_SC("name"),-1,SQTrue),nc->_name);
+		res->NewSlot(SQString::Create(_ss(v),_SC("paramscheck"),-1,SQTrue),nc->_nparamscheck);
 		SQObjectPtr typecheck;
 		if(nc->_typecheck.size() > 0) {
 			typecheck =
@@ -945,7 +945,7 @@ static SQInteger closure_getinfos(HSQUIRRELVM v) {
 					_array(typecheck)->Set((SQInteger)n,nc->_typecheck[n]);
 			}
 		}
-		res->NewSlot(SQString::Create(_ss(v),_SC("typecheck"),-1),typecheck);
+		res->NewSlot(SQString::Create(_ss(v),_SC("typecheck"),-1,SQTrue),typecheck);
 	}
 	v->Push(res);
 	return 1;
@@ -972,9 +972,9 @@ static SQInteger generator_getstatus(HSQUIRRELVM v)
 {
 	SQObject &o=stack_get(v,1);
 	switch(_generator(o)->_state){
-		case SQGenerator::eSuspended:v->Push(SQString::Create(_ss(v),_SC("suspended")));break;
-		case SQGenerator::eRunning:v->Push(SQString::Create(_ss(v),_SC("running")));break;
-		case SQGenerator::eDead:v->Push(SQString::Create(_ss(v),_SC("dead")));break;
+		case SQGenerator::eSuspended:v->Push(SQString::Create(_ss(v),_SC("suspended"),-1,SQTrue));break;
+		case SQGenerator::eRunning:v->Push(SQString::Create(_ss(v),_SC("running"),-1,SQTrue));break;
+		case SQGenerator::eDead:v->Push(SQString::Create(_ss(v),_SC("dead"),-1,SQTrue));break;
 	}
 	return 1;
 }
@@ -1047,13 +1047,13 @@ static SQInteger thread_getstatus(HSQUIRRELVM v)
 	SQObjectPtr &o = stack_get(v,1);
 	switch(sq_getvmstate(_thread(o))) {
 		case SQ_VMSTATE_IDLE:
-			sq_pushstring(v,_SC("idle"),-1);
+			sq_pushstringex(v,_SC("idle"),-1,SQTrue);
 		break;
 		case SQ_VMSTATE_RUNNING:
-			sq_pushstring(v,_SC("running"),-1);
+			sq_pushstringex(v,_SC("running"),-1,SQTrue);
 		break;
 		case SQ_VMSTATE_SUSPENDED:
-			sq_pushstring(v,_SC("suspended"),-1);
+			sq_pushstringex(v,_SC("suspended"),-1,SQTrue);
 		break;
 		default:
 			return sq_throwerror(v,_SC("internal VM error"));
