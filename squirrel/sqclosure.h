@@ -45,7 +45,11 @@ public:
 	~SQClosure();
 	
 	bool Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write);
+#ifndef E_SQUIRREL
 	static bool Load(SQVM *v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &ret);
+#else
+	static bool LoadInPlace(SQVM *v,SQUserPointer ptr,SQObjectPtr &ret);
+#endif
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
 	void Finalize(){

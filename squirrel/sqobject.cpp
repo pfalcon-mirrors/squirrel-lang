@@ -269,29 +269,9 @@ bool SafeWrite(HSQUIRRELVM v,SQWRITEFUNC write,SQUserPointer up,SQUserPointer de
 	return true;
 }
 
-bool SafeRead(HSQUIRRELVM v,SQWRITEFUNC read,SQUserPointer up,SQUserPointer dest,SQInteger size)
-{
-	if(size && read(up,dest,size) != size) {
-		v->Raise_Error(_SC("io error, read function failure, the origin stream could be corrupted/trucated"));
-		return false;
-	}
-	return true;
-}
-
 bool WriteTag(HSQUIRRELVM v,SQWRITEFUNC write,SQUserPointer up,SQUnsignedInteger32 tag)
 {
 	return SafeWrite(v,write,up,&tag,sizeof(tag));
-}
-
-bool CheckTag(HSQUIRRELVM v,SQWRITEFUNC read,SQUserPointer up,SQUnsignedInteger32 tag)
-{
-	SQUnsignedInteger32 t;
-	_CHECK_IO(SafeRead(v,read,up,&t,sizeof(t)));
-	if(t != tag){
-		v->Raise_Error(_SC("invalid or corrupted closure stream"));
-		return false;
-	}
-	return true;
 }
 
 bool WriteObject(HSQUIRRELVM v,SQUserPointer up,SQWRITEFUNC write,SQObjectPtr &o)
@@ -311,6 +291,27 @@ bool WriteObject(HSQUIRRELVM v,SQUserPointer up,SQWRITEFUNC write,SQObjectPtr &o
 		break;
 	default:
 		v->Raise_Error(_SC("cannot serialize a %s"),GetTypeName(o));
+		return false;
+	}
+	return true;
+}
+
+#ifndef E_SQUIRREL
+bool SafeRead(HSQUIRRELVM v,SQWRITEFUNC read,SQUserPointer up,SQUserPointer dest,SQInteger size)
+{
+	if(size && read(up,dest,size) != size) {
+		v->Raise_Error(_SC("io error, read function failure, the origin stream could be corrupted/trucated"));
+		return false;
+	}
+	return true;
+}
+
+bool CheckTag(HSQUIRRELVM v,SQWRITEFUNC read,SQUserPointer up,SQUnsignedInteger32 tag)
+{
+	SQUnsignedInteger32 t;
+	_CHECK_IO(SafeRead(v,read,up,&t,sizeof(t)));
+	if(t != tag){
+		v->Raise_Error(_SC("invalid or corrupted closure stream"));
 		return false;
 	}
 	return true;
@@ -346,6 +347,60 @@ bool ReadObject(HSQUIRRELVM v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &o)
 	}
 	return true;
 }
+#else
+bool SafeRead(HSQUIRRELVM v,SQInteger dummy,SQUserPointer *up,SQUserPointer dest,SQInteger size)
+{
+	memcpy(dest,*up,size);
+	*up = ((unsigned char *)*up) + size;
+	/*if(size && read(up,dest,size) != size) {
+		v->Raise_Error(_SC("io error, read function failure, the origin stream could be corrupted/trucated"));
+		return false;
+	}*/
+	return true;
+}
+
+bool CheckTag(HSQUIRRELVM v,SQInteger dummy,SQUserPointer *up,SQUnsignedInteger32 tag)
+{
+	SQUnsignedInteger32 t;
+	_CHECK_IO(SafeRead(v,dummy,up,&t,sizeof(t)));
+	if(t != tag){
+		v->Raise_Error(_SC("invalid or corrupted closure stream"));
+		return false;
+	}
+	return true;
+}
+
+bool ReadObject(HSQUIRRELVM v,SQUserPointer *up,SQInteger dummy,SQObjectPtr &o)
+{
+	SQUnsignedInteger32 _type;
+	_CHECK_IO(SafeRead(v,dummy,up,&_type,sizeof(_type)));
+	SQObjectType t = (SQObjectType)_type;
+	switch(t){
+	case OT_STRING:{
+		SQInteger len;
+		_CHECK_IO(SafeRead(v,dummy,up,&len,sizeof(SQInteger)));
+		_CHECK_IO(SafeRead(v,dummy,up,_ss(v)->GetScratchPad(rsl(len)),rsl(len)));
+		o=SQString::Create(_ss(v),_ss(v)->GetScratchPad(-1),len);
+				   }
+		break;
+	case OT_INTEGER:{
+		SQInteger i;
+		_CHECK_IO(SafeRead(v,dummy,up,&i,sizeof(SQInteger))); o = i; break;
+					}
+	case OT_FLOAT:{
+		SQFloat f;
+		_CHECK_IO(SafeRead(v,dummy,up,&f,sizeof(SQFloat))); o = f; break;
+				  }
+	case OT_NULL:
+		o.Null();
+		break;
+	default:
+		v->Raise_Error(_SC("cannot serialize a %s"),IdType2Name(t));
+		return false;
+	}
+	return true;
+}
+#endif
 
 bool SQClosure::Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write)
 {
@@ -357,15 +412,26 @@ bool SQClosure::Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write)
 	_CHECK_IO(WriteTag(v,write,up,SQ_CLOSURESTREAM_TAIL));
 	return true;
 }
-
+#ifndef E_SQUIRREL
 bool SQClosure::Load(SQVM *v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &ret)
 {
+#else
+bool SQClosure::LoadInPlace(SQVM *v,SQUserPointer ptr,SQObjectPtr &ret)
+{
+	SQUserPointer *up;
+	SQInteger read = 666; //dummy
+	up = &ptr;
+#endif
 	_CHECK_IO(CheckTag(v,read,up,SQ_CLOSURESTREAM_HEAD));
 	_CHECK_IO(CheckTag(v,read,up,sizeof(SQChar)));
 	_CHECK_IO(CheckTag(v,read,up,sizeof(SQInteger)));
 	_CHECK_IO(CheckTag(v,read,up,sizeof(SQFloat)));
 	SQObjectPtr func;
+#ifndef E_SQUIRREL
 	_CHECK_IO(SQFunctionProto::Load(v,up,read,func));
+#else
+	_CHECK_IO(SQFunctionProto::LoadInPlace(v,up,func));
+#endif
 	_CHECK_IO(CheckTag(v,read,up,SQ_CLOSURESTREAM_TAIL));
 	ret = SQClosure::Create(_ss(v),_funcproto(func));
 	return true;
@@ -445,9 +511,17 @@ bool SQFunctionProto::Save(SQVM *v,SQUserPointer up,SQWRITEFUNC write)
 	_CHECK_IO(SafeWrite(v,write,up,&_varparams,sizeof(_varparams)));
 	return true;
 }
-
+#ifndef E_SQUIRREL
 bool SQFunctionProto::Load(SQVM *v,SQUserPointer up,SQREADFUNC read,SQObjectPtr &ret)
 {
+#else
+bool SQFunctionProto::LoadInPlace(SQVM *v,SQUserPointer *ptr,SQObjectPtr &ret)
+{
+	SQUserPointer *up;
+	SQInteger read = 666; //dummy
+	up = ptr;
+#endif
+
 	SQInteger i, nliterals,nparameters;
 	SQInteger noutervalues ,nlocalvarinfos ;
 	SQInteger nlineinfos,ninstructions ,nfunctions,ndefaultparams ;
@@ -467,9 +541,13 @@ bool SQFunctionProto::Load(SQVM *v,SQUserPointer up,SQREADFUNC read,SQObjectPtr 
 	_CHECK_IO(SafeRead(v,read,up, &ninstructions, sizeof(ninstructions)));
 	_CHECK_IO(SafeRead(v,read,up, &nfunctions, sizeof(nfunctions)));
 	
-
+#ifndef E_SQUIRREL
 	SQFunctionProto *f = SQFunctionProto::Create(_opt_ss(v),ninstructions,nliterals,nparameters,
 			nfunctions,noutervalues,nlineinfos,nlocalvarinfos,ndefaultparams);
+#else
+	SQFunctionProto *f = SQFunctionProto::CreateInPlace(_opt_ss(v),ninstructions,nliterals,nparameters,
+			nfunctions,noutervalues,nlineinfos,nlocalvarinfos,ndefaultparams);
+#endif
 	SQObjectPtr proto = f; //gets a ref in case of failure
 	f->_sourcename = sourcename;
 	f->_name = name;
@@ -506,6 +584,8 @@ bool SQFunctionProto::Load(SQVM *v,SQUserPointer up,SQREADFUNC read,SQObjectPtr 
 		_CHECK_IO(SafeRead(v,read,up, &lvi._end_op, sizeof(SQUnsignedInteger)));
 		f->_localvarinfos[i] = lvi;
 	}
+
+#ifndef E_SQUIRREL
 	_CHECK_IO(CheckTag(v,read,up,SQ_CLOSURESTREAM_PART));
 	_CHECK_IO(SafeRead(v,read,up, f->_lineinfos, sizeof(SQLineInfo)*nlineinfos));
 
@@ -514,10 +594,27 @@ bool SQFunctionProto::Load(SQVM *v,SQUserPointer up,SQREADFUNC read,SQObjectPtr 
 
 	_CHECK_IO(CheckTag(v,read,up,SQ_CLOSURESTREAM_PART));
 	_CHECK_IO(SafeRead(v,read,up, f->_instructions, sizeof(SQInstruction)*ninstructions));
+#else
+	_CHECK_IO(CheckTag(v,read,up,SQ_CLOSURESTREAM_PART));
+	f->_lineinfos = (SQLineInfo*)*up;
+	*up = ((unsigned char*)*up) + (sizeof(SQLineInfo)*nlineinfos);
+
+	_CHECK_IO(CheckTag(v,read,up,SQ_CLOSURESTREAM_PART));
+	f->_defaultparams = (SQInteger*)*up;
+	*up = ((unsigned char*)*up) + (sizeof(SQInteger)*ndefaultparams);
+
+	_CHECK_IO(CheckTag(v,read,up,SQ_CLOSURESTREAM_PART));
+	f->_instructions = (SQInstruction*)*up;
+	*up = ((unsigned char*)*up) + (sizeof(SQInstruction)*ninstructions);
+#endif
 
 	_CHECK_IO(CheckTag(v,read,up,SQ_CLOSURESTREAM_PART));
 	for(i = 0; i < nfunctions; i++){
+#ifndef E_SQUIRREL
 		_CHECK_IO(_funcproto(o)->Load(v, up, read, o));
+#else
+		_CHECK_IO(_funcproto(o)->LoadInPlace(v, up, o));
+#endif
 		f->_functions[i] = o;
 	}
 	_CHECK_IO(SafeRead(v,read,up, &f->_stacksize, sizeof(f->_stacksize)));
@@ -527,6 +624,7 @@ bool SQFunctionProto::Load(SQVM *v,SQUserPointer up,SQREADFUNC read,SQObjectPtr 
 	ret = f;
 	return true;
 }
+
 
 #ifndef NO_GARBAGE_COLLECTOR
 

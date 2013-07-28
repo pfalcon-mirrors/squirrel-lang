@@ -1157,6 +1157,7 @@ SQRESULT sq_writeclosure(HSQUIRRELVM v,SQWRITEFUNC w,SQUserPointer up)
 	return SQ_OK;
 }
 
+#ifndef E_SQUIRREL
 SQRESULT sq_readclosure(HSQUIRRELVM v,SQREADFUNC r,SQUserPointer up)
 {
 	SQObjectPtr closure;
@@ -1171,6 +1172,26 @@ SQRESULT sq_readclosure(HSQUIRRELVM v,SQREADFUNC r,SQUserPointer up)
 	v->Push(closure);
 	return SQ_OK;
 }
+#else
+
+SQRESULT sq_readclosure(HSQUIRRELVM v,SQREADFUNC r,SQUserPointer up)
+{
+	return sq_throwerror(v,_SC("function not implemented in the embedded version"));
+}
+
+SQRESULT sq_readclosureinplace(HSQUIRRELVM v,SQUserPointer ptr)
+{
+	SQObjectPtr closure;
+	unsigned short *p = (unsigned short *)ptr;
+	if(*p != SQ_BYTECODE_STREAM_TAG)
+		return sq_throwerror(v,_SC("invalid stream"));
+	p++; 
+	if(!SQClosure::LoadInPlace(v,p,closure))
+		return SQ_ERROR;
+	v->Push(closure);
+	return SQ_OK;
+}
+#endif
 
 SQChar *sq_getscratchpad(HSQUIRRELVM v,SQInteger minsize)
 {

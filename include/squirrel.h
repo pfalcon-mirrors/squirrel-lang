@@ -458,6 +458,9 @@ SQUIRREL_API SQRESULT sq_resurrectunreachable(HSQUIRRELVM v);
 /*serialization*/
 SQUIRREL_API SQRESULT sq_writeclosure(HSQUIRRELVM vm,SQWRITEFUNC writef,SQUserPointer up);
 SQUIRREL_API SQRESULT sq_readclosure(HSQUIRRELVM vm,SQREADFUNC readf,SQUserPointer up);
+#ifdef E_SQUIRREL
+SQUIRREL_API SQRESULT sq_readclosureinplace(HSQUIRRELVM v,SQUserPointer ptr);
+#endif
 
 /*mem allocation*/
 SQUIRREL_API void *sq_malloc(SQUnsignedInteger size);
