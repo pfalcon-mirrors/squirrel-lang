@@ -374,6 +374,7 @@ public:
 		LogicalOrExp();
 		switch(_token)  {
 		case _SC('='):
+		case TK_SASSIGN:
 		case TK_NEWSLOT:
 		case TK_MINUSEQ:
 		case TK_PLUSEQ:
@@ -394,6 +395,7 @@ public:
 					Error(_SC("can't 'create' a local slot"));
 				break;
 			case _SC('='): //ASSIGN
+			case TK_SASSIGN:
 				switch(ds) {
 				case LOCAL:
 					{
@@ -404,7 +406,10 @@ public:
 					break;
 				case OBJECT:
 				case BASE:
-					EmitDerefOp(_OP_SET);
+					if (op == TK_SASSIGN)
+						EmitDerefOp(_OP_SET);
+					else
+						EmitDerefOp(_OP_NEWSLOT);
 					break;
 				case OUTER:
 					{
@@ -884,6 +889,7 @@ public:
 	bool NeedGet()
 	{
 		switch(_token) {
+		case TK_SASSIGN:
 		case _SC('='): case _SC('('): case TK_NEWSLOT: case TK_MODEQ: case TK_MULEQ:
 	    case TK_DIVEQ: case TK_MINUSEQ: case TK_PLUSEQ: case TK_PLUSPLUS: case TK_MINUSMINUS:
 			return false;

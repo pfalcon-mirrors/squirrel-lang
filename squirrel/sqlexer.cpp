@@ -232,7 +232,8 @@ SQInteger SQLexer::Lex()
 			else { NEXT(); RETURN_TOKEN(TK_OR); }
 		case _SC(':'):
 			NEXT();
-			if (CUR_CHAR != _SC(':')){ RETURN_TOKEN(':') }
+			if (CUR_CHAR == _SC('=')){ NEXT(); RETURN_TOKEN(TK_SASSIGN); }
+			else if (CUR_CHAR != _SC(':')){ RETURN_TOKEN(':') }
 			else { NEXT(); RETURN_TOKEN(TK_DOUBLE_COLON); }
 		case _SC('*'):
 			NEXT();

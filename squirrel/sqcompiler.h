@@ -70,6 +70,8 @@ struct SQVM;
 #define TK_STATIC 322
 #define TK_ENUM 323
 #define TK_CONST 324
+// Strict assign, :=
+#define TK_SASSIGN 325
 
 
 typedef void(*CompilerErrorFunc)(void *ud, const SQChar *s);
