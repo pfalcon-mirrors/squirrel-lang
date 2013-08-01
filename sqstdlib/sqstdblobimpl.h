@@ -34,6 +34,7 @@ struct SQBlob : public SQStream
 		_ptr += n;
 		return n;
 	}
+	SQInteger Readline(void *buffer,SQInteger size) { return -1; }
 	bool Resize(SQInteger n) {
 		if(!_owns) return false;
 		if(n != _allocated) {

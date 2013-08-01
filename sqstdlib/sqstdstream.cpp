@@ -38,6 +38,26 @@ SQInteger _stream_readblob(HSQUIRRELVM v)
 	return 1;
 }
 
+SQInteger _stream_readline(HSQUIRRELVM v)
+{
+	SETUP_STREAM(v);
+	SQChar *data;
+	SQInteger size = 512,res;
+	if(sq_gettop(v) > 1)
+		sq_getinteger(v,2,&size);
+	// Abstraction separation break-up:
+	// Readline is implemented in terms of fgets() which stuffs '\0'
+	// after the string, so to get size chars, we need to use size + 1
+	// buffer.
+	data = sq_getscratchpad(v,size + 1);
+	res = self->Readline(data,size + 1);
+	if(res < 0)
+		return sq_throwerror(v,_SC("I/O error in readline()"));
+	// Note - on EOF we return empty string
+	sq_pushstring(v,data,res);
+	return 1;
+}
+
 #define SAFE_READN(ptr,len) { \
 	if(self->Read(ptr,len) != len) return sq_throwerror(v,_SC("io error")); \
 	}
@@ -244,6 +264,7 @@ SQInteger _stream_eos(HSQUIRRELVM v)
 
 static SQRegFunction _stream_methods[] = {
 	_DECL_STREAM_FUNC(readblob,2,_SC("xn")),
+	_DECL_STREAM_FUNC(readline,-1,_SC("xn")),
 	_DECL_STREAM_FUNC(readn,2,_SC("xn")),
 	_DECL_STREAM_FUNC(writeblob,-2,_SC("xx")),
 	_DECL_STREAM_FUNC(writen,3,_SC("xnn")),
