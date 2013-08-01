@@ -22,9 +22,13 @@ SQInteger _stream_readblob(HSQUIRRELVM v)
 	SQUserPointer data,blobp;
 	SQInteger size,res;
 	sq_getinteger(v,2,&size);
+#if 0
+	// Don't do check like this -
+	// it doesn't work for stdin/out, pipes, sockets, etc.
 	if(size > self->Len()) {
 		size = self->Len();
 	}
+#endif
 	data = sq_getscratchpad(v,size);
 	res = self->Read(data,size);
 	if(res <= 0)
