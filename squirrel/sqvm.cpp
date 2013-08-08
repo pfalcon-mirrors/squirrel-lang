@@ -644,6 +644,13 @@ bool SQVM::IsEqual(const SQObjectPtr &o1,const SQObjectPtr &o2,bool &res)
 
 bool SQVM::IsFalse(SQObjectPtr &o)
 {
+	switch(type(o)) {
+	case OT_STRING:		return _string(o)->_len == 0;
+	case OT_TABLE:		return _table(o)->CountUsed() == 0;
+	case OT_ARRAY:		return _array(o)->Size() == 0;
+	default:;
+	}
+
 	if(((type(o) & SQOBJECT_CANBEFALSE) 
 		&& ( ((type(o) == OT_FLOAT) && (_float(o) == SQFloat(0.0))) ))
 #if !defined(SQUSEDOUBLE) || (defined(SQUSEDOUBLE) && defined(_SQ64))
