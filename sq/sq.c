@@ -69,6 +69,14 @@ void PrintVersionInfos()
 	scfprintf(stdout,_SC("%s %s (%d bits)\n"),SQUIRREL_VERSION,SQUIRREL_COPYRIGHT,((int)(sizeof(SQInteger)*8)));
 }
 
+void PrintIntro()
+{
+	scfprintf(stdout,_SC("\nEnter statements, each will be executed in a standone function "
+	                     "(that means local variables won't work between two statements). "
+	                     "To print result of an expression, prefix it with '='. "
+	                     "Use quit() or Ctrl+C to quit.\n"));
+}
+
 void PrintUsage()
 {
 	scfprintf(stderr,_SC("usage: sq <options> <scriptpath [args]>.\n")
@@ -235,6 +243,7 @@ void Interactive(HSQUIRRELVM v)
 	SQInteger retval=0;
 	SQInteger done=0;
 	PrintVersionInfos();
+	PrintIntro();
 		
 	sq_pushroottable(v);
 	sq_pushstring(v,_SC("quit"),-1);
