@@ -201,6 +201,8 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[],SQInteger *retval)
 						return _DONE;
 					}
 					else{
+						// Runtime error
+						*retval = -3;
 						return _ERROR;
 					}
 					
