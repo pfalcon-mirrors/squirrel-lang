@@ -1,3 +1,69 @@
+"General-Purpose Squirrel" project
+
+This branch of a repository (or tarball is you got such) implements Squirrel
+core specific changes for "Squirrel as General-Purpose Language" RFC:
+http://forum.squirrel-lang.org/mainsite/forums/default.aspx?g=posts&t=3116
+
+Changes to the core are expected to be concise, to faciliate future merging
+with upstream (no too big refactors), and stay compatible with original
+Squirrel. Of course, changes may introduce new features which, if being
+used, no longer will be compatible with original interpreter (fixing
+warts is the whole purpose of this branch in the first place). Besides
+concise, changes are also should be few, again, to facilitate merging
+with upstream (or submission to upstream, assuming it is interested). If
+something can be NOT changed, it rather be not. Anything which can go
+to extension module, should rather go there.
+
+Big part of "General-Purpose Squirrel" project is module library. Actually,
+if you're interested in the project, you should rather checkout
+squirrel-modules repository - it includes this branch as a git submodule
+and will build you an interpreter with module imported capabilities
+(which are not available in this branch proper - see above: anything not
+belonging to the core, should be an extension). Feel free to proceed to
+https://github.com/pfalcon/squirrel-modules
+
+List of changes done in this branch:
+
+1. Usage of "<-" operator is optional. Instead, you can use "=" operator
+as in most other languages. All existing Squirrel code will continue to
+work. If you want behavior of "=" as in original Squirrel, use ":=". To sum
+up: if you're a novice, or never liked "<-", just use "=". If you liked
+"<-", then don't use "=", use "<-" and ":=" instead.
+RFC and discussion:
+http://forum.squirrel-lang.org/mainsite/forums/default.aspx?g=posts&t=3113
+Reference: Python, many other languages.
+
+2. readblob() fixed to work with streams, not just files (can use
+with stdin for example).
+
+3. "stream" base class got readline() method for reading next textual
+line. It is implemented for file objects, currently not implemented
+for blobs. Reference: Python.
+
+4. "stream" base class got read(size) and write(str) methods. Reference:
+Python.
+
+5. blob.tostring() method added for consistency and ease of use.
+
+6. Treat "", [], {} as false values in boolean context (like Python).
+This allows for simpler checks in container processing algorithms.
+
+7. If runtime error happened in the script, interpreter exits with
+return code 253 (was 0, i.e. success, previously).
+
+8. Interactive interpreter prints intro text with helpful hints at start.
+
+9. Improve build system: more easy to use makefile, allow to build in
+arbitrary static modules (using override makefile), helper script to
+assess interpreter binary size when built with different options.
+
+10. In vargv[] as passed to top-level script function, vargv[0] is now
+name of the script itself. Reference: Unix shell conventions.
+
+
+Original README content follows:
+=================================================================
+
 The programming language SQUIRREL 3.0 stable
 
 --------------------------------------------------
