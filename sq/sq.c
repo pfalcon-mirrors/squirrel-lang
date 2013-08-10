@@ -339,6 +339,11 @@ int main(int argc, char* argv[])
 	//aux library
 	//sets error handlers
 	sqstd_seterrorhandlers(v);
+#ifdef EXTRA_STATIC_MODULES
+	if (SQ_FAILED(init_static_modules(v)))
+		// Runtime error initializing builtin modules
+		return -3;
+#endif
 
 	//gets arguments
 	switch(getargs(v,argc,argv,&retval))
