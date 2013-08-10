@@ -340,9 +340,13 @@ int main(int argc, char* argv[])
 	//sets error handlers
 	sqstd_seterrorhandlers(v);
 #ifdef EXTRA_STATIC_MODULES
-	if (SQ_FAILED(init_static_modules(v)))
+	if (SQ_FAILED(init_static_modules(v))) {
 		// Runtime error initializing builtin modules
+		sq_pushroottable(v);
+		sq_getlasterror(v);
+		sqstd_aux_printerror(v);
 		return -3;
+	}
 #endif
 
 	//gets arguments
