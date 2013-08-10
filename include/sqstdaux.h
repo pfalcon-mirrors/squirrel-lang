@@ -8,6 +8,7 @@ extern "C" {
 
 SQUIRREL_API void sqstd_seterrorhandlers(HSQUIRRELVM v);
 SQUIRREL_API void sqstd_printcallstack(HSQUIRRELVM v);
+SQUIRREL_API SQInteger sqstd_aux_printerror(HSQUIRRELVM v);
 
 #ifdef __cplusplus
 } /*extern "C"*/
