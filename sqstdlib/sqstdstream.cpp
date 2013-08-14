@@ -16,6 +16,21 @@
 	if(!self || !self->IsValid())  \
 		return sq_throwerror(v,_SC("the stream is invalid"));
 
+SQInteger _stream_read(HSQUIRRELVM v)
+{
+	SETUP_STREAM(v);
+	SQUserPointer data;
+	SQInteger size = 4096,res;
+	if(sq_gettop(v) > 1)
+		sq_getinteger(v,2,&size);
+	data = sq_getscratchpad(v,size);
+	res = self->Read(data,size);
+	if(res < 0)
+		return sq_throwerror(v,_SC("I/O error in read()"));
+	sq_pushstring(v,(SQChar*)data,res);
+	return 1;
+}
+
 SQInteger _stream_readblob(HSQUIRRELVM v)
 {
 	SETUP_STREAM(v);
@@ -118,6 +133,20 @@ SQInteger _stream_readn(HSQUIRRELVM v)
 	default:
 		return sq_throwerror(v, _SC("invalid format"));
 	}
+	return 1;
+}
+
+SQInteger _stream_write(HSQUIRRELVM v)
+{
+	SETUP_STREAM(v);
+	SQInteger size;
+	const SQChar *data;
+	sq_getstring(v,2,&data);
+	size = sq_getsize(v,2);
+	size = self->Write((void*)data,size);
+	if(size < 0)
+		return sq_throwerror(v,_SC("I/O error in write()"));
+	sq_pushinteger(v,size);
 	return 1;
 }
 
@@ -263,9 +292,11 @@ SQInteger _stream_eos(HSQUIRRELVM v)
  }
 
 static SQRegFunction _stream_methods[] = {
+	_DECL_STREAM_FUNC(read,-1,_SC("xn")),
 	_DECL_STREAM_FUNC(readblob,2,_SC("xn")),
 	_DECL_STREAM_FUNC(readline,-1,_SC("xn")),
 	_DECL_STREAM_FUNC(readn,2,_SC("xn")),
+	_DECL_STREAM_FUNC(write,2,_SC("xs")),
 	_DECL_STREAM_FUNC(writeblob,-2,_SC("xx")),
 	_DECL_STREAM_FUNC(writen,3,_SC("xnn")),
 	_DECL_STREAM_FUNC(seek,-2,_SC("xnn")),
