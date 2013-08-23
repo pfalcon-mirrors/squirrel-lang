@@ -183,8 +183,9 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[],SQInteger *retval)
 					//return _DONE;
 				//}
 				if(SQ_SUCCEEDED(sqstd_loadfile(v,filename,SQTrue))) {
-					int callargs = 1;
+					int callargs = 2;
 					sq_pushroottable(v);
+					sq_pushstring(v,filename,-1);
 					for(i=arg;i<argc;i++)
 					{
 						const SQChar *a;
