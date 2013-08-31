@@ -381,6 +381,7 @@ void SQCollectable::RemoveFromChain(SQCollectable **chain,SQCollectable *c)
 
 SQChar* SQSharedState::GetScratchPad(SQInteger size)
 {
+//TODO: Redo algo
 	SQInteger newsize;
 	if(size>0) {
 		if(_scratchpadsize < size) {
