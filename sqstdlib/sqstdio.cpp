@@ -483,13 +483,13 @@ SQRESULT sqstd_register_iolib(HSQUIRRELVM v)
 	SQInteger top = sq_gettop(v);
 	//create delegate
 	declare_stream(v,_SC("file"),(SQUserPointer)SQSTD_FILE_TYPE_TAG,_SC("std_file"),_file_methods,iolib_funcs);
-	sq_pushstring(v,_SC("stdout"),-1);
+	sq_pushstringex(v,_SC("stdout"),-1,true);
 	sqstd_createfile(v,stdout,SQFalse);
 	sq_newslot(v,-3,SQFalse);
-	sq_pushstring(v,_SC("stdin"),-1);
+	sq_pushstringex(v,_SC("stdin"),-1,true);
 	sqstd_createfile(v,stdin,SQFalse);
 	sq_newslot(v,-3,SQFalse);
-	sq_pushstring(v,_SC("stderr"),-1);
+	sq_pushstringex(v,_SC("stderr"),-1,true);
 	sqstd_createfile(v,stderr,SQFalse);
 	sq_newslot(v,-3,SQFalse);
 	sq_settop(v,top);
