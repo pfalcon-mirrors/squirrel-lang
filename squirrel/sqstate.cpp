@@ -381,7 +381,9 @@ void SQCollectable::RemoveFromChain(SQCollectable **chain,SQCollectable *c)
 
 SQChar* SQSharedState::GetScratchPad(SQInteger size)
 {
-//TODO: Redo algo
+//TODO: Redo algo even further
+// Don't shrink scratchpad below this size
+#define SCRATCHPAD_LOW_WATERMARK 256
 	SQInteger newsize;
 	if(size>0) {
 		if(_scratchpadsize < size) {
@@ -389,7 +391,7 @@ SQChar* SQSharedState::GetScratchPad(SQInteger size)
 			_scratchpad = (SQChar *)SQ_REALLOC(_scratchpad,_scratchpadsize,newsize);
 			_scratchpadsize = newsize;
 
-		}else if(_scratchpadsize >= (size<<5)) {
+		}else if(_scratchpadsize > SCRATCHPAD_LOW_WATERMARK && _scratchpadsize >= (size<<5)) {
 			newsize = _scratchpadsize >> 1;
 			_scratchpad = (SQChar *)SQ_REALLOC(_scratchpad,_scratchpadsize,newsize);
 			_scratchpadsize = newsize;
