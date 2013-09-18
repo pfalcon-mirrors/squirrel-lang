@@ -28,11 +28,11 @@ SQSharedState::SQSharedState()
 }
 
 #define newsysstring(s) {	\
-	_systemstrings->push_back(SQString::Create(this,s));	\
+	_systemstrings->push_back(SQString::Create(this,s,-1,true));	\
 	}
 
 #define newmetamethod(s) {	\
-	_metamethods->push_back(SQString::Create(this,s));	\
+	_metamethods->push_back(SQString::Create(this,s,-1,true));	\
 	_table(_metamethodsmap)->NewSlot(_metamethods->back(),(SQInteger)(_metamethods->size()-1)); \
 	}
 
@@ -99,10 +99,10 @@ SQTable *CreateDefaultDelegate(SQSharedState *ss,SQRegFunction *funcz)
 	while(funcz[i].name!=0){
 		SQNativeClosure *nc = SQNativeClosure::Create(ss,funcz[i].f,0);
 		nc->_nparamscheck = funcz[i].nparamscheck;
-		nc->_name = SQString::Create(ss,funcz[i].name);
+		nc->_name = SQString::Create(ss,funcz[i].name,-1,true);
 		if(funcz[i].typemask && !CompileTypemask(nc->_typecheck,funcz[i].typemask))
 			return NULL;
-		t->NewSlot(SQString::Create(ss,funcz[i].name),nc);
+		t->NewSlot(SQString::Create(ss,funcz[i].name,-1,true),nc);
 		i++;
 	}
 	return t;
@@ -160,7 +160,7 @@ void SQSharedState::Init()
 	newmetamethod(MM_NEWMEMBER);
 	newmetamethod(MM_INHERITED);
 
-	_constructoridx = SQString::Create(this,_SC("constructor"));
+	_constructoridx = SQString::Create(this,_SC("constructor"),-1,true);
 	_registry = SQTable::Create(this,0);
 	_consts = SQTable::Create(this,0);
 	_table_default_delegate = CreateDefaultDelegate(this,_table_default_delegate_funcz);
