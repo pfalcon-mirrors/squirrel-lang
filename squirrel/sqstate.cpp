@@ -584,7 +584,7 @@ void RefTable::AllocNodes(SQUnsignedInteger size)
 SQStringTable::SQStringTable(SQSharedState *ss)
 {
 	_sharedstate = ss;
-	AllocNodes(4);
+	AllocNodes(32);
 	_slotused = 0;
 }
 
