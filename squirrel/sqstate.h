@@ -75,7 +75,9 @@ public:
 	SQObjectPtrVec *_systemstrings;
 	SQObjectPtrVec *_types;
 	SQStringTable *_stringtable;
+#ifndef NO_GARBAGE_COLLECTOR
 	RefTable _refs_table;
+#endif
 	SQObjectPtr _registry;
 	SQObjectPtr _consts;
 	SQObjectPtr _constructoridx;

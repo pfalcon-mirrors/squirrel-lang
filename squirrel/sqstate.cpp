@@ -186,8 +186,8 @@ SQSharedState::~SQSharedState()
 	_class_default_delegate.Null();
 	_instance_default_delegate.Null();
 	_weakref_default_delegate.Null();
-	_refs_table.Finalize();
 #ifndef NO_GARBAGE_COLLECTOR
+	_refs_table.Finalize();
 	SQCollectable *t = _gc_chain;
 	SQCollectable *nx = NULL;
 	if(t) {
