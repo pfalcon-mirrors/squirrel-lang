@@ -38,6 +38,19 @@ SQSharedState::SQSharedState()
 
 bool CompileTypemask(SQIntVec &res,const SQChar *typemask)
 {
+	// TODO: Storing typemask flags in dynamic vector is non-optimal
+
+	// Calculate exact typemask vector size to avoid reallocs and
+	// wasted memory.
+	SQInteger size = 0;
+	for (const SQChar *p = typemask; *p; p++) {
+		if (*p == '|')
+			size--;
+		else if (*p != ' ')
+			size++;
+	}
+	res.reserve(size);
+
 	SQInteger i = 0;
 	
 	SQInteger mask = 0;
