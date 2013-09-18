@@ -118,7 +118,9 @@ void SQSharedState::Init()
 	_stringtable = (SQStringTable*)SQ_MALLOC(sizeof(SQStringTable));
 	new (_stringtable) SQStringTable(this);
 	sq_new(_metamethods,SQObjectPtrVec);
+	_metamethods->reserve(18);
 	sq_new(_systemstrings,SQObjectPtrVec);
+	_systemstrings->reserve(15);
 	sq_new(_types,SQObjectPtrVec);
 	_metamethodsmap = SQTable::Create(this,MT_LAST-1);
 	//adding type strings to avoid memory trashing
