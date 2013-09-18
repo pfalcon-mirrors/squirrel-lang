@@ -417,7 +417,7 @@ SQRESULT sq_setnativeclosurenameex(HSQUIRRELVM v,SQInteger idx,const SQChar *nam
 	SQObject o = stack_get(v, idx);
 	if(sq_isnativeclosure(o)) {
 		SQNativeClosure *nc = _nativeclosure(o);
-		nc->_name = SQString::Create(_ss(v),name,isconst);
+		nc->_name = SQString::Create(_ss(v),name,-1,isconst);
 		return SQ_OK;
 	}
 	return sq_throwerror(v,_SC("the object is not a nativeclosure"));
