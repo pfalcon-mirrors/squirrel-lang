@@ -351,7 +351,7 @@ static SQRegFunction stringlib_funcs[]={
 SQInteger sqstd_register_stringlib(HSQUIRRELVM v)
 {
 	sq_pushstringex(v,_SC("regexp"),-1,SQTrue);
-	sq_newclass(v,SQFalse);
+	sq_newclassex(v,SQFalse,6);
 	SQInteger i = 0;
 	while(rexobj_funcs[i].name != 0) {
 		SQRegFunction &f = rexobj_funcs[i];
