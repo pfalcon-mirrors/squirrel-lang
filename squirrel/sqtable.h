@@ -56,6 +56,16 @@ private:
 	}
 	void AllocNodes(SQInteger nSize);
 	void Rehash(bool force);
+	inline SQInteger IncreaseSize(SQInteger n)
+	{
+		// Grow by 50%
+		return n + n / 2;
+	}
+	inline SQInteger DecreaseSize(SQInteger n)
+	{
+		// Shrink twice by 50%
+		return n / 2;
+	}
 	SQTable(SQSharedState *ss, SQInteger nInitialSize);
 	void _ClearNodes();
 public:
