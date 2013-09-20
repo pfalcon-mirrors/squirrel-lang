@@ -38,6 +38,10 @@ private:
 	SQInteger _usednodes;
 	
 ///////////////////////////
+	inline SQInteger TableHash(const SQObjectPtr &key)
+	{
+		return HashObj(key) & (_numofnodes - 1);
+	}
 	void AllocNodes(SQInteger nSize);
 	void Rehash(bool force);
 	SQTable(SQSharedState *ss, SQInteger nInitialSize);
