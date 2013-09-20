@@ -21,7 +21,7 @@ SQTable::SQTable(SQSharedState *ss,SQInteger nInitialSize)
 void SQTable::Remove(const SQObjectPtr &key)
 {
 	
-	_HashNode *n = _Get(key, HashObj(key) & (_numofnodes - 1));
+	_HashNode *n = _Get(key, TableHash(key));
 	if (n) {
 		n->val.Null();
 		n->key.Null();
@@ -109,7 +109,7 @@ bool SQTable::Get(const SQObjectPtr &key,SQObjectPtr &val)
 {
 	if(type(key) == OT_NULL)
 		return false;
-	_HashNode *n = _Get(key, HashObj(key) & (_numofnodes - 1));
+	_HashNode *n = _Get(key, TableHash(key));
 	if (n) {
 		val = _realval(n->val);
 		return true;
@@ -119,7 +119,7 @@ bool SQTable::Get(const SQObjectPtr &key,SQObjectPtr &val)
 bool SQTable::NewSlot(const SQObjectPtr &key,const SQObjectPtr &val)
 {
 	assert(type(key) != OT_NULL);
-	SQHash h = HashObj(key) & (_numofnodes - 1);
+	SQHash h = TableHash(key);
 	_HashNode *n = _Get(key, h);
 	if (n) {
 		n->val = val;
@@ -134,7 +134,7 @@ bool SQTable::NewSlot(const SQObjectPtr &key,const SQObjectPtr &val)
 
 	if(type(mp->key) != OT_NULL) {
 		n = _firstfree;  /* get a free place */
-		SQHash mph = HashObj(mp->key) & (_numofnodes - 1);
+		SQHash mph = TableHash(mp->key);
 		_HashNode *othern;  /* main position of colliding node */
 		
 		if (mp > n && (othern = &_nodes[mph]) != mp){
@@ -194,7 +194,7 @@ SQInteger SQTable::Next(bool getweakrefs,const SQObjectPtr &refpos, SQObjectPtr 
 
 bool SQTable::Set(const SQObjectPtr &key, const SQObjectPtr &val)
 {
-	_HashNode *n = _Get(key, HashObj(key) & (_numofnodes - 1));
+	_HashNode *n = _Get(key, TableHash(key));
 	if (n) {
 		n->val = val;
 		return true;
