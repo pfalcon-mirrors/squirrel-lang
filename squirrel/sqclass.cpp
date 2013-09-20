@@ -10,7 +10,7 @@
 
 
 
-SQClass::SQClass(SQSharedState *ss,SQClass *base)
+SQClass::SQClass(SQSharedState *ss, SQClass *base, SQInteger num_methods)
 {
 	_base = base;
 	_typetag = 0;
@@ -18,6 +18,10 @@ SQClass::SQClass(SQSharedState *ss,SQClass *base)
 	_udsize = 0;
 	_locked = false;
 	_constructoridx = -1;
+	if (_base)
+		num_methods += base->_methods.size();
+	if (num_methods)
+		_methods.reserve(num_methods);
 	if(_base) {
 		_constructoridx = _base->_constructoridx;
 		_udsize = _base->_udsize;

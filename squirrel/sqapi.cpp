@@ -278,7 +278,7 @@ void sq_newarray(HSQUIRRELVM v,SQInteger size)
 	v->Push(SQArray::Create(_ss(v), size));	
 }
 
-SQRESULT sq_newclass(HSQUIRRELVM v,SQBool hasbase)
+SQRESULT sq_newclassex(HSQUIRRELVM v,SQBool hasbase,SQInteger num_methods)
 {
 	SQClass *baseclass = NULL;
 	if(hasbase) {
@@ -287,10 +287,15 @@ SQRESULT sq_newclass(HSQUIRRELVM v,SQBool hasbase)
 			return sq_throwerror(v,_SC("invalid base type"));
 		baseclass = _class(base);
 	}
-	SQClass *newclass = SQClass::Create(_ss(v), baseclass);
+	SQClass *newclass = SQClass::Create(_ss(v), baseclass, num_methods);
 	if(baseclass) v->Pop();
 	v->Push(newclass);	
 	return SQ_OK;
+}
+
+SQRESULT sq_newclass(HSQUIRRELVM v,SQBool hasbase)
+{
+	return sq_newclassex(v,hasbase,0);
 }
 
 SQBool sq_instanceof(HSQUIRRELVM v)
@@ -414,6 +419,7 @@ SQRESULT sq_setnativeclosurename(HSQUIRRELVM v,SQInteger idx,const SQChar *name)
 
 SQRESULT sq_setnativeclosurenameex(HSQUIRRELVM v,SQInteger idx,const SQChar *name,SQBool isconst)
 {
+return SQ_OK;
 	SQObject o = stack_get(v, idx);
 	if(sq_isnativeclosure(o)) {
 		SQNativeClosure *nc = _nativeclosure(o);
