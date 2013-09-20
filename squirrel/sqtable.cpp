@@ -9,9 +9,7 @@ see copyright notice in squirrel.h
 
 SQTable::SQTable(SQSharedState *ss,SQInteger nInitialSize)
 {
-	SQInteger pow2size=MINPOWER2;
-	while(nInitialSize>pow2size)pow2size=pow2size<<1;
-	AllocNodes(pow2size);
+	AllocNodes(nInitialSize ? nInitialSize : MINPOWER2);
 	_usednodes = 0;
 	_delegate = NULL;
 	INIT_CHAIN();
@@ -39,6 +37,9 @@ void SQTable::AllocNodes(SQInteger nSize)
 		n.next=NULL;
 	}
 	_numofnodes=nSize;
+	SQInteger log;
+	for (log = 1; nSize > 1 << log; log++);
+	pow = log;
 	_nodes=nodes;
 	_firstfree=&_nodes[_numofnodes-1];
 }
@@ -46,8 +47,6 @@ void SQTable::AllocNodes(SQInteger nSize)
 void SQTable::Rehash(bool force)
 {
 	SQInteger oldsize=_numofnodes;
-	//prevent problems with the integer division
-	if(oldsize<4)oldsize=4;
 	_HashNode *nold=_nodes;
 	SQInteger nelems=CountUsed();
 	if (nelems >= oldsize-oldsize/4)  /* using more than 3/4? */

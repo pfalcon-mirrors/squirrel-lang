@@ -36,11 +36,23 @@ private:
 	_HashNode *_nodes;
 	SQInteger _numofnodes;
 	SQInteger _usednodes;
+	// Logarithm of minimal power-of-2 number >=_numofnodes
+	// stored as log instead of number itself to save mem, assumes
+	// target CPU has barrel shiffer, so (1 << pow) is quick.
+	unsigned char pow;
 	
 ///////////////////////////
 	inline SQInteger TableHash(const SQObjectPtr &key)
 	{
-		return HashObj(key) & (_numofnodes - 1);
+		//return HashObj(key) % _numofnodes;
+		// To avoid expensive module operator, use
+		// binary AND followed by oveflow. This definitely
+		// leads to non-uniform index distribution, but
+		// price of magic of allowing for non-power-of-2
+		// hash sizes. For chaining method in this hash
+		// implementation, it's not a big problem.
+		SQInteger i = HashObj(key) & ((1 << pow) - 1);
+		return i < _numofnodes ? i : i - _numofnodes;
 	}
 	void AllocNodes(SQInteger nSize);
 	void Rehash(bool force);
