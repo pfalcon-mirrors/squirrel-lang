@@ -50,10 +50,10 @@ void SQTable::Rehash(bool force)
 	_HashNode *nold=_nodes;
 	SQInteger nelems=CountUsed();
 	if (nelems >= oldsize-oldsize/4)  /* using more than 3/4? */
-		AllocNodes(oldsize*2);
+		AllocNodes(IncreaseSize(oldsize));
 	else if (nelems <= oldsize/4 &&  /* less than 1/4? */
-		oldsize > MINPOWER2)
-		AllocNodes(oldsize/2);
+		oldsize > MINPOWER2 * 2)
+		AllocNodes(DecreaseSize(oldsize));
 	else if(force)
 		AllocNodes(oldsize);
 	else
