@@ -23,11 +23,11 @@ typedef sqvector<SQClassMember> SQClassMemberVec;
 
 struct SQClass : public CHAINABLE_OBJ
 {
-	SQClass(SQSharedState *ss,SQClass *base);
+	SQClass(SQSharedState *ss, SQClass *base, SQInteger num_methods = 0);
 public:
-	static SQClass* Create(SQSharedState *ss,SQClass *base) {
+	static SQClass* Create(SQSharedState *ss, SQClass *base, SQInteger num_methods = 0) {
 		SQClass *newclass = (SQClass *)SQ_MALLOC(sizeof(SQClass));
-		new (newclass) SQClass(ss, base);
+		new (newclass) SQClass(ss, base, num_methods);
 		return newclass;
 	}
 	~SQClass();
