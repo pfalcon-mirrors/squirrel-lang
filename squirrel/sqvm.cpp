@@ -1319,6 +1319,11 @@ bool SQVM::Set(const SQObjectPtr &self,const SQObjectPtr &key,const SQObjectPtr 
 		if(_table(_roottable)->Set(key,val))
 			return true;
 	}
+	// If it's a table, automagically create new slot
+	if (type(self) == OT_TABLE) {
+		_table(self)->NewSlot(key, val);
+		return true;
+	}
 	Raise_IdxError(key);
 	return false;
 }
