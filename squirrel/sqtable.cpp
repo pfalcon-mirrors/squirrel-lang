@@ -124,6 +124,12 @@ bool SQTable::NewSlot(const SQObjectPtr &key,const SQObjectPtr &val)
 		n->val = val;
 		return false;
 	}
+
+	if (!_firstfree) {
+		Rehash(true);
+		h = TableHash(key);
+	}
+
 	_HashNode *mp = &_nodes[h];
 	n = mp;
 
@@ -158,18 +164,18 @@ bool SQTable::NewSlot(const SQObjectPtr &key,const SQObjectPtr &val)
 		}
 	}
 	mp->key = key;
+	mp->val = val;
+	_usednodes++;
 
 	for (;;) {  /* correct `firstfree' */
 		if (type(_firstfree->key) == OT_NULL && _firstfree->next == NULL) {
-			mp->val = val;
-			_usednodes++;
 			return true;  /* OK; table still has a free place */
 		}
 		else if (_firstfree == _nodes) break;  /* cannot decrement from here */
 		else (_firstfree)--;
 	}
-	Rehash(true);
-	return NewSlot(key, val);
+	_firstfree = NULL;
+	return true;
 }
 
 SQInteger SQTable::Next(bool getweakrefs,const SQObjectPtr &refpos, SQObjectPtr &outkey, SQObjectPtr &outval)
