@@ -2,6 +2,7 @@
 	see copyright notice in squirrel.h
 */
 #include "sqpcheader.h"
+#ifndef NO_COMPILER
 #include <ctype.h>
 #include <stdlib.h>
 #include "sqtable.h"
@@ -487,3 +488,4 @@ SQInteger SQLexer::ReadID()
 	}
 	return res;
 }
+#endif
