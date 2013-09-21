@@ -1439,6 +1439,8 @@ bool SQVM::NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObject
 		
 		break;}
 	case OT_INSTANCE: {
+		return Set(self, key, val, 0);
+#if 0
 		SQObjectPtr res;
 		SQObjectPtr closure;
 		if(_delegable(self)->_delegate && _delegable(self)->GetMetaMethod(this,MT_NEWSLOT,closure)) {
@@ -1450,6 +1452,7 @@ bool SQVM::NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObject
 		}
 		Raise_Error(_SC("class instances do not support the new slot operator"));
 		return false;
+#endif
 		break;}
 	case OT_CLASS: 
 		if(!_class(self)->NewSlot(_ss(this),key,val,bstatic)) {
@@ -1464,8 +1467,10 @@ bool SQVM::NewSlot(const SQObjectPtr &self,const SQObjectPtr &key,const SQObject
 			}
 		}
 		break;
+	case OT_ARRAY:
+		return Set(self, key, val, 0);
 	default:
-		Raise_Error(_SC("indexing %s with %s"),GetTypeName(self),GetTypeName(key));
+		Raise_Error(_SC("cannot create new slot of type %s in %s"),GetTypeName(key),GetTypeName(self));
 		return false;
 		break;
 	}
