@@ -350,7 +350,7 @@ bool SQVM::Init(SQVM *friendvm, SQInteger stacksize)
 	_stackbase = 0;
 	_top = 0;
 	if(!friendvm) 
-		_roottable = SQTable::Create(_ss(this), 0);
+		_roottable = SQTable::Create(_ss(this), 28);
 	else {
 		_roottable = friendvm->_roottable;
 		_errorhandler = friendvm->_errorhandler;
