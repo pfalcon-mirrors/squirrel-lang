@@ -95,14 +95,17 @@ bool CompileTypemask(SQIntVec &res,const SQChar *typemask)
 SQTable *CreateDefaultDelegate(SQSharedState *ss,SQRegFunction *funcz)
 {
 	SQInteger i=0;
-	SQTable *t=SQTable::Create(ss,0);
+	while (funcz[i].name != 0) i++;
+	SQTable *t=SQTable::Create(ss, i);
+	i = 0;
 	while(funcz[i].name!=0){
 		SQNativeClosure *nc = SQNativeClosure::Create(ss,funcz[i].f,0);
 		nc->_nparamscheck = funcz[i].nparamscheck;
-		nc->_name = SQString::Create(ss,funcz[i].name,-1,true);
+		SQString *s = SQString::Create(ss,funcz[i].name,-1,true);
+		nc->_name = s;
 		if(funcz[i].typemask && !CompileTypemask(nc->_typecheck,funcz[i].typemask))
 			return NULL;
-		t->NewSlot(SQString::Create(ss,funcz[i].name,-1,true),nc);
+		t->NewSlot(s, nc);
 		i++;
 	}
 	return t;
