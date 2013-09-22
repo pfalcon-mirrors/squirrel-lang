@@ -125,7 +125,7 @@ void SQSharedState::Init()
 	sq_new(_systemstrings,SQObjectPtrVec);
 	_systemstrings->reserve(15);
 	sq_new(_types,SQObjectPtrVec);
-	_metamethodsmap = SQTable::Create(this,MT_LAST-1);
+	_metamethodsmap = SQTable::Create(this,MT_LAST);
 	//adding type strings to avoid memory trashing
 	//types names
 	newsysstring(_SC("null"));
