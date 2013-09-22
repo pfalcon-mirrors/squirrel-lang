@@ -418,6 +418,7 @@ SQChar* SQSharedState::GetScratchPad(SQInteger size)
 	return _scratchpad;
 }
 
+#ifndef NO_GARBAGE_COLLECTOR
 RefTable::RefTable()
 {
 	AllocNodes(4);
@@ -436,6 +437,7 @@ RefTable::~RefTable()
 {
 	SQ_FREE(_buckets,(_numofslots * sizeof(RefNode *)) + (_numofslots * sizeof(RefNode)));
 }
+#endif
 
 #ifndef NO_GARBAGE_COLLECTOR
 void RefTable::Mark(SQCollectable **chain)
@@ -450,6 +452,7 @@ void RefTable::Mark(SQCollectable **chain)
 }
 #endif
 
+#ifndef NO_GARBAGE_COLLECTOR
 void RefTable::AddRef(SQObject &obj)
 {
 	SQHash mainpos;
@@ -578,6 +581,7 @@ void RefTable::AllocNodes(SQUnsignedInteger size)
 	_slotused = 0;
 	_numofslots = size;
 }
+#endif
 //////////////////////////////////////////////////////////////////////////
 //SQStringTable
 /*
