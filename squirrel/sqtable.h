@@ -91,12 +91,28 @@ public:
 #endif
 	inline _HashNode *_Get(const SQObjectPtr &key,SQHash hash)
 	{
+#ifdef PROFILE
+		extern int table_pos_lookups, table_neg_lookups;
+		extern int table_pos_misses, table_neg_misses;
+		int misses = 0;
+#endif
 		_HashNode *n = &_nodes[hash];
 		do{
 			if(_rawval(n->key) == _rawval(key) && type(n->key) == type(key)){
+#ifdef PROFILE
+				table_pos_lookups++;
+				table_pos_misses += misses;
+#endif
 				return n;
 			}
+#ifdef PROFILE
+			misses++;
+#endif
 		}while((n = n->next));
+#ifdef PROFILE
+		table_neg_lookups++;
+		table_neg_misses += misses;
+#endif
 		return NULL;
 	}
 	bool Get(const SQObjectPtr &key,SQObjectPtr &val);
