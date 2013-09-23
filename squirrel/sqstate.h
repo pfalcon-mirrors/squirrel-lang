@@ -51,8 +51,14 @@ private:
 	RefNode **_buckets;
 };
 
+#ifdef GLOBAL_STRINGTABLE
+extern SQStringTable *_stringtable;
+#define ADD_STRING(ss,str,len,isconst) _stringtable->Add(str,len,isconst)
+#define REMOVE_STRING(ss,bstr) _stringtable->Remove(bstr)
+#else
 #define ADD_STRING(ss,str,len,isconst) ss->_stringtable->Add(str,len,isconst)
 #define REMOVE_STRING(ss,bstr) ss->_stringtable->Remove(bstr)
+#endif
 
 struct SQObjectPtr;
 
@@ -74,7 +80,9 @@ public:
 	SQObjectPtr _metamethodsmap;
 	SQObjectPtrVec *_systemstrings;
 	SQObjectPtrVec *_types;
+#ifndef GLOBAL_STRINGTABLE
 	SQStringTable *_stringtable;
+#endif
 #ifndef NO_GARBAGE_COLLECTOR
 	RefTable _refs_table;
 #endif

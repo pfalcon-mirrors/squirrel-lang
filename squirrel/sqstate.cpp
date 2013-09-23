@@ -111,6 +111,11 @@ SQTable *CreateDefaultDelegate(SQSharedState *ss,SQRegFunction *funcz)
 	return t;
 }
 
+#ifdef GLOBAL_STRINGTABLE
+SQStringTable *_stringtable;
+int _stringtable_refcount;
+#endif
+
 void SQSharedState::Init()
 {	
 	_scratchpad=NULL;
@@ -118,8 +123,15 @@ void SQSharedState::Init()
 #ifndef NO_GARBAGE_COLLECTOR
 	_gc_chain=NULL;
 #endif
+#ifdef GLOBAL_STRINGTABLE
+	if (!_stringtable) {
+#endif
 	_stringtable = (SQStringTable*)SQ_MALLOC(sizeof(SQStringTable));
 	new (_stringtable) SQStringTable(this);
+#ifdef GLOBAL_STRINGTABLE
+	}
+	++_stringtable_refcount;
+#endif
 	sq_new(_metamethods,SQObjectPtrVec);
 	_metamethods->reserve(18);
 	sq_new(_systemstrings,SQObjectPtrVec);
@@ -229,6 +241,9 @@ SQSharedState::~SQSharedState()
 	sq_delete(_types,SQObjectPtrVec);
 	sq_delete(_systemstrings,SQObjectPtrVec);
 	sq_delete(_metamethods,SQObjectPtrVec);
+#ifdef GLOBAL_STRINGTABLE
+	if (--_stringtable_refcount == 0)
+#endif
 	sq_delete(_stringtable,SQStringTable);
 	if(_scratchpad)SQ_FREE(_scratchpad,_scratchpadsize);
 }
@@ -634,7 +649,9 @@ SQString *SQStringTable::Add(const SQChar *news,SQInteger len,SQBool isconst)
 		memcpy(t->_val,news,rsl(len));
 		t->_val[len] = _SC('\0');
 	}
+#ifndef GLOBAL_STRINGTABLE
 	t->_sharedstate = _sharedstate;
+#endif
 	t->_len = len;
 	t->_hash = newhash;
 	t->_next = _strings[h];

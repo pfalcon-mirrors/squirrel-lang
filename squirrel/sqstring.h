@@ -19,7 +19,9 @@ public:
 	static SQString *Create(SQSharedState *ss, const SQChar *, SQInteger len = -1,SQBool isconst = SQFalse );
 	SQInteger Next(const SQObjectPtr &refpos, SQObjectPtr &outkey, SQObjectPtr &outval);
 	void Release();
+#ifndef GLOBAL_STRINGTABLE
 	SQSharedState *_sharedstate;
+#endif
 	SQString *_next; //chain for the string table
 	SQInteger _len;
 	SQHash _hash;
