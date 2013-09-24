@@ -636,24 +636,10 @@ SQString *SQStringTable::Add(const SQChar *news,SQInteger len,SQBool isconst)
 		if(s->_len == len && (!memcmp(news,s->_val,rsl(len))))
 			return s; //found
 	}
-	SQString *t;
-	if(isconst) {
-		t = (SQString *)SQ_MALLOC(sizeof(SQString));
-		new (t) SQString;
-		t->_val = (SQChar*)news;
-	}
-	else {
-		t = (SQString *)SQ_MALLOC(rsl(len + 1)+sizeof(SQString));
-		new (t) SQString;
-		t->_val = (SQChar*)(((unsigned char*)t) + sizeof(SQString));
-		memcpy(t->_val,news,rsl(len));
-		t->_val[len] = _SC('\0');
-	}
+	SQString *t = SQString::Alloc(news, len, isconst, newhash);
 #ifndef GLOBAL_STRINGTABLE
 	t->_sharedstate = _sharedstate;
 #endif
-	t->_len = len;
-	t->_hash = newhash;
 	t->_next = _strings[h];
 	_strings[h] = t;
 	_slotused++;
@@ -693,17 +679,7 @@ void SQStringTable::Remove(SQString *bs)
 			else
 				_strings[h] = s->_next;
 			_slotused--;
-			SQInteger slen = s->_len;
-			SQChar *val = s->_val;
-			s->~SQString();
-			if(val == (SQChar*)(((unsigned char*)s) + sizeof(SQString))) {
-				SQ_FREE(s,sizeof(SQString) + rsl(slen + 1));
-			}
-			else {
-				SQ_FREE(s,sizeof(SQString));
-			}
-			
-			
+			SQString::Free(s);
 			return;
 		}
 		prev = s;
