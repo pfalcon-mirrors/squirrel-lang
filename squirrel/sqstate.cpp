@@ -123,6 +123,7 @@ void SQSharedState::Init()
 #ifndef NO_GARBAGE_COLLECTOR
 	_gc_chain=NULL;
 #endif
+#ifdef UNIQUE_STRINGS
 #ifdef GLOBAL_STRINGTABLE
 	if (!_stringtable) {
 #endif
@@ -131,6 +132,7 @@ void SQSharedState::Init()
 #ifdef GLOBAL_STRINGTABLE
 	}
 	++_stringtable_refcount;
+#endif
 #endif
 	sq_new(_metamethods,SQObjectPtrVec);
 	_metamethods->reserve(18);
@@ -241,10 +243,12 @@ SQSharedState::~SQSharedState()
 	sq_delete(_types,SQObjectPtrVec);
 	sq_delete(_systemstrings,SQObjectPtrVec);
 	sq_delete(_metamethods,SQObjectPtrVec);
+#ifdef UNIQUE_STRINGS
 #ifdef GLOBAL_STRINGTABLE
 	if (--_stringtable_refcount == 0)
 #endif
 	sq_delete(_stringtable,SQStringTable);
+#endif
 	if(_scratchpad)SQ_FREE(_scratchpad,_scratchpadsize);
 }
 
@@ -605,6 +609,7 @@ void RefTable::AllocNodes(SQUnsignedInteger size)
 * http://www.lua.org/source/4.0.1/src_lstring.c.html
 */
 
+#ifdef UNIQUE_STRINGS
 SQStringTable::SQStringTable(SQSharedState *ss)
 {
 	_sharedstate = ss;
@@ -687,3 +692,4 @@ void SQStringTable::Remove(SQString *bs)
 	}
 	assert(0);//if this fail something is wrong
 }
+#endif

@@ -629,6 +629,17 @@ bool SQVM::CLASS_OP(SQObjectPtr &target,SQInteger baseclass,SQInteger attributes
 bool SQVM::IsEqual(const SQObjectPtr &o1,const SQObjectPtr &o2,bool &res)
 {
 	if(type(o1) == type(o2)) {
+#ifndef UNIQUE_STRINGS
+		if (type(o1) == OT_STRING) {
+			SQString *s1 = _string(o1), *s2 = _string(o2);
+			printf("IsEq(%s, %s)\n", s1->_val, s2->_val);
+			res = false;
+			if (s1->_hash == s2->_hash && s1->_len == s2->_len) {
+				if (!memcmp(s1->_val, s2->_val, rsl(s1->_len)))
+					res = true;
+			}
+		} else
+#endif
 		res = (_rawval(o1) == _rawval(o2));
 	}
 	else {

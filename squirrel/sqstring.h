@@ -21,10 +21,12 @@ public:
 	void Release();
 	static SQString *Alloc(const SQChar *s, SQInteger len, SQBool isconst, SQHash hash);
 	static void Free(SQString *s);
+#ifdef UNIQUE_STRINGS
 #ifndef GLOBAL_STRINGTABLE
 	SQSharedState *_sharedstate;
 #endif
 	SQString *_next; //chain for the string table
+#endif
 	SQInteger _len;
 	SQHash _hash;
 	SQChar *_val;

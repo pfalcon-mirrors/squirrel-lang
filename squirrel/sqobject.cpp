@@ -85,13 +85,23 @@ void SQString::Free(SQString *s)
 
 SQString *SQString::Create(SQSharedState *ss,const SQChar *s,SQInteger len,SQBool isconst)
 {
+#ifdef UNIQUE_STRINGS
 	SQString *str=ADD_STRING(ss,s,len,isconst);
 	return str;
+#else
+	if (len == -1)
+		len = (SQInteger)scstrlen(s);
+	return Alloc(s, len, isconst, ::_hashstr(s, len));
+#endif
 }
 
 void SQString::Release()
 {
+#ifdef UNIQUE_STRINGS
 	REMOVE_STRING(_sharedstate,this);
+#else
+	Free(this);
+#endif
 }
 
 SQInteger SQString::Next(const SQObjectPtr &refpos, SQObjectPtr &outkey, SQObjectPtr &outval)
