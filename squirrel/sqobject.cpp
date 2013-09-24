@@ -46,6 +46,43 @@ const SQChar *GetTypeName(const SQObjectPtr &obj1)
 	return IdType2Name(type(obj1));	
 }
 
+SQString *SQString::Alloc(const SQChar *s, SQInteger len, SQBool isconst, SQHash hash)
+{
+	SQString *t;
+	if(isconst) {
+		t = (SQString *)SQ_MALLOC(sizeof(SQString));
+		new (t) SQString;
+		t->_val = (SQChar*)s;
+	}
+	else {
+		t = (SQString *)SQ_MALLOC(rsl(len + 1) + sizeof(SQString));
+		new (t) SQString;
+		t->_val = (SQChar*)(((unsigned char*)t) + sizeof(SQString));
+		memcpy(t->_val, s, rsl(len));
+		t->_val[len] = _SC('\0');
+	}
+	t->_len = len;
+	t->_hash = hash;
+#ifdef PROFILE
+	extern int str_alloc_count;
+	++str_alloc_count;
+#endif
+	return t;
+}
+
+void SQString::Free(SQString *s)
+{
+	SQInteger slen = s->_len;
+	SQChar *val = s->_val;
+	s->~SQString();
+	if(val == (SQChar*)(((unsigned char*)s) + sizeof(SQString))) {
+		SQ_FREE(s,sizeof(SQString) + rsl(slen + 1));
+	}
+	else {
+		SQ_FREE(s,sizeof(SQString));
+	}
+}
+
 SQString *SQString::Create(SQSharedState *ss,const SQChar *s,SQInteger len,SQBool isconst)
 {
 	SQString *str=ADD_STRING(ss,s,len,isconst);
