@@ -9,6 +9,20 @@
 #include "sqtable.h"
 #include "sqopcodes.h"
 #include "sqfuncstate.h"
+#ifdef UNIQUE_STRINGS
+inline bool StrEqual(const SQObject &s1, const SQObject &s2)
+{
+    return _string(s1) == _string(s2);
+}
+#else
+#include "sqvm.h"
+inline bool StrEqual(const SQObject &s1, const SQObject &s2)
+{
+    bool res;
+    SQVM::IsEqual(s1, s2, res);
+    return res;
+}
+#endif
 
 #ifdef _DEBUG_DUMP
 SQInstructionDesc g_InstrDesc[]={
@@ -370,7 +384,7 @@ SQInteger SQFuncState::GetLocalVariable(const SQObject &name)
 	SQInteger locals=_vlocals.size();
 	while(locals>=1){
 		SQLocalVarInfo &lvi = _vlocals[locals-1];
-		if(type(lvi._name)==OT_STRING && _string(lvi._name)==_string(name)){
+		if(type(lvi._name)==OT_STRING && StrEqual(lvi._name, name)){
 			return locals-1;
 		}
 		locals--;
@@ -389,7 +403,7 @@ SQInteger SQFuncState::GetOuterVariable(const SQObject &name)
 {
 	SQInteger outers = _outervalues.size();
 	for(SQInteger i = 0; i<outers; i++) {
-		if(_string(_outervalues[i]._name) == _string(name))
+		if(StrEqual(_outervalues[i]._name, name))
 			return i;
 	}
 	SQInteger pos=-1;
