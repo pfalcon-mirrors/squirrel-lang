@@ -122,6 +122,22 @@ bool SQTable::NewSlot(const SQObjectPtr &key,const SQObjectPtr &val)
 	_HashNode *n = _Get(key, h);
 	if (n) {
 		n->val = val;
+#ifndef UNIQUE_STRINGS
+		// The situation is that we were called with an object which
+		// we found to be equal to one stored in a table key. It makes
+		// no sense to have 2 equal, by different objects around.
+		// Actually, other code expects that if false is returned is
+		// return here, then key argument has >1 reference counter
+		// (because it's stored in table key!). So, in case of
+		// non-interned strings, we have 2 choices: replace key in table
+		// with our argument, or replace argument with key from table.
+		// Second choice breaks function signature (const SQObjectPtr)
+		// and possibly API contract, so 1st choice is made, though it's
+		// potentially less memory-allocation friendly (key in table
+		// definitely was create before argument, so deleting it will
+		// leave hole in memory).
+		n->key = key;
+#endif
 		return false;
 	}
 

@@ -8,6 +8,12 @@
 */
 
 #include "sqstring.h"
+#ifndef UNIQUE_STRINGS
+// For SQVM::IsEqual(). That function might be better placed on SQObject,
+// though taking into account possible future extension to call metmethod,
+// maybe not.
+#include "sqvm.h"
+#endif
 
 
 #define hashptr(p)  ((SQHash)(((SQInteger)p) >> 3))
@@ -98,7 +104,13 @@ public:
 #endif
 		_HashNode *n = &_nodes[hash];
 		do{
+#ifdef UNIQUE_STRINGS
 			if(_rawval(n->key) == _rawval(key) && type(n->key) == type(key)){
+#else
+			bool res;
+			SQVM::IsEqual(n->key, key, res);
+			if (res) {
+#endif
 #ifdef PROFILE
 				table_pos_lookups++;
 				table_pos_misses += misses;
