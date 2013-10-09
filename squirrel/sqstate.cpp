@@ -608,6 +608,8 @@ SQString *SQStringTable::Add(const SQChar *news,SQInteger len)
 	t->_next = _strings[h];
 	_strings[h] = t;
 	_slotused++;
+	// TODO: better criteria? There got to be collisions, so blindly
+	// increasing size on each new string doesn't seem like good idea.
 	if (_slotused > _numofslots)  /* too crowded? */
 		Resize(_numofslots*2);
 	return t;
