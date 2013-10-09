@@ -7,6 +7,8 @@
 #define SQSTD_STREAM_TYPE_TAG 0x80000000
 
 struct SQStream {
+	static const char BUF_READONLY = 1;
+
 	virtual SQInteger Read(void *buffer, SQInteger size) = 0;
 	virtual SQInteger Readline(void *buffer, SQInteger size) = 0;
 	virtual SQInteger Write(void *buffer, SQInteger size) = 0;
@@ -15,7 +17,10 @@ struct SQStream {
 	virtual SQInteger Len() = 0;
 	virtual SQInteger Seek(SQInteger offset, SQInteger origin) = 0;
 	virtual bool IsValid() = 0;
+	// Note that end-of-stream condition cannot be reliably detected for all streams,
+	// use Read() == 0 for reliable detection.
 	virtual bool EOS() = 0;
+	virtual bool GetBuffer(void *& buffer, SQInteger& len, char& flags) { return false; }
 };
 
 extern "C" {
