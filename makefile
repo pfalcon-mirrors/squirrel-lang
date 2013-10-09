@@ -17,6 +17,7 @@ OPT = -s -O2
 # -DNO_GARBAGE_COLLECTOR
 # -DNO_COMPILER
 # -D_DEBUG_DUMP
+# -Wl,-Map=$@.map,--cref
 INCLUDE = -I$(TOP)/include $(INCLUDE_EXTRA)
 CFLAGS = $(OPT) $(OPT_EXTRA) $(INCLUDE) -fno-strict-aliasing -fno-unwind-tables -fno-asynchronous-unwind-tables
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
