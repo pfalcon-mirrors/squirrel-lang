@@ -18,7 +18,7 @@ OPT = -s -O2
 # -DNO_COMPILER
 # -D_DEBUG_DUMP
 INCLUDE = -I$(TOP)/include $(INCLUDE_EXTRA)
-CFLAGS = $(OPT) $(OPT_EXTRA) $(INCLUDE) -fno-strict-aliasing
+CFLAGS = $(OPT) $(OPT_EXTRA) $(INCLUDE) -fno-strict-aliasing -fno-unwind-tables -fno-asynchronous-unwind-tables
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
 
 SQUIRREL_OBJS = \
