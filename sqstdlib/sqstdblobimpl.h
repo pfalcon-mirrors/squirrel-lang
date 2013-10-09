@@ -4,18 +4,36 @@
 
 struct SQBlob : public SQStream
 {
+	SQBlob(void *buf, SQInteger size) {
+		_buf = (unsigned char *)buf;
+		_size = size;
+		// _allocated == 0 means readonly buffer, with
+		// memory owned by something else. The intention
+		// is to provide (possibly sliced) view inside
+		// other object. Few issues: for this to work
+		// reliably, target object must be referenced
+		// by such blob, but this is low-level type
+		// not concerned with Squirrel objects. So,
+		// it would need to be wrapped in higher-level
+		// object keeping such reference. Also: should
+		// read-only, own vs borrowed memory buffer,
+		// growability all be orthogonal properties?
+		_allocated = 0;
+		_ptr = 0;
+	}
 	SQBlob(SQInteger size) {
 		_size = size;
 		_allocated = size;
 		_buf = (unsigned char *)sq_malloc(size);
 		memset(_buf, 0, _size);
 		_ptr = 0;
-		_owns = true;
 	}
 	virtual ~SQBlob() {
-		sq_free(_buf, _allocated);
+		if (_allocated)
+			sq_free(_buf, _allocated);
 	}
 	SQInteger Write(void *buffer, SQInteger size) {
+		if (!_allocated) return 0;
 		if(!CanAdvance(size)) {
 			GrowBufOf(_ptr + size - _size);
 		}
@@ -36,7 +54,7 @@ struct SQBlob : public SQStream
 	}
 	SQInteger Readline(void *buffer,SQInteger size) { return -1; }
 	bool Resize(SQInteger n) {
-		if(!_owns) return false;
+		if (!_allocated) return false;
 		if(n != _allocated) {
 			unsigned char *newbuf = (unsigned char *)sq_malloc(n);
 			memset(newbuf,0,n);
@@ -103,7 +121,6 @@ private:
 	SQInteger _allocated;
 	SQInteger _ptr;
 	unsigned char *_buf;
-	bool _owns;
 };
 
 #endif //_SQSTD_BLOBIMPL_H_
